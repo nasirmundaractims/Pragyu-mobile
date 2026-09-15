@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:student_mobile/app/theme/app_colors.dart';
+import 'package:student_mobile/app/router/app_router.dart';
 import 'package:student_mobile/features/home/data/home_repository.dart';
 import 'package:student_mobile/features/home/domain/home_models.dart';
 
@@ -126,7 +127,12 @@ class _TodayDetailScreenState extends State<TodayDetailScreen> {
           ...snapshot.classes.map(
             (item) => Padding(
               padding: const EdgeInsets.only(bottom: 10),
-              child: _ClassTile(lecture: item),
+              child: _ClassTile(
+                lecture: item,
+                onTap: () {
+                  Navigator.of(context).pushNamed(AppRoutes.lecturesList);
+                },
+              ),
             ),
           ),
         const SizedBox(height: 22),
@@ -182,67 +188,78 @@ class _TodayDetailScreenState extends State<TodayDetailScreen> {
 }
 
 class _ClassTile extends StatelessWidget {
-  const _ClassTile({required this.lecture});
+  const _ClassTile({
+    required this.lecture,
+    required this.onTap,
+  });
 
   final HomeLecture lecture;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final live = lecture.isLiveNow;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
+    return Material(
+      color: AppColors.surface,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: live
-              ? AppColors.accent.withValues(alpha: 0.45)
-              : AppColors.brandSoft,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            live ? 'Live now' : 'Class',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: live ? AppColors.accent : AppColors.muted,
+        onTap: onTap,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: live
+                  ? AppColors.accent.withValues(alpha: 0.45)
+                  : AppColors.brandSoft,
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            lecture.title,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: AppColors.ink,
-            ),
-          ),
-          if ((lecture.subjectName ?? lecture.courseName) != null) ...[
-            const SizedBox(height: 4),
-            Text(
-              [lecture.subjectName, lecture.courseName]
-                  .whereType<String>()
-                  .where((s) => s.isNotEmpty)
-                  .join(' · '),
-              style: const TextStyle(fontSize: 13, color: AppColors.muted),
-            ),
-          ],
-          if (lecture.startsAt != null) ...[
-            const SizedBox(height: 8),
-            Text(
-              _formatTime(lecture.startsAt!),
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: AppColors.brand,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                live ? 'Live now' : 'Class',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: live ? AppColors.accent : AppColors.muted,
+                ),
               ),
-            ),
-          ],
-        ],
+              const SizedBox(height: 4),
+              Text(
+                lecture.title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.ink,
+                ),
+              ),
+              if ((lecture.subjectName ?? lecture.courseName) != null) ...[
+                const SizedBox(height: 4),
+                Text(
+                  [lecture.subjectName, lecture.courseName]
+                      .whereType<String>()
+                      .where((s) => s.isNotEmpty)
+                      .join(' · '),
+                  style: const TextStyle(fontSize: 13, color: AppColors.muted),
+                ),
+              ],
+              if (lecture.startsAt != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  _formatTime(lecture.startsAt!),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.brand,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }

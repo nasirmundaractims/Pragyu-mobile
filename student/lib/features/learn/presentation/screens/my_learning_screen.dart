@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:student_mobile/app/router/app_router.dart';
 import 'package:student_mobile/app/theme/app_colors.dart';
 import 'package:student_mobile/features/learn/data/learn_repository.dart';
 import 'package:student_mobile/features/learn/domain/learn_models.dart';
@@ -55,12 +56,13 @@ class _MyLearningScreenState extends State<MyLearningScreen> {
   }
 
   void _openCourse(LearningCourse course) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          '${course.title} — opens S-21 when course detail ships.',
-        ),
-        behavior: SnackBarBehavior.floating,
+    Navigator.of(context).pushNamed(
+      AppRoutes.courseDetail,
+      arguments: CourseDetailArgs(
+        courseId: course.courseId,
+        title: course.title,
+        programName: course.programName,
+        batchName: course.batchName,
       ),
     );
   }

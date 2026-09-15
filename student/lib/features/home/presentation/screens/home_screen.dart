@@ -153,7 +153,12 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
         if (snapshot.nextLecture != null) ...[
           const SizedBox(height: 20),
-          _LiveCard(lecture: snapshot.nextLecture!),
+          _LiveCard(
+            lecture: snapshot.nextLecture!,
+            onTap: () {
+              Navigator.of(context).pushNamed(AppRoutes.lecturesList);
+            },
+          ),
         ],
         const SizedBox(height: 22),
         const Text(
@@ -192,6 +197,13 @@ class _HomeScreenState extends State<HomeScreen> {
               label: 'Learn',
               icon: Icons.menu_book_rounded,
               onTap: () => _openTab(context, 1),
+            ),
+            _ShortcutChip(
+              label: 'Lectures',
+              icon: Icons.sensors_rounded,
+              onTap: () {
+                Navigator.of(context).pushNamed(AppRoutes.lecturesList);
+              },
             ),
             _ShortcutChip(
               label: 'Tests',
@@ -272,66 +284,79 @@ class _UnreadStrip extends StatelessWidget {
 }
 
 class _LiveCard extends StatelessWidget {
-  const _LiveCard({required this.lecture});
+  const _LiveCard({
+    required this.lecture,
+    required this.onTap,
+  });
 
   final HomeLecture lecture;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final live = lecture.isLiveNow;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
+    return Material(
+      color: AppColors.surface,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: live ? AppColors.accent.withValues(alpha: 0.45) : AppColors.brandSoft,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            live ? 'Live now' : 'Next class',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: live ? AppColors.accent : AppColors.muted,
-              letterSpacing: 0.3,
+        onTap: onTap,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: live
+                  ? AppColors.accent.withValues(alpha: 0.45)
+                  : AppColors.brandSoft,
             ),
           ),
-          const SizedBox(height: 6),
-          Text(
-            lecture.title,
-            style: const TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w700,
-              color: AppColors.ink,
-            ),
-          ),
-          if ((lecture.subjectName ?? lecture.courseName) != null) ...[
-            const SizedBox(height: 4),
-            Text(
-              [lecture.subjectName, lecture.courseName]
-                  .whereType<String>()
-                  .where((s) => s.isNotEmpty)
-                  .join(' · '),
-              style: const TextStyle(color: AppColors.muted, fontSize: 13),
-            ),
-          ],
-          if (!live && lecture.startsAt != null) ...[
-            const SizedBox(height: 8),
-            Text(
-              _formatStarts(lecture.startsAt!),
-              style: const TextStyle(
-                color: AppColors.brand,
-                fontWeight: FontWeight.w600,
-                fontSize: 13,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                live ? 'Live now' : 'Next class',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: live ? AppColors.accent : AppColors.muted,
+                  letterSpacing: 0.3,
+                ),
               ),
-            ),
-          ],
-        ],
+              const SizedBox(height: 6),
+              Text(
+                lecture.title,
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.ink,
+                ),
+              ),
+              if ((lecture.subjectName ?? lecture.courseName) != null) ...[
+                const SizedBox(height: 4),
+                Text(
+                  [lecture.subjectName, lecture.courseName]
+                      .whereType<String>()
+                      .where((s) => s.isNotEmpty)
+                      .join(' · '),
+                  style: const TextStyle(color: AppColors.muted, fontSize: 13),
+                ),
+              ],
+              if (!live && lecture.startsAt != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  _formatStarts(lecture.startsAt!),
+                  style: const TextStyle(
+                    color: AppColors.brand,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:student_mobile/app/router/app_router.dart';
 import 'package:student_mobile/app/theme/app_theme.dart';
 import 'package:student_mobile/core/config/app_config.dart';
 import 'package:student_mobile/features/auth/domain/auth_models.dart';
@@ -8,6 +9,8 @@ import 'package:student_mobile/features/home/domain/home_models.dart';
 import 'package:student_mobile/features/home/presentation/screens/home_screen.dart';
 import 'package:student_mobile/features/learn/data/learn_repository.dart';
 import 'package:student_mobile/features/learn/domain/learn_models.dart';
+import 'package:student_mobile/features/learn/presentation/screens/course_detail_screen.dart';
+import 'package:student_mobile/features/learn/presentation/screens/lesson_player_screen.dart';
 import 'package:student_mobile/features/learn/presentation/screens/my_learning_screen.dart';
 
 class _FakeHome implements HomeGateway {
@@ -31,6 +34,51 @@ class _FakeLearn implements LearnGateway {
 
   @override
   Future<MyLearningSnapshot> loadMyLearning() async => snapshot;
+
+  @override
+  Future<CourseDetailSnapshot> loadCourseDetail(CourseDetailArgs args) async {
+    return CourseDetailSnapshot(
+      courseId: args.courseId,
+      title: args.title ?? 'Course',
+      programName: args.programName,
+      batchName: args.batchName,
+      progress: const CourseProgressSummary(
+        completionPercent: 10,
+        totalLessons: 1,
+        completedLessons: 0,
+      ),
+      modules: const [
+        CourseModule(
+          id: 'm1',
+          title: 'Module 1',
+          lessons: [
+            CourseLesson(id: 'l1', title: 'Intro lesson'),
+          ],
+        ),
+      ],
+    );
+  }
+
+  @override
+  Future<LessonDetailSnapshot> loadLesson(LessonDetailArgs args) async {
+    return LessonDetailSnapshot(
+      lessonId: args.lessonId,
+      title: args.title ?? 'Intro lesson',
+      summary: 'Welcome to the course.',
+      progress: const LessonProgressState(
+        status: 'in_progress',
+        progressPercent: 0,
+      ),
+    );
+  }
+
+  @override
+  Future<LessonProgressState> completeLesson(String lessonId) async {
+    return const LessonProgressState(
+      status: 'completed',
+      progressPercent: 100,
+    );
+  }
 }
 
 void main() {
@@ -119,5 +167,83 @@ void main() {
 
     expect(find.text('My learning'), findsOneWidget);
     expect(find.text('GPSC Foundation'), findsOneWidget);
+  });
+
+  testWidgets('S-20 opens S-21 course detail', (tester) async {
+    final fake = _FakeLearn(
+      const MyLearningSnapshot(
+        courses: [
+          LearningCourse(
+            courseId: 'c1',
+            title: 'UPSC GS Foundation',
+            programName: 'UPSC CSE',
+            isActive: true,
+          ),
+        ],
+      ),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        onGenerateRoute: (settings) {
+          if (settings.name == AppRoutes.courseDetail) {
+            return MaterialPageRoute<void>(
+              settings: settings,
+              builder: (_) => CourseDetailScreen(
+                args: CourseDetailArgs.fromObject(settings.arguments),
+                learnRepository: fake,
+              ),
+            );
+          }
+          return onGenerateRoute(settings);
+        },
+        home: MyLearningScreen(learnRepository: fake),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('UPSC GS Foundation'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('10% complete'), findsOneWidget);
+    expect(find.text('Modules'), findsOneWidget);
+    expect(find.text('Intro lesson'), findsOneWidget);
+  });
+
+  testWidgets('S-21 opens S-22 lesson player', (tester) async {
+    final fake = _FakeLearn(const MyLearningSnapshot());
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        onGenerateRoute: (settings) {
+          if (settings.name == AppRoutes.lessonPlayer) {
+            return MaterialPageRoute<void>(
+              settings: settings,
+              builder: (_) => LessonPlayerScreen(
+                args: LessonDetailArgs.fromObject(settings.arguments),
+                learnRepository: fake,
+              ),
+            );
+          }
+          return onGenerateRoute(settings);
+        },
+        home: CourseDetailScreen(
+          args: const CourseDetailArgs(
+            courseId: 'c1',
+            title: 'Course',
+          ),
+          learnRepository: fake,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Intro lesson'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Welcome to the course.'), findsOneWidget);
+    expect(find.text('Mark complete'), findsOneWidget);
   });
 }

@@ -2,8 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import 'package:student_mobile/app/router/app_router.dart';
 import 'package:student_mobile/app/theme/app_colors.dart';
 import 'package:student_mobile/features/home/presentation/screens/home_screen.dart';
+import 'package:student_mobile/features/learn/domain/learn_models.dart';
 import 'package:student_mobile/features/search/data/search_repository.dart';
 import 'package:student_mobile/features/search/domain/search_models.dart';
 
@@ -130,8 +132,22 @@ class _QuickSearchSheetState extends State<QuickSearchSheet> {
 
   void _select(SearchHit hit) {
     final shell = StudentShell.of(context);
+    final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
-    Navigator.of(context).pop();
+    navigator.pop();
+
+    if (hit.kind == SearchHitKind.course) {
+      shell?.goToTab(1);
+      navigator.pushNamed(
+        AppRoutes.courseDetail,
+        arguments: CourseDetailArgs(
+          courseId: hit.id,
+          title: hit.title,
+        ),
+      );
+      return;
+    }
+
     shell?.goToTab(hit.tabIndex);
     messenger.showSnackBar(
       SnackBar(
