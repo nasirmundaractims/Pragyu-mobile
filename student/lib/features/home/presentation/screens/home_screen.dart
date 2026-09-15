@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:student_mobile/app/router/app_router.dart';
 import 'package:student_mobile/app/shell/feature_placeholder_screen.dart';
 import 'package:student_mobile/app/theme/app_colors.dart';
 import 'package:student_mobile/features/home/data/home_repository.dart';
 import 'package:student_mobile/features/home/domain/greeting.dart';
 import 'package:student_mobile/features/home/domain/home_models.dart';
+import 'package:student_mobile/features/search/presentation/widgets/quick_search_sheet.dart';
 
 /// S-10 Home — Today: greeting, next class, due tests, alerts strip, shortcuts.
 class HomeScreen extends StatefulWidget {
@@ -103,19 +105,45 @@ class _HomeScreenState extends State<HomeScreen> {
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
       children: [
-        Text(
-          '$greeting, $first',
-          style: const TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.w700,
-            color: AppColors.ink,
-            letterSpacing: -0.4,
-          ),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Text(
+                '$greeting, $first',
+                style: const TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.ink,
+                  letterSpacing: -0.4,
+                ),
+              ),
+            ),
+            IconButton(
+              tooltip: 'Quick search',
+              onPressed: () => showQuickSearchSheet(context),
+              icon: const Icon(Icons.search_rounded, color: AppColors.ink),
+            ),
+          ],
         ),
         const SizedBox(height: 6),
         const Text(
           'Here’s what’s next today.',
           style: TextStyle(fontSize: 15, color: AppColors.muted),
+        ),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton(
+            style: TextButton.styleFrom(
+              padding: EdgeInsets.zero,
+              minimumSize: const Size(0, 36),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            onPressed: () {
+              Navigator.of(context).pushNamed(AppRoutes.todayDetail);
+            },
+            child: const Text('See today’s schedule'),
+          ),
         ),
         if (snapshot.unreadCount > 0) ...[
           const SizedBox(height: 16),

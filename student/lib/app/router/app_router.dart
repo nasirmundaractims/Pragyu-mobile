@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../features/auth/presentation/screens/forgot_password_screen.dart';
 import '../../features/auth/presentation/screens/sign_in_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
+import '../../features/home/presentation/screens/today_detail_screen.dart';
 import '../../features/onboarding/presentation/screens/onboarding_screen.dart';
 import '../../features/organization/presentation/screens/org_picker_screen.dart';
 import '../../features/splash/presentation/screens/splash_screen.dart';
@@ -18,6 +19,7 @@ abstract final class AppRoutes {
   static const orgPicker = '/org-picker';
   static const onboarding = '/onboarding';
   static const home = '/home';
+  static const todayDetail = '/today';
   static const createAccountStub = '/create-account-stub';
 }
 
@@ -57,6 +59,11 @@ Route<dynamic> onGenerateRoute(RouteSettings settings) {
       return MaterialPageRoute<void>(
         settings: settings,
         builder: (_) => const StudentShell(),
+      );
+    case AppRoutes.todayDetail:
+      return MaterialPageRoute<void>(
+        settings: settings,
+        builder: (_) => const TodayDetailScreen(),
       );
     case AppRoutes.createAccountStub:
       return MaterialPageRoute<void>(

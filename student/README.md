@@ -55,13 +55,16 @@ lib/
     auth/        # S-03 / S-04
     organization/# S-05
     onboarding/  # S-06
-    home/        # S-10
+    home/        # S-10 / S-11
+    search/      # S-12
 ```
 
 ## Screens status
 
 - **S-01…S-06** — auth entry complete
-- **S-10 Home** — implemented (greeting, live/next class, due tests, unread strip, shortcuts + bottom tabs)
+- **S-10 Home** — implemented
+- **S-11 Today detail** — implemented
+- **S-12 Quick search** — implemented (sheet: courses / tests / materials)
 - **S-20 / S-40 / S-50 / S-70** — tab placeholders only
 
 ## iOS note

@@ -17,6 +17,11 @@ class _FakeHome implements HomeGateway {
       user: AuthUser(id: '1', email: 'a@b.com', firstName: 'Alex'),
     );
   }
+
+  @override
+  Future<TodaySnapshot> loadToday() async {
+    return TodaySnapshot(day: DateTime(2026, 9, 15));
+  }
 }
 
 Route<dynamic> _routes(RouteSettings settings) {

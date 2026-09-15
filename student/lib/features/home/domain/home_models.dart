@@ -84,3 +84,25 @@ class HomeSnapshot {
   final List<HomeAssessment> dueAssessments;
   final int unreadCount;
 }
+
+class TodaySnapshot {
+  const TodaySnapshot({
+    required this.day,
+    this.classes = const [],
+    this.deadlines = const [],
+  });
+
+  final DateTime day;
+  final List<HomeLecture> classes;
+  final List<HomeAssessment> deadlines;
+
+  bool get isEmpty => classes.isEmpty && deadlines.isEmpty;
+}
+
+bool isSameLocalDay(DateTime a, DateTime b) {
+  final left = a.toLocal();
+  final right = b.toLocal();
+  return left.year == right.year &&
+      left.month == right.month &&
+      left.day == right.day;
+}

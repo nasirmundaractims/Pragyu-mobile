@@ -7,6 +7,7 @@ import 'package:student_mobile/features/home/domain/home_models.dart';
 
 abstract class HomeGateway {
   Future<HomeSnapshot> loadHome();
+  Future<TodaySnapshot> loadToday();
 }
 
 class HomeRepository implements HomeGateway {
@@ -21,30 +22,81 @@ class HomeRepository implements HomeGateway {
 
   @override
   Future<HomeSnapshot> loadHome() async {
-    final session = await _session.read();
-    if (session == null) {
-      throw StateError('Signed-in session with institute is required.');
-    }
-
+    final session = await _requireSession();
     final userFuture = _loadUser(session);
     final profileFuture = _loadStudentProfileId(session);
     final unreadFuture = _loadUnreadCount(session);
-    final assessmentsFuture = _loadDueAssessments(session);
+    final assessmentsFuture = _loadAssessments(session);
 
     final user = await userFuture;
     final profileId = await profileFuture;
     final unread = await unreadFuture;
-    final dueAssessments = await assessmentsFuture;
-    final nextLecture = profileId == null
-        ? null
-        : await _loadNextLecture(session, profileId);
+    final assessments = await assessmentsFuture;
+    final lectures = profileId == null
+        ? const <HomeLecture>[]
+        : await _loadLectures(session, profileId);
+
+    final dueAssessments = assessments
+        .where((item) => item.due?.isActionable ?? false)
+        .toList()
+      ..sort(_compareAssessments);
 
     return HomeSnapshot(
       user: user,
-      nextLecture: nextLecture,
-      dueAssessments: dueAssessments,
+      nextLecture: _pickNextLecture(lectures),
+      dueAssessments: dueAssessments.take(5).toList(growable: false),
       unreadCount: unread,
     );
+  }
+
+  @override
+  Future<TodaySnapshot> loadToday() async {
+    final session = await _requireSession();
+    final now = DateTime.now();
+    final profileId = await _loadStudentProfileId(session);
+    final assessments = await _loadAssessments(session);
+    final lectures = profileId == null
+        ? const <HomeLecture>[]
+        : await _loadLectures(session, profileId);
+
+    final classes = lectures.where((lecture) {
+      if (lecture.isLiveNow) return true;
+      final starts = lecture.startsAt;
+      return starts != null && isSameLocalDay(starts, now);
+    }).toList()
+      ..sort((a, b) {
+        if (a.isLiveNow != b.isLiveNow) {
+          return a.isLiveNow ? -1 : 1;
+        }
+        final sa = a.startsAt;
+        final sb = b.startsAt;
+        if (sa == null && sb == null) return 0;
+        if (sa == null) return 1;
+        if (sb == null) return -1;
+        return sa.compareTo(sb);
+      });
+
+    final deadlines = assessments.where((item) {
+      final urgency = item.due?.urgency;
+      return urgency == DueUrgency.dueToday ||
+          urgency == DueUrgency.overdue ||
+          urgency == DueUrgency.endsSoon;
+    }).toList()
+      ..sort(_compareAssessments);
+
+    return TodaySnapshot(
+      day: now,
+      classes: classes,
+      deadlines: deadlines,
+    );
+  }
+
+  Future<SessionContext> _requireSession() async {
+    final session = await _session.read();
+    if (session == null) {
+      throw StateError('Signed-in session with institute is required.');
+    }
+    return session;
   }
 
   Future<AuthUser> _loadUser(SessionContext session) async {
@@ -97,9 +149,7 @@ class HomeRepository implements HomeGateway {
     }
   }
 
-  Future<List<HomeAssessment>> _loadDueAssessments(
-    SessionContext session,
-  ) async {
+  Future<List<HomeAssessment>> _loadAssessments(SessionContext session) async {
     try {
       final envelope = await _api.get(
         '/assessments',
@@ -115,7 +165,7 @@ class HomeRepository implements HomeGateway {
       final data = envelope['data'];
       if (data is! List) return const [];
       final now = DateTime.now();
-      final mapped = data
+      return data
           .whereType<Map>()
           .map(
             (item) => HomeAssessment.fromJson(
@@ -124,27 +174,13 @@ class HomeRepository implements HomeGateway {
             ),
           )
           .where((item) => item.id.isNotEmpty)
-          .where((item) => item.due?.isActionable ?? false)
-          .toList();
-
-      mapped.sort((a, b) {
-        final rankA = _urgencyRank(a.due?.urgency);
-        final rankB = _urgencyRank(b.due?.urgency);
-        if (rankA != rankB) return rankA.compareTo(rankB);
-        final da = a.deadlineAt;
-        final db = b.deadlineAt;
-        if (da == null && db == null) return 0;
-        if (da == null) return 1;
-        if (db == null) return -1;
-        return da.compareTo(db);
-      });
-      return mapped.take(5).toList(growable: false);
+          .toList(growable: false);
     } catch (_) {
       return const [];
     }
   }
 
-  Future<HomeLecture?> _loadNextLecture(
+  Future<List<HomeLecture>> _loadLectures(
     SessionContext session,
     String studentProfileId,
   ) async {
@@ -159,9 +195,8 @@ class HomeRepository implements HomeGateway {
         organizationId: session.organizationId,
       );
       final data = envelope['data'];
-      if (data is! List) return null;
-
-      final lectures = data
+      if (data is! List) return const [];
+      return data
           .whereType<Map>()
           .map(
             (item) => HomeLecture.fromJson(
@@ -169,29 +204,41 @@ class HomeRepository implements HomeGateway {
             ),
           )
           .where((item) => item.id.isNotEmpty)
-          .toList();
-
-      final live = lectures.where((l) => l.sessionStatus == 'live').toList();
-      if (live.isNotEmpty) return live.first;
-
-      final waiting =
-          lectures.where((l) => l.sessionStatus == 'waiting').toList();
-      if (waiting.isNotEmpty) return waiting.first;
-
-      final upcoming = lectures
-          .where((l) => l.startsAt != null)
-          .toList()
-        ..sort((a, b) => a.startsAt!.compareTo(b.startsAt!));
-      final now = DateTime.now();
-      for (final lecture in upcoming) {
-        if (!lecture.startsAt!.isBefore(now.subtract(const Duration(hours: 1)))) {
-          return lecture;
-        }
-      }
-      return upcoming.isEmpty ? null : upcoming.first;
+          .toList(growable: false);
     } catch (_) {
-      return null;
+      return const [];
     }
+  }
+
+  static HomeLecture? _pickNextLecture(List<HomeLecture> lectures) {
+    final live = lectures.where((l) => l.sessionStatus == 'live').toList();
+    if (live.isNotEmpty) return live.first;
+
+    final waiting =
+        lectures.where((l) => l.sessionStatus == 'waiting').toList();
+    if (waiting.isNotEmpty) return waiting.first;
+
+    final upcoming = lectures.where((l) => l.startsAt != null).toList()
+      ..sort((a, b) => a.startsAt!.compareTo(b.startsAt!));
+    final now = DateTime.now();
+    for (final lecture in upcoming) {
+      if (!lecture.startsAt!.isBefore(now.subtract(const Duration(hours: 1)))) {
+        return lecture;
+      }
+    }
+    return upcoming.isEmpty ? null : upcoming.first;
+  }
+
+  static int _compareAssessments(HomeAssessment a, HomeAssessment b) {
+    final rankA = _urgencyRank(a.due?.urgency);
+    final rankB = _urgencyRank(b.due?.urgency);
+    if (rankA != rankB) return rankA.compareTo(rankB);
+    final da = a.deadlineAt;
+    final db = b.deadlineAt;
+    if (da == null && db == null) return 0;
+    if (da == null) return 1;
+    if (db == null) return -1;
+    return da.compareTo(db);
   }
 
   static int _urgencyRank(DueUrgency? urgency) {
