@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:student_mobile/app/router/app_router.dart';
-import 'package:student_mobile/app/theme/app_colors.dart';
-import 'package:student_mobile/app/widgets/app_text_field.dart';
-import 'package:student_mobile/app/widgets/primary_button.dart';
+import 'package:student_mobile/core/config/app_config.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/features/auth/data/auth_repository.dart';
 import 'package:student_mobile/features/auth/domain/auth_models.dart';
@@ -23,6 +21,13 @@ class SignInScreen extends StatefulWidget {
 }
 
 class _SignInScreenState extends State<SignInScreen> {
+  static const _ink = Color(0xFF1A2B4C);
+  static const _muted = Color(0xFF7A8499);
+  static const _blue = Color(0xFF4A7DFF);
+  static const _purple = Color(0xFF7C5CFF);
+  static const _fieldBorder = Color(0xFFE4E8F0);
+  static const _cardShadow = Color(0xFF1A2B4C);
+
   late final AuthGateway _auth =
       widget.authRepository ?? AuthRepository();
 
@@ -152,147 +157,855 @@ class _SignInScreenState extends State<SignInScreen> {
     });
   }
 
+  void _onBack() {
+    if (_submitting) return;
+    if (_mfaStep) {
+      _cancelMfa();
+      return;
+    }
+    Navigator.of(context).maybePop();
+  }
+
+  void _showHelp() {
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Need help?'),
+        content: const Text(
+          'Use the email and password from your institute invite. '
+          'If you can’t sign in, tap Forgot password or ask your institute admin.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _googleStub() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Google sign-in will be available in a later build.'),
+      ),
+    );
+  }
+
   static bool _isEmail(String value) {
     return RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(value);
   }
 
   @override
   Widget build(BuildContext context) {
+    final appName = AppConfig.instance.appName;
+
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
       child: Scaffold(
-        backgroundColor: AppColors.background,
-        appBar: AppBar(
-          backgroundColor: AppColors.background,
-          title: Text(_mfaStep ? 'Verify sign-in' : 'Sign in'),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_rounded),
-            onPressed: _submitting
-                ? null
-                : () {
-                    if (_mfaStep) {
-                      _cancelMfa();
-                      return;
-                    }
-                    Navigator.of(context).maybePop();
-                  },
+        backgroundColor: const Color(0xFFF7F8FC),
+        body: DecoratedBox(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Color(0xFFF3F0FF),
+                Color(0xFFF7F8FC),
+                Color(0xFFEEF4FF),
+              ],
+              stops: [0.0, 0.45, 1.0],
+            ),
           ),
-        ),
-        body: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(24, 8, 24, 28),
-            child: AutofillGroup(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    _mfaStep
-                        ? 'Enter the code from your authenticator app.'
-                        : 'Welcome back. Use your student email and password.',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      height: 1.45,
-                      color: AppColors.muted,
-                    ),
-                  ),
-                  const SizedBox(height: 28),
-                  if (_formError != null) ...[
-                    _ErrorBanner(message: _formError!),
-                    const SizedBox(height: 16),
-                  ],
-                  if (_mfaStep) ...[
-                    AppTextField(
-                      controller: _mfaController,
-                      label: 'Authentication code',
-                      hint: '6-digit code',
-                      keyboardType: TextInputType.number,
-                      textInputAction: TextInputAction.done,
-                      enabled: !_submitting,
-                      errorText: _mfaError,
-                      autofillHints: const [AutofillHints.oneTimeCode],
-                      onSubmitted: (_) => _submit(),
-                    ),
-                  ] else ...[
-                    AppTextField(
-                      controller: _emailController,
-                      label: 'Email',
-                      hint: 'you@institute.edu',
-                      keyboardType: TextInputType.emailAddress,
-                      textInputAction: TextInputAction.next,
-                      enabled: !_submitting,
-                      errorText: _emailError,
-                      autofillHints: const [AutofillHints.email],
-                    ),
-                    const SizedBox(height: 16),
-                    AppTextField(
-                      controller: _passwordController,
-                      label: 'Password',
-                      hint: 'Your password',
-                      obscureText: _obscurePassword,
-                      textInputAction: TextInputAction.done,
-                      enabled: !_submitting,
-                      errorText: _passwordError,
-                      autofillHints: const [AutofillHints.password],
-                      onSubmitted: (_) => _submit(),
-                      suffix: IconButton(
-                        onPressed: _submitting
-                            ? null
-                            : () {
-                                setState(
-                                  () => _obscurePassword = !_obscurePassword,
-                                );
-                              },
-                        icon: Icon(
-                          _obscurePassword
-                              ? Icons.visibility_outlined
-                              : Icons.visibility_off_outlined,
-                          color: AppColors.muted,
+          child: SafeArea(
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 4, 12, 0),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        onPressed: _submitting ? null : _onBack,
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                        color: _ink,
+                      ),
+                      const Spacer(),
+                      TextButton(
+                        onPressed: _submitting ? null : _showHelp,
+                        style: TextButton.styleFrom(
+                          foregroundColor: _purple,
+                        ),
+                        child: const Text(
+                          'Need help?',
+                          style: TextStyle(fontWeight: FontWeight.w600),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: _submitting
-                            ? null
-                            : () {
-                                Navigator.of(context)
-                                    .pushNamed(AppRoutes.forgotPassword);
-                              },
-                        child: const Text('Forgot password?'),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    SwitchListTile.adaptive(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text(
-                        'Keep me signed in',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500,
-                          color: AppColors.ink,
-                        ),
-                      ),
-                      value: _rememberMe,
-                      activeThumbColor: AppColors.brand,
-                      onChanged: _submitting
-                          ? null
-                          : (value) => setState(() => _rememberMe = value),
-                    ),
-                  ],
-                  const SizedBox(height: 24),
-                  PrimaryButton(
-                    label: _submitting
-                        ? (_mfaStep ? 'Verifying…' : 'Signing in…')
-                        : (_mfaStep ? 'Verify and continue' : 'Sign in'),
-                    onPressed: _submitting ? null : _submit,
+                    ],
                   ),
-                ],
-              ),
+                ),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+                    child: AutofillGroup(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _Header(
+                            appName: appName,
+                            mfaStep: _mfaStep,
+                          ),
+                          const SizedBox(height: 18),
+                          Container(
+                            padding: const EdgeInsets.fromLTRB(18, 20, 18, 18),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(28),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: _cardShadow.withValues(alpha: 0.08),
+                                  blurRadius: 28,
+                                  offset: const Offset(0, 12),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                if (_formError != null) ...[
+                                  _ErrorBanner(message: _formError!),
+                                  const SizedBox(height: 14),
+                                ],
+                                if (_mfaStep) ...[
+                                  _LabeledField(
+                                    label: 'Authentication code',
+                                    errorText: _mfaError,
+                                    child: TextField(
+                                      controller: _mfaController,
+                                      enabled: !_submitting,
+                                      keyboardType: TextInputType.number,
+                                      textInputAction: TextInputAction.done,
+                                      autofillHints: const [
+                                        AutofillHints.oneTimeCode,
+                                      ],
+                                      onSubmitted: (_) => _submit(),
+                                      decoration: _inputDecoration(
+                                        hint: '6-digit code',
+                                        prefix: Icons.pin_outlined,
+                                      ),
+                                    ),
+                                  ),
+                                ] else ...[
+                                  _LabeledField(
+                                    label: 'Email',
+                                    errorText: _emailError,
+                                    child: TextField(
+                                      controller: _emailController,
+                                      enabled: !_submitting,
+                                      keyboardType: TextInputType.emailAddress,
+                                      textInputAction: TextInputAction.next,
+                                      autofillHints: const [
+                                        AutofillHints.email,
+                                      ],
+                                      decoration: _inputDecoration(
+                                        hint: 'you@institute.edu',
+                                        prefix: Icons.mail_outline_rounded,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 14),
+                                  _LabeledField(
+                                    label: 'Password',
+                                    errorText: _passwordError,
+                                    child: TextField(
+                                      controller: _passwordController,
+                                      enabled: !_submitting,
+                                      obscureText: _obscurePassword,
+                                      textInputAction: TextInputAction.done,
+                                      autofillHints: const [
+                                        AutofillHints.password,
+                                      ],
+                                      onSubmitted: (_) => _submit(),
+                                      decoration: _inputDecoration(
+                                        hint: 'Your password',
+                                        prefix: Icons.lock_outline_rounded,
+                                        suffix: IconButton(
+                                          onPressed: _submitting
+                                              ? null
+                                              : () {
+                                                  setState(
+                                                    () => _obscurePassword =
+                                                        !_obscurePassword,
+                                                  );
+                                                },
+                                          icon: Icon(
+                                            _obscurePassword
+                                                ? Icons.visibility_off_outlined
+                                                : Icons.visibility_outlined,
+                                            color: _muted,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Row(
+                                    children: [
+                                      Switch.adaptive(
+                                        value: _rememberMe,
+                                        activeThumbColor: _blue,
+                                        activeTrackColor:
+                                            _blue.withValues(alpha: 0.45),
+                                        onChanged: _submitting
+                                            ? null
+                                            : (value) => setState(
+                                                  () => _rememberMe = value,
+                                                ),
+                                      ),
+                                      const Text(
+                                        'Keep me signed in',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: _ink,
+                                        ),
+                                      ),
+                                      const Spacer(),
+                                      TextButton(
+                                        onPressed: _submitting
+                                            ? null
+                                            : () {
+                                                Navigator.of(context).pushNamed(
+                                                  AppRoutes.forgotPassword,
+                                                );
+                                              },
+                                        style: TextButton.styleFrom(
+                                          foregroundColor: _purple,
+                                          padding: EdgeInsets.zero,
+                                          minimumSize: Size.zero,
+                                          tapTargetSize:
+                                              MaterialTapTargetSize.shrinkWrap,
+                                        ),
+                                        child: const Text(
+                                          'Forgot password?',
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                                const SizedBox(height: 16),
+                                _GradientSignInButton(
+                                  label: _submitting
+                                      ? (_mfaStep
+                                          ? 'Verifying…'
+                                          : 'Signing in…')
+                                      : (_mfaStep
+                                          ? 'Verify and continue'
+                                          : 'Sign in'),
+                                  showArrow: !_submitting && !_mfaStep,
+                                  onPressed: _submitting ? null : _submit,
+                                ),
+                                if (!_mfaStep) ...[
+                                  const SizedBox(height: 16),
+                                  const _OrDivider(),
+                                  const SizedBox(height: 16),
+                                  _GoogleButton(onPressed: _googleStub),
+                                  const SizedBox(height: 16),
+                                  Center(
+                                    child: Wrap(
+                                      crossAxisAlignment:
+                                          WrapCrossAlignment.center,
+                                      children: [
+                                        Text(
+                                          'New to $appName? ',
+                                          style: const TextStyle(
+                                            fontSize: 13,
+                                            color: _muted,
+                                          ),
+                                        ),
+                                        GestureDetector(
+                                          onTap: _submitting
+                                              ? null
+                                              : () {
+                                                  Navigator.of(context)
+                                                      .pushNamed(
+                                                    AppRoutes
+                                                        .createAccountStub,
+                                                  );
+                                                },
+                                          child: const Text(
+                                            'Create an account',
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w800,
+                                              color: _purple,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                          if (!_mfaStep) ...[
+                            const SizedBox(height: 22),
+                            const _FeatureHighlights(),
+                            const SizedBox(height: 18),
+                            const _FooterMotto(),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  InputDecoration _inputDecoration({
+    required String hint,
+    required IconData prefix,
+    Widget? suffix,
+  }) {
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: const TextStyle(color: Color(0xFFAEB6C5), fontSize: 14),
+      prefixIcon: Icon(prefix, color: _muted, size: 20),
+      suffixIcon: suffix,
+      filled: true,
+      fillColor: const Color(0xFFFAFBFE),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: _fieldBorder),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: _fieldBorder),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: _blue, width: 1.5),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: Color(0xFFC0392B)),
+      ),
+    );
+  }
+}
+
+class _Header extends StatelessWidget {
+  const _Header({
+    required this.appName,
+    required this.mfaStep,
+  });
+
+  final String appName;
+  final bool mfaStep;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const _PragyuMark(size: 30),
+                  const SizedBox(width: 8),
+                  Text(
+                    appName,
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: _SignInScreenState._ink,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Learn  Practice  Improve  Succeed',
+                style: TextStyle(
+                  fontSize: 10,
+                  letterSpacing: 0.8,
+                  color: _SignInScreenState._muted,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 16),
+              if (mfaStep)
+                const Text(
+                  'Verify sign-in',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                    color: _SignInScreenState._ink,
+                    height: 1.15,
+                  ),
+                )
+              else
+                const Text.rich(
+                  TextSpan(
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w800,
+                      height: 1.15,
+                      color: _SignInScreenState._ink,
+                    ),
+                    children: [
+                      TextSpan(text: 'Welcome '),
+                      TextSpan(
+                        text: 'Back!',
+                        style: TextStyle(
+                          color: _SignInScreenState._purple,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              const SizedBox(height: 8),
+              Text(
+                mfaStep
+                    ? 'Enter the code from your authenticator app.'
+                    : 'Sign in to continue your learning journey with $appName.',
+                style: const TextStyle(
+                  fontSize: 13,
+                  height: 1.4,
+                  color: _SignInScreenState._muted,
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (!mfaStep)
+          SizedBox(
+            width: 120,
+            height: 130,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Positioned(
+                  right: 0,
+                  top: 0,
+                  bottom: 0,
+                  child: Image.asset(
+                    'assets/images/sign_in_hero.jpg',
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, error, stackTrace) => const Icon(
+                      Icons.school_rounded,
+                      size: 64,
+                      color: _SignInScreenState._purple,
+                    ),
+                  ),
+                ),
+                const Positioned(
+                  right: -4,
+                  top: 18,
+                  child: Text(
+                    'Better Students\nBrighter Future',
+                    textAlign: TextAlign.right,
+                    style: TextStyle(
+                      fontSize: 9,
+                      height: 1.2,
+                      fontStyle: FontStyle.italic,
+                      color: Color(0xFF9AA3B5),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _LabeledField extends StatelessWidget {
+  const _LabeledField({
+    required this.label,
+    required this.child,
+    this.errorText,
+  });
+
+  final String label;
+  final Widget child;
+  final String? errorText;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: _SignInScreenState._ink,
+          ),
+        ),
+        const SizedBox(height: 8),
+        child,
+        if (errorText != null) ...[
+          const SizedBox(height: 6),
+          Text(
+            errorText!,
+            style: const TextStyle(
+              color: Color(0xFFC0392B),
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _GradientSignInButton extends StatelessWidget {
+  const _GradientSignInButton({
+    required this.label,
+    required this.onPressed,
+    this.showArrow = true,
+  });
+
+  final String label;
+  final VoidCallback? onPressed;
+  final bool showArrow;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onPressed != null;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(26),
+        child: Ink(
+          height: 52,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(26),
+            gradient: LinearGradient(
+              colors: enabled
+                  ? const [
+                      _SignInScreenState._purple,
+                      _SignInScreenState._blue,
+                    ]
+                  : const [
+                      Color(0xFFB8B4D8),
+                      Color(0xFFA8B8E0),
+                    ],
+            ),
+            boxShadow: enabled
+                ? [
+                    BoxShadow(
+                      color:
+                          _SignInScreenState._blue.withValues(alpha: 0.28),
+                      blurRadius: 14,
+                      offset: const Offset(0, 8),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              if (showArrow) ...[
+                const SizedBox(width: 8),
+                const Icon(
+                  Icons.arrow_forward_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _OrDivider extends StatelessWidget {
+  const _OrDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Row(
+      children: [
+        Expanded(child: Divider(color: Color(0xFFE6EAF2))),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: 12),
+          child: Text(
+            'OR',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFFA0A8B8),
+            ),
+          ),
+        ),
+        Expanded(child: Divider(color: Color(0xFFE6EAF2))),
+      ],
+    );
+  }
+}
+
+class _GoogleButton extends StatelessWidget {
+  const _GoogleButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 50,
+      child: OutlinedButton(
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: _SignInScreenState._ink,
+          side: const BorderSide(color: Color(0xFFE4E8F0)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(26),
+          ),
+          backgroundColor: Colors.white,
+        ),
+        child: const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _GoogleG(),
+            SizedBox(width: 10),
+            Text(
+              'Continue with Google',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GoogleG extends StatelessWidget {
+  const _GoogleG();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 18,
+      height: 18,
+      child: CustomPaint(painter: _GoogleGPainter()),
+    );
+  }
+}
+
+class _GoogleGPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final stroke = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = size.width * 0.18
+      ..strokeCap = StrokeCap.butt;
+    final rect = Rect.fromLTWH(
+      size.width * 0.08,
+      size.height * 0.08,
+      size.width * 0.84,
+      size.height * 0.84,
+    );
+    stroke.color = const Color(0xFF4285F4);
+    canvas.drawArc(rect, -0.4, 1.6, false, stroke);
+    stroke.color = const Color(0xFF34A853);
+    canvas.drawArc(rect, 1.2, 1.2, false, stroke);
+    stroke.color = const Color(0xFFFBBC05);
+    canvas.drawArc(rect, 2.4, 0.9, false, stroke);
+    stroke.color = const Color(0xFFEA4335);
+    canvas.drawArc(rect, 3.3, 1.1, false, stroke);
+    final bar = Paint()..color = const Color(0xFF4285F4);
+    canvas.drawRect(
+      Rect.fromLTWH(
+        size.width * 0.48,
+        size.height * 0.42,
+        size.width * 0.44,
+        size.height * 0.16,
+      ),
+      bar,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _FeatureHighlights extends StatelessWidget {
+  const _FeatureHighlights();
+
+  @override
+  Widget build(BuildContext context) {
+    Widget item({
+      required Color bg,
+      required Color iconColor,
+      required IconData icon,
+      required String label,
+    }) {
+      return Expanded(
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(8, 12, 8, 12),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.85),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE8ECF5)),
+          ),
+          child: Column(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: bg,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, size: 18, color: iconColor),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 11,
+                  height: 1.25,
+                  fontWeight: FontWeight.w700,
+                  color: _SignInScreenState._ink,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Row(
+      children: [
+        item(
+          bg: const Color(0xFFE8F0FF),
+          iconColor: _SignInScreenState._blue,
+          icon: Icons.menu_book_rounded,
+          label: 'Learn\nAnywhere',
+        ),
+        const SizedBox(width: 8),
+        item(
+          bg: const Color(0xFFF0EBFF),
+          iconColor: _SignInScreenState._purple,
+          icon: Icons.bar_chart_rounded,
+          label: 'Track Your\nProgress',
+        ),
+        const SizedBox(width: 8),
+        item(
+          bg: const Color(0xFFE8F8EF),
+          iconColor: const Color(0xFF1F8A5B),
+          icon: Icons.school_rounded,
+          label: 'Achieve Your\nGoals',
+        ),
+      ],
+    );
+  }
+}
+
+class _FooterMotto extends StatelessWidget {
+  const _FooterMotto();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Row(
+      children: [
+        Expanded(child: Divider(color: Color(0xFFD8DEEA))),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: 10),
+          child: Text(
+            'TOGETHER FOR A SMARTER FUTURE',
+            style: TextStyle(
+              fontSize: 9,
+              letterSpacing: 0.6,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFFA0A8B8),
+            ),
+          ),
+        ),
+        Expanded(child: Divider(color: Color(0xFFD8DEEA))),
+      ],
+    );
+  }
+}
+
+class _PragyuMark extends StatelessWidget {
+  const _PragyuMark({required this.size});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned(
+            left: 2,
+            top: 5,
+            child: ShaderMask(
+              shaderCallback: (bounds) => const LinearGradient(
+                colors: [
+                  _SignInScreenState._blue,
+                  _SignInScreenState._purple,
+                ],
+              ).createShader(bounds),
+              child: Text(
+                'P',
+                style: TextStyle(
+                  fontSize: size * 0.78,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white,
+                  height: 1,
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 0,
+            top: -2,
+            child: Icon(
+              Icons.school_rounded,
+              size: size * 0.38,
+              color: _SignInScreenState._ink,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -307,18 +1020,20 @@ class _ErrorBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: const Color(0xFFFDECEA),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.danger.withValues(alpha: 0.25)),
+        border: Border.all(
+          color: const Color(0xFFC0392B).withValues(alpha: 0.25),
+        ),
       ),
       child: Text(
         message,
         style: const TextStyle(
-          color: AppColors.danger,
+          color: Color(0xFFC0392B),
           height: 1.4,
-          fontSize: 14,
+          fontSize: 13,
         ),
       ),
     );

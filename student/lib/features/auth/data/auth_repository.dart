@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:student_mobile/core/network/api_client.dart';
-import 'package:student_mobile/features/auth/data/secure_token_store.dart';
+import 'package:student_mobile/core/storage/platform_stores.dart';
 import 'package:student_mobile/features/auth/data/token_store.dart';
 import 'package:student_mobile/features/auth/domain/auth_models.dart';
 
@@ -28,7 +28,7 @@ class AuthRepository implements AuthGateway {
     ApiClient? apiClient,
     TokenStore? tokenStore,
   })  : _api = apiClient ?? ApiClient(),
-        _tokens = tokenStore ?? SecureTokenStore();
+        _tokens = tokenStore ?? createTokenStore();
 
   static const deviceName = 'pragyu-student-mobile';
 

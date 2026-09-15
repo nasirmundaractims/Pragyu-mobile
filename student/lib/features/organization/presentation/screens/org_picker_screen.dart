@@ -65,12 +65,17 @@ class _OrgPickerScreenState extends State<OrgPickerScreen> {
         _error = error.message;
         _loading = false;
       });
-    } catch (_) {
+    } catch (error) {
       if (!mounted) return;
       setState(() {
         _error = 'Unable to load institutes. Pull to retry.';
         _loading = false;
       });
+      assert(() {
+        // ignore: avoid_print
+        print('org_picker load failed: $error');
+        return true;
+      }());
     }
   }
 

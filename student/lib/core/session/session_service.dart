@@ -1,9 +1,8 @@
 import 'dart:convert';
 
-import 'package:student_mobile/features/auth/data/secure_token_store.dart';
+import 'package:student_mobile/core/storage/platform_stores.dart';
 import 'package:student_mobile/features/auth/data/token_store.dart';
 import 'package:student_mobile/features/auth/domain/auth_models.dart';
-import 'package:student_mobile/features/organization/data/secure_tenant_store.dart';
 import 'package:student_mobile/features/organization/data/tenant_store.dart';
 
 class SessionContext {
@@ -22,8 +21,8 @@ class SessionService {
   SessionService({
     TokenStore? tokenStore,
     TenantStore? tenantStore,
-  })  : _tokens = tokenStore ?? SecureTokenStore(),
-        _tenant = tenantStore ?? SecureTenantStore();
+  })  : _tokens = tokenStore ?? createTokenStore(),
+        _tenant = tenantStore ?? createTenantStore();
 
   final TokenStore _tokens;
   final TenantStore _tenant;

@@ -18,11 +18,10 @@ class SecureTokenStore implements TokenStore {
     required String refreshToken,
     required String userJson,
   }) async {
-    await Future.wait([
-      _storage.write(key: _accessKey, value: accessToken),
-      _storage.write(key: _refreshKey, value: refreshToken),
-      _storage.write(key: _userKey, value: userJson),
-    ]);
+    // Sequential writes avoid web AES-key race when this store is used.
+    await _storage.write(key: _accessKey, value: accessToken);
+    await _storage.write(key: _refreshKey, value: refreshToken);
+    await _storage.write(key: _userKey, value: userJson);
   }
 
   @override
@@ -36,10 +35,8 @@ class SecureTokenStore implements TokenStore {
 
   @override
   Future<void> clear() async {
-    await Future.wait([
-      _storage.delete(key: _accessKey),
-      _storage.delete(key: _refreshKey),
-      _storage.delete(key: _userKey),
-    ]);
+    await _storage.delete(key: _accessKey);
+    await _storage.delete(key: _refreshKey);
+    await _storage.delete(key: _userKey);
   }
 }

@@ -108,7 +108,8 @@ void main() {
       ),
     );
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Sign in'));
+    await tester.ensureVisible(find.text('Sign in'));
+    await tester.tap(find.text('Sign in'));
     await tester.pump();
 
     expect(find.text('Enter your email'), findsOneWidget);
@@ -128,7 +129,8 @@ void main() {
 
     await tester.enterText(_emailField(), 'student@example.com');
     await tester.enterText(_passwordField(), 'Password1!');
-    await tester.tap(find.widgetWithText(FilledButton, 'Sign in'));
+    await tester.ensureVisible(find.text('Sign in'));
+    await tester.tap(find.text('Sign in'));
     await tester.pumpAndSettle();
 
     expect(auth.loginCalls, 1);
@@ -153,7 +155,8 @@ void main() {
 
     await tester.enterText(_emailField(), 'student@example.com');
     await tester.enterText(_passwordField(), 'bad-password');
-    await tester.tap(find.widgetWithText(FilledButton, 'Sign in'));
+    await tester.ensureVisible(find.text('Sign in'));
+    await tester.tap(find.text('Sign in'));
     await tester.pumpAndSettle();
 
     expect(

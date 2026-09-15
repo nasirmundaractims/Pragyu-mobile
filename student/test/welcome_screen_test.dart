@@ -22,16 +22,20 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Pragyu'), findsOneWidget);
+    expect(find.textContaining('Your Learning'), findsOneWidget);
+    expect(find.text('Smarter'), findsOneWidget);
+    expect(find.text('Get Started'), findsOneWidget);
+    expect(find.text('I already have an account'), findsOneWidget);
+    expect(find.text('Skip'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('I already have an account'));
+    await tester.tap(find.text('I already have an account'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 800));
+    expect(find.text('Sign in'), findsWidgets);
     expect(
-      find.textContaining('Your classes, tests, and learning'),
+      find.textContaining('Welcome'),
       findsOneWidget,
     );
-    expect(find.text('Sign in'), findsOneWidget);
-    expect(find.text('Create account'), findsOneWidget);
-
-    await tester.tap(find.text('Sign in'));
-    await tester.pumpAndSettle();
-    expect(find.text('Welcome back. Use your student email and password.'),
-        findsOneWidget);
   });
 }

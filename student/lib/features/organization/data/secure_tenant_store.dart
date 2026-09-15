@@ -18,11 +18,13 @@ class SecureTenantStore implements TenantStore {
     String? name,
     String? type,
   }) async {
-    await Future.wait([
-      _storage.write(key: _idKey, value: id),
-      if (name != null) _storage.write(key: _nameKey, value: name),
-      if (type != null) _storage.write(key: _typeKey, value: type),
-    ]);
+    await _storage.write(key: _idKey, value: id);
+    if (name != null) {
+      await _storage.write(key: _nameKey, value: name);
+    }
+    if (type != null) {
+      await _storage.write(key: _typeKey, value: type);
+    }
   }
 
   @override
@@ -33,10 +35,8 @@ class SecureTenantStore implements TenantStore {
 
   @override
   Future<void> clear() async {
-    await Future.wait([
-      _storage.delete(key: _idKey),
-      _storage.delete(key: _nameKey),
-      _storage.delete(key: _typeKey),
-    ]);
+    await _storage.delete(key: _idKey);
+    await _storage.delete(key: _nameKey);
+    await _storage.delete(key: _typeKey);
   }
 }

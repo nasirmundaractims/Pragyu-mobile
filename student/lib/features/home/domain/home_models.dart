@@ -77,12 +77,59 @@ class HomeSnapshot {
     this.nextLecture,
     this.dueAssessments = const [],
     this.unreadCount = 0,
+    this.continueLearning,
+    this.progress,
+    this.upcomingLectures,
   });
 
   final AuthUser user;
   final HomeLecture? nextLecture;
-  final List<HomeAssessment> dueAssessments;
+  final List<HomeAssessment>? dueAssessments;
   final int unreadCount;
+  final HomeContinueItem? continueLearning;
+  final HomeProgressSummary? progress;
+  final List<HomeLecture>? upcomingLectures;
+
+  HomeProgressSummary get progressOrEmpty =>
+      progress ?? const HomeProgressSummary();
+
+  List<HomeAssessment> get dueAssessmentsOrEmpty =>
+      dueAssessments ?? const [];
+
+  List<HomeLecture> get upcomingLecturesOrEmpty =>
+      upcomingLectures ?? const [];
+}
+
+class HomeContinueItem {
+  const HomeContinueItem({
+    required this.courseId,
+    required this.title,
+    this.lessonId,
+    this.lessonTitle,
+    this.subjectTag,
+    this.progressPercent = 0,
+  });
+
+  final String courseId;
+  final String title;
+  final String? lessonId;
+  final String? lessonTitle;
+  final String? subjectTag;
+  final int progressPercent;
+}
+
+class HomeProgressSummary {
+  const HomeProgressSummary({
+    this.overallPercent = 0,
+    this.coursesEnrolled = 0,
+    this.testsAttempted = 0,
+    this.averageScorePercent,
+  });
+
+  final int overallPercent;
+  final int coursesEnrolled;
+  final int testsAttempted;
+  final int? averageScorePercent;
 }
 
 class TodaySnapshot {

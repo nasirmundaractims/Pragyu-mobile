@@ -1,7 +1,7 @@
 import 'package:student_mobile/core/network/api_client.dart';
-import 'package:student_mobile/features/auth/data/secure_token_store.dart';
+import 'package:student_mobile/core/network/api_exception.dart';
+import 'package:student_mobile/core/storage/platform_stores.dart';
 import 'package:student_mobile/features/auth/data/token_store.dart';
-import 'package:student_mobile/features/organization/data/secure_tenant_store.dart';
 import 'package:student_mobile/features/organization/data/tenant_store.dart';
 import 'package:student_mobile/features/organization/domain/organization_summary.dart';
 
@@ -17,8 +17,8 @@ class OrganizationRepository implements OrganizationGateway {
     TokenStore? tokenStore,
     TenantStore? tenantStore,
   })  : _api = apiClient ?? ApiClient(),
-        _tokens = tokenStore ?? SecureTokenStore(),
-        _tenant = tenantStore ?? SecureTenantStore();
+        _tokens = tokenStore ?? createTokenStore(),
+        _tenant = tenantStore ?? createTenantStore();
 
   final ApiClient _api;
   final TokenStore _tokens;
@@ -28,7 +28,11 @@ class OrganizationRepository implements OrganizationGateway {
   Future<List<OrganizationSummary>> listOrganizations() async {
     final accessToken = await _tokens.readAccessToken();
     if (accessToken == null || accessToken.isEmpty) {
-      throw StateError('Signed-in session required to load organizations.');
+      throw ApiException(
+        message: 'Your session expired. Sign in again.',
+        statusCode: 401,
+        code: 'AUTH_SESSION_MISSING',
+      );
     }
 
     final envelope = await _api.get(

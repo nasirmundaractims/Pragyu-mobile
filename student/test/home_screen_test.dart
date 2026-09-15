@@ -33,9 +33,11 @@ void main() {
     await AppConfig.load();
   });
 
-  testWidgets('S-10 home shows greeting, due tests, unread, shortcuts', (
+  testWidgets('S-10 home shows greeting, schedule, progress, shortcuts', (
     tester,
   ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     final fake = _FakeHome(
       home: HomeSnapshot(
         user: const AuthUser(
@@ -60,6 +62,24 @@ void main() {
           ),
         ],
         unreadCount: 3,
+        continueLearning: const HomeContinueItem(
+          courseId: 'c1',
+          title: 'Indian Constitution and Governance',
+          subjectTag: 'Polity',
+          progressPercent: 60,
+        ),
+        progress: const HomeProgressSummary(
+          overallPercent: 65,
+          coursesEnrolled: 12,
+          testsAttempted: 28,
+        ),
+        upcomingLectures: const [
+          HomeLecture(
+            id: 'lec-1',
+            title: 'Live Polity Doubt Session',
+            sessionStatus: 'live',
+          ),
+        ],
       ),
     );
 
@@ -72,14 +92,18 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.textContaining('Alex'), findsOneWidget);
+    expect(find.text('Continue Learning'), findsWidgets);
+    expect(find.text('Indian Constitution and Governance'), findsOneWidget);
     expect(find.text('Live Polity Doubt Session'), findsOneWidget);
     expect(find.text('Weekly Quiz 3'), findsOneWidget);
-    expect(find.textContaining('Unread alerts'), findsOneWidget);
-    expect(find.text('Shortcuts'), findsOneWidget);
-    expect(find.text('See today’s schedule'), findsOneWidget);
+    expect(find.text('My Courses'), findsOneWidget);
+    expect(find.text('My Progress'), findsWidgets);
+    expect(find.textContaining('3'), findsWidgets);
   });
 
-  testWidgets('S-10 empty due tests message', (tester) async {
+  testWidgets('S-10 empty schedule message', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light(),
@@ -94,11 +118,15 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('No upcoming tests right now.'), findsOneWidget);
-    expect(find.textContaining('Unread alerts'), findsNothing);
+    expect(
+      find.text('No upcoming classes or tests right now.'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('S-10 opens S-11 today detail', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     final fake = _FakeHome(
       home: const HomeSnapshot(
         user: AuthUser(id: '1', email: 'a@b.com', firstName: 'Alex'),
@@ -142,7 +170,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('See today’s schedule'));
+    await tester.ensureVisible(find.text('Upcoming Schedule'));
+    await tester.tap(find.text('View All →').at(1));
     await tester.pumpAndSettle();
 
     expect(find.text('Classes'), findsOneWidget);

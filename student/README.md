@@ -14,10 +14,11 @@ Flutter app for Pragyu students (Android + iOS). Lives in the **Pragyu-Mobile** 
 
 ## 0. One-time environment (this Linux machine)
 
-```bash
-# Load JDK 17 + Android SDK + Flutter into PATH
-source ~/development/pragyu-mobile-env.sh
+Flutter is installed at `~/development/flutter`, but it is **not** on PATH until you load the env script (also auto-loaded from `~/.bashrc` in new terminals):
 
+```bash
+source ~/development/pragyu-mobile-env.sh
+which flutter   # should print .../development/flutter/bin/flutter
 flutter doctor -v
 ```
 

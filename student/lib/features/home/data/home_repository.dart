@@ -35,17 +35,29 @@ class HomeRepository implements HomeGateway {
     final lectures = profileId == null
         ? const <HomeLecture>[]
         : await _loadLectures(session, profileId);
+    final courses = await _loadCourses(session);
+    final continueItem = await _loadContinue(session, courses);
 
     final dueAssessments = assessments
         .where((item) => item.due?.isActionable ?? false)
         .toList()
       ..sort(_compareAssessments);
 
+    final overall = _averageProgress(courses);
+    final upcoming = _upcomingLectures(lectures);
+
     return HomeSnapshot(
       user: user,
       nextLecture: _pickNextLecture(lectures),
       dueAssessments: dueAssessments.take(5).toList(growable: false),
       unreadCount: unread,
+      continueLearning: continueItem,
+      progress: HomeProgressSummary(
+        overallPercent: overall,
+        coursesEnrolled: courses.length,
+        testsAttempted: assessments.length,
+      ),
+      upcomingLectures: upcoming,
     );
   }
 
@@ -210,6 +222,108 @@ class HomeRepository implements HomeGateway {
     }
   }
 
+  Future<List<_CourseBrief>> _loadCourses(SessionContext session) async {
+    try {
+      final envelope = await _api.get(
+        '/students/me/account/courses',
+        query: const {'status': 'all'},
+        accessToken: session.accessToken,
+        organizationId: session.organizationId,
+      );
+      final data = envelope['data'];
+      if (data is! List) return const [];
+      return data
+          .whereType<Map>()
+          .map((item) {
+            final map = item.map((k, v) => MapEntry(k.toString(), v));
+            final id = map['course_id']?.toString() ??
+                map['id']?.toString() ??
+                '';
+            if (id.isEmpty) return null;
+            final progressRaw = map['progress_percent'] ??
+                map['completion_percent'] ??
+                (map['progress'] is Map
+                    ? (map['progress'] as Map)['percent']
+                    : null);
+            return _CourseBrief(
+              courseId: id,
+              title: map['course_name']?.toString() ??
+                  map['title']?.toString() ??
+                  'Course',
+              programName: map['program_name']?.toString(),
+              progressPercent: int.tryParse(progressRaw?.toString() ?? '') ?? 0,
+            );
+          })
+          .whereType<_CourseBrief>()
+          .toList(growable: false);
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  Future<HomeContinueItem?> _loadContinue(
+    SessionContext session,
+    List<_CourseBrief> courses,
+  ) async {
+    try {
+      final envelope = await _api.get(
+        '/students/me/learning/continue',
+        accessToken: session.accessToken,
+        organizationId: session.organizationId,
+      );
+      final data = _asMap(envelope['data']);
+      final courseId = data['course_id']?.toString();
+      if (courseId == null || courseId.isEmpty) {
+        return _fallbackContinue(courses);
+      }
+      final match = courses.where((c) => c.courseId == courseId).firstOrNull;
+      return HomeContinueItem(
+        courseId: courseId,
+        title: match?.title ??
+            data['course_name']?.toString() ??
+            'Continue learning',
+        lessonId: data['lesson_id']?.toString(),
+        lessonTitle: data['lesson_title']?.toString(),
+        subjectTag: match?.programName,
+        progressPercent: match?.progressPercent ?? 0,
+      );
+    } catch (_) {
+      return _fallbackContinue(courses);
+    }
+  }
+
+  static HomeContinueItem? _fallbackContinue(List<_CourseBrief> courses) {
+    if (courses.isEmpty) return null;
+    final course = courses.first;
+    return HomeContinueItem(
+      courseId: course.courseId,
+      title: course.title,
+      subjectTag: course.programName,
+      progressPercent: course.progressPercent,
+    );
+  }
+
+  static int _averageProgress(List<_CourseBrief> courses) {
+    if (courses.isEmpty) return 0;
+    final sum = courses.fold<int>(0, (acc, c) => acc + c.progressPercent);
+    return (sum / courses.length).round().clamp(0, 100);
+  }
+
+  static List<HomeLecture> _upcomingLectures(List<HomeLecture> lectures) {
+    final sorted = [...lectures]..sort((a, b) {
+        if (a.isLiveNow != b.isLiveNow) {
+          return a.isLiveNow ? -1 : 1;
+        }
+        final sa = a.startsAt;
+        final sb = b.startsAt;
+        if (sa == null && sb == null) return 0;
+        if (sa == null) return 1;
+        if (sb == null) return -1;
+        return sa.compareTo(sb);
+      });
+    return sorted.take(3).toList(growable: false);
+  }
+
   static HomeLecture? _pickNextLecture(List<HomeLecture> lectures) {
     final live = lectures.where((l) => l.sessionStatus == 'live').toList();
     if (live.isNotEmpty) return live.first;
@@ -264,4 +378,18 @@ class HomeRepository implements HomeGateway {
     }
     return const {};
   }
+}
+
+class _CourseBrief {
+  const _CourseBrief({
+    required this.courseId,
+    required this.title,
+    this.programName,
+    this.progressPercent = 0,
+  });
+
+  final String courseId;
+  final String title;
+  final String? programName;
+  final int progressPercent;
 }
