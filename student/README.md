@@ -2,7 +2,7 @@
 
 Flutter app for Pragyu students (Android + iOS). Lives in the **Pragyu-Mobile** project (`/var/www/html/Pragyu-Mobile/student`), not the website monorepo. Uses the existing Pragyu backend/API.
 
-## Application identity (proposed)
+## Application identity
 
 | Platform | ID |
 | --- | --- |
@@ -10,22 +10,115 @@ Flutter app for Pragyu students (Android + iOS). Lives in the **Pragyu-Mobile** 
 | iOS bundle ID | `com.pragyu.student` |
 | Display name | Pragyu |
 
-## Local toolchain (this machine)
+---
+
+## 0. One-time environment (this Linux machine)
 
 ```bash
+# Load JDK 17 + Android SDK + Flutter into PATH
 source ~/development/pragyu-mobile-env.sh
+
 flutter doctor -v
 ```
 
-## Run (Android)
+Expected: Flutter ✓, Android toolchain ✓.  
+**iOS ✗ on Linux** — needs a Mac (see below).
+
+Installed for this machine:
+
+- Flutter `3.47.x` at `~/development/flutter`
+- JDK 17 at `~/development/jdk/...`
+- Android SDK at `~/Android/Sdk`
+- Emulator AVD: **`Pragyu_API_34`** (Android 14 / Google APIs x86_64)
+
+Optional (faster emulator): add your user to the `kvm` group, then log out/in:
 
 ```bash
-cd /var/www/html/Pragyu-Mobile/student
-flutter pub get
-flutter run            # requires emulator/device
-# or verify compile:
-flutter build apk --debug
+sudo usermod -aG kvm "$USER"
 ```
+
+---
+
+## 1. Backend API (required for sign-in)
+
+The app calls Pragyu at `API_BASE_URL` from `assets/env/.env.development`.
+
+Default for the **Android emulator**:
+
+```text
+API_BASE_URL=http://10.0.2.2:8000/api/v1
+```
+
+(`10.0.2.2` is the emulator’s alias for the host machine’s localhost.)
+
+Start the Laravel API on the host (example):
+
+```bash
+cd /var/www/html/Pragyu
+php artisan serve --host=0.0.0.0 --port=8000
+```
+
+**Physical Android phone on the same Wi‑Fi:** set `API_BASE_URL` to your PC’s LAN IP, e.g. `http://192.168.1.20:8000/api/v1`, then `flutter pub get` is not required for env assets (they are bundled as assets — rebuild/run after editing).
+
+---
+
+## 2. Run on Android (emulator)
+
+```bash
+source ~/development/pragyu-mobile-env.sh
+cd /var/www/html/Pragyu-Mobile/student
+
+flutter pub get
+
+# Start the AVD (first boot can take a few minutes)
+flutter emulators --launch Pragyu_API_34
+# wait until `flutter devices` shows an android emulator
+
+flutter devices
+flutter run -d emulator-5554   # or the device id shown
+```
+
+Useful alternatives:
+
+```bash
+# Build only (no device)
+flutter build apk --debug
+# APK: build/app/outputs/flutter-apk/app-debug.apk
+
+# Install on a USB phone (enable Developer options → USB debugging)
+flutter devices
+flutter run -d <device_id>
+```
+
+---
+
+## 3. Run on iOS (macOS only)
+
+This workspace is **Linux**, so iOS Simulator / Xcode builds **cannot** run here. On a Mac:
+
+1. Install **Xcode** (App Store) + open once to accept license.
+2. Install CocoaPods: `sudo gem install cocoapods` (or Homebrew `brew install cocoapods`).
+3. Install Flutter and put it on `PATH` (same project via git/rsync).
+4. Then:
+
+```bash
+cd /path/to/Pragyu-Mobile/student
+flutter pub get
+cd ios && pod install && cd ..
+open -a Simulator
+flutter devices
+flutter run -d ios
+```
+
+Local API from the iOS Simulator usually uses the Mac’s localhost:
+
+```bash
+flutter run -d ios --dart-define=API_BASE_URL=http://127.0.0.1:8000/api/v1
+```
+
+`Info.plist` already allows local networking (`NSAllowsLocalNetworking`) for HTTP to a local API.
+
+---
 
 ## Environments
 
@@ -81,6 +174,12 @@ lib/
 - **S-30 Calendar** — implemented (14-day agenda: live classes + test deadlines)
 - **S-40 / S-50 / S-70** — tab placeholders only
 
-## iOS note
+## Troubleshooting
 
-iOS project files are generated. Local simulator/build requires **macOS + Xcode**. On Linux, iOS verification is blocked by platform.
+| Issue | Fix |
+| --- | --- |
+| `No space left on device` | Free disk (Gradle/Flutter caches under `~/.gradle`, `student/build`). Aim for **≥5 GB** free before `flutter build` / emulator. |
+| Emulator slow / won’t start | Ensure KVM: `ls -l /dev/kvm`, then `sudo usermod -aG kvm $USER` and re-login. |
+| API calls fail on emulator | Confirm API on `:8000` and `API_BASE_URL=http://10.0.2.2:8000/api/v1`. |
+| Cleartext / network blocked | Android manifest allows cleartext for local hosts; rebuild after env changes. |
+| Multiple `adb` warnings | Prefer SDK adb: `source ~/development/pragyu-mobile-env.sh` (uses `~/Android/Sdk/platform-tools`). |
