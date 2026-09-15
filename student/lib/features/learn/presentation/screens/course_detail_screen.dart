@@ -6,6 +6,7 @@ import 'package:student_mobile/app/theme/app_colors.dart';
 import 'package:student_mobile/features/learn/data/learn_repository.dart';
 import 'package:student_mobile/features/learn/domain/learn_models.dart';
 import 'package:student_mobile/features/lectures/domain/lecture_models.dart';
+import 'package:student_mobile/features/materials/domain/material_models.dart';
 
 /// S-21 Course detail — modules, progress, Continue CTA.
 class CourseDetailScreen extends StatefulWidget {
@@ -162,34 +163,60 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
           ),
         ],
         const SizedBox(height: 12),
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton.icon(
-            onPressed: () {
-              Navigator.of(context).pushNamed(
-                AppRoutes.lecturesList,
-                arguments: LecturesListArgs(
-                  courseId: snapshot.courseId,
-                  courseTitle: snapshot.displayTitle,
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).pushNamed(
+                    AppRoutes.lecturesList,
+                    arguments: LecturesListArgs(
+                      courseId: snapshot.courseId,
+                      courseTitle: snapshot.displayTitle,
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.sensors_rounded),
+                label: const Text('Lectures'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.brand,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  side: const BorderSide(color: AppColors.brandSoft),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
-              );
-            },
-            icon: const Icon(Icons.sensors_rounded),
-            label: const Text('Lectures'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.brand,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              side: const BorderSide(color: AppColors.brandSoft),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
               ),
             ),
-          ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).pushNamed(
+                    AppRoutes.studyMaterials,
+                    arguments: StudyMaterialsListArgs(
+                      courseId: snapshot.courseId,
+                      courseTitle: snapshot.displayTitle,
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.menu_book_rounded),
+                label: const Text('Materials'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.brand,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  side: const BorderSide(color: AppColors.brandSoft),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 22),
         const Text(
-          'Modules',
-          style: TextStyle(
+          'Modules',          style: TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w700,
             color: AppColors.ink,

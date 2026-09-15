@@ -102,6 +102,7 @@ void main() {
     expect(find.text('2/5 lessons'), findsOneWidget);
     expect(find.textContaining('Continue: Preamble'), findsOneWidget);
     expect(find.text('Lectures'), findsOneWidget);
+    expect(find.text('Materials'), findsOneWidget);
     expect(find.text('Modules'), findsOneWidget);
     expect(find.text('Polity Basics'), findsOneWidget);
     expect(find.text('Constitution'), findsOneWidget);
