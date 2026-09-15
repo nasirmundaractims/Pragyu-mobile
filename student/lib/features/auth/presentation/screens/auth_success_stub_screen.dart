@@ -28,8 +28,7 @@ class AuthSuccessStubScreen extends StatelessWidget {
               SizedBox(height: 10),
               Text(
                 'S-03 Sign in is complete. Session tokens are stored securely.\n\n'
-                'Next up: S-05 Organization / institute picker '
-                '(S-04 Forgot password is a separate entry from Sign in).',
+                'Next up: S-05 Organization / institute picker.',
                 style: TextStyle(
                   fontSize: 15,
                   height: 1.45,

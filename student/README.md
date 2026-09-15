@@ -60,7 +60,7 @@ lib/
 - **S-01 Splash** — implemented
 - **S-02 Welcome** — implemented
 - **S-03 Sign in** — implemented (`POST /auth/login`, MFA step, secure tokens)
-- **S-04 Forgot password** — stub only (link from Sign in)
+- **S-04 Forgot password** — implemented (`POST /auth/forgot-password`)
 - **S-05 Org picker** — not started (success lands on temporary stub)
 
 ## iOS note

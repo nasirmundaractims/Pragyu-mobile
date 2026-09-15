@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
 
 import '../../features/auth/presentation/screens/auth_success_stub_screen.dart';
+import '../../features/auth/presentation/screens/forgot_password_screen.dart';
 import '../../features/auth/presentation/screens/sign_in_screen.dart';
 import '../../features/splash/presentation/screens/splash_screen.dart';
 import '../../features/welcome/presentation/screens/auth_flow_stub_screen.dart';
 import '../../features/welcome/presentation/screens/welcome_screen.dart';
 
-/// Central route names. S-04 Forgot password is stubbed only.
+/// Central route names. S-05 Org picker is not implemented yet.
 abstract final class AppRoutes {
   static const splash = '/';
   static const welcome = '/welcome';
   static const signIn = '/sign-in';
+  static const forgotPassword = '/forgot-password';
   static const createAccountStub = '/create-account-stub';
-  static const forgotPasswordStub = '/forgot-password-stub';
   static const authSuccessStub = '/auth-success-stub';
 }
 
@@ -33,20 +34,17 @@ Route<dynamic> onGenerateRoute(RouteSettings settings) {
         settings: settings,
         builder: (_) => const SignInScreen(),
       );
+    case AppRoutes.forgotPassword:
+      return MaterialPageRoute<void>(
+        settings: settings,
+        builder: (_) => const ForgotPasswordScreen(),
+      );
     case AppRoutes.createAccountStub:
       return MaterialPageRoute<void>(
         settings: settings,
         builder: (_) => const AuthFlowStubScreen(
           title: 'Create account',
           nextScreenId: 'Create account',
-        ),
-      );
-    case AppRoutes.forgotPasswordStub:
-      return MaterialPageRoute<void>(
-        settings: settings,
-        builder: (_) => const AuthFlowStubScreen(
-          title: 'Forgot password',
-          nextScreenId: 'S-04',
         ),
       );
     case AppRoutes.authSuccessStub:

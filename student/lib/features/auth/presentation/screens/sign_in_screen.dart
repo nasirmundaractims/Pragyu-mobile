@@ -258,7 +258,7 @@ class _SignInScreenState extends State<SignInScreen> {
                             ? null
                             : () {
                                 Navigator.of(context)
-                                    .pushNamed(AppRoutes.forgotPasswordStub);
+                                    .pushNamed(AppRoutes.forgotPassword);
                               },
                         child: const Text('Forgot password?'),
                       ),

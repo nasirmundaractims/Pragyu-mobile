@@ -17,6 +17,9 @@ abstract class AuthGateway {
     required String code,
   });
 
+  /// Requests a reset email. API always succeeds (no account enumeration).
+  Future<void> forgotPassword({required String email});
+
   Future<void> clearSession();
 }
 
@@ -79,6 +82,14 @@ class AuthRepository implements AuthGateway {
     final session = _sessionFromData(data);
     await _persist(session);
     return session;
+  }
+
+  @override
+  Future<void> forgotPassword({required String email}) async {
+    await _api.post(
+      '/auth/forgot-password',
+      body: {'email': email.trim()},
+    );
   }
 
   @override

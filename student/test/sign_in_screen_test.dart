@@ -43,6 +43,9 @@ class _FakeAuth implements AuthGateway {
   }
 
   @override
+  Future<void> forgotPassword({required String email}) async {}
+
+  @override
   Future<void> clearSession() async {}
 }
 
@@ -118,7 +121,7 @@ void main() {
     );
   });
 
-  testWidgets('S-03 forgot password opens S-04 stub', (tester) async {
+  testWidgets('S-03 forgot password opens S-04', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light(),
@@ -129,6 +132,6 @@ void main() {
 
     await tester.tap(find.text('Forgot password?'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('S-04 is next'), findsOneWidget);
+    expect(find.text('Send reset link'), findsOneWidget);
   });
 }
