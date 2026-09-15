@@ -61,10 +61,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   void _goHome({required bool replace}) {
     if (replace) {
-      Navigator.of(context).pushReplacementNamed(AppRoutes.homeStub);
+      Navigator.of(context).pushReplacementNamed(AppRoutes.home);
     } else {
       Navigator.of(context).pushNamedAndRemoveUntil(
-        AppRoutes.homeStub,
+        AppRoutes.home,
         (route) => false,
       );
     }

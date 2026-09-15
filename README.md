@@ -8,7 +8,7 @@ Apps talk to the Pragyu backend only via HTTP API (`API_BASE_URL`).
 
 ```text
 Pragyu-Mobile/
-  student/     # Student app (Android + iOS) — S-01…S-06 done
+  student/     # Student app — auth + S-10 Home done
   faculty/     # (planned)
   parent/      # (planned)
 ```

@@ -47,25 +47,22 @@ Never commit production secrets.
 
 ```text
 lib/
-  app/           # bootstrap, theme, router, shared widgets
-  core/          # config, network
+  app/           # bootstrap, theme, router, shell
+  core/          # config, network, session
   features/
     splash/      # S-01
     welcome/     # S-02
-    auth/        # S-03 Sign in, S-04 Forgot password
-    organization/# S-05 Org picker + tenant storage
-    onboarding/  # S-06 tips (once)
+    auth/        # S-03 / S-04
+    organization/# S-05
+    onboarding/  # S-06
+    home/        # S-10
 ```
 
 ## Screens status
 
-- **S-01 Splash** — implemented
-- **S-02 Welcome** — implemented
-- **S-03 Sign in** — implemented (`POST /auth/login`, MFA step, secure tokens)
-- **S-04 Forgot password** — implemented (`POST /auth/forgot-password`)
-- **S-05 Org picker** — implemented (`GET /organizations`, stores `X-Organization-Id`)
-- **S-06 Onboarding tips** — implemented (Learn / Tests / Alerts, once)
-- **S-10 Home** — not started (post-onboarding stub)
+- **S-01…S-06** — auth entry complete
+- **S-10 Home** — implemented (greeting, live/next class, due tests, unread strip, shortcuts + bottom tabs)
+- **S-20 / S-40 / S-50 / S-70** — tab placeholders only
 
 ## iOS note
 
