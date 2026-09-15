@@ -7,6 +7,9 @@ import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/features/auth/data/auth_repository.dart';
 import 'package:student_mobile/features/auth/domain/auth_models.dart';
 import 'package:student_mobile/features/auth/presentation/screens/sign_in_screen.dart';
+import 'package:student_mobile/features/organization/data/organization_repository.dart';
+import 'package:student_mobile/features/organization/domain/organization_summary.dart';
+import 'package:student_mobile/features/organization/presentation/screens/org_picker_screen.dart';
 
 class _FakeAuth implements AuthGateway {
   _FakeAuth({this.loginError});
@@ -49,8 +52,45 @@ class _FakeAuth implements AuthGateway {
   Future<void> clearSession() async {}
 }
 
+class _FakeOrgs implements OrganizationGateway {
+  @override
+  Future<List<OrganizationSummary>> listOrganizations() async {
+    return const [
+      OrganizationSummary(
+        id: 'org-1',
+        name: 'Acme Institute',
+        type: 'institute',
+      ),
+      OrganizationSummary(
+        id: 'org-2',
+        name: 'Beta College',
+        type: 'institute',
+      ),
+    ];
+  }
+
+  @override
+  Future<void> selectOrganization(OrganizationSummary organization) async {}
+
+  @override
+  Future<String?> readActiveOrganizationId() async => null;
+}
+
 Finder _emailField() => find.byType(TextField).at(0);
 Finder _passwordField() => find.byType(TextField).at(1);
+
+Route<dynamic> _testRoutes(RouteSettings settings) {
+  if (settings.name == AppRoutes.orgPicker) {
+    return MaterialPageRoute<void>(
+      settings: settings,
+      builder: (_) => OrgPickerScreen(
+        organizationRepository: _FakeOrgs(),
+        autoSelectSingle: false,
+      ),
+    );
+  }
+  return onGenerateRoute(settings);
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -76,12 +116,12 @@ void main() {
     expect(auth.loginCalls, 0);
   });
 
-  testWidgets('S-03 signs in and opens success stub', (tester) async {
+  testWidgets('S-03 signs in and opens org picker', (tester) async {
     final auth = _FakeAuth();
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light(),
-        onGenerateRoute: onGenerateRoute,
+        onGenerateRoute: _testRoutes,
         home: SignInScreen(authRepository: auth),
       ),
     );
@@ -92,7 +132,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(auth.loginCalls, 1);
-    expect(find.text('Signed in'), findsOneWidget);
+    expect(find.text('Choose institute'), findsOneWidget);
+    expect(find.text('Acme Institute'), findsOneWidget);
   });
 
   testWidgets('S-03 shows API error message', (tester) async {

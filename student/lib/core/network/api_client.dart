@@ -22,34 +22,50 @@ class ApiClient {
     String path, {
     JsonMap? body,
     String? accessToken,
+    String? organizationId,
   }) {
     return _send(
       'POST',
       path,
       body: body,
       accessToken: accessToken,
+      organizationId: organizationId,
     );
   }
 
   Future<JsonMap> get(
     String path, {
+    Map<String, String>? query,
     String? accessToken,
+    String? organizationId,
   }) {
-    return _send('GET', path, accessToken: accessToken);
+    return _send(
+      'GET',
+      path,
+      query: query,
+      accessToken: accessToken,
+      organizationId: organizationId,
+    );
   }
 
   Future<JsonMap> _send(
     String method,
     String path, {
     JsonMap? body,
+    Map<String, String>? query,
     String? accessToken,
+    String? organizationId,
   }) async {
-    final uri = Uri.parse(_join(_baseUrl, path));
+    final uri = Uri.parse(_join(_baseUrl, path)).replace(
+      queryParameters: (query == null || query.isEmpty) ? null : query,
+    );
     final headers = <String, String>{
       'Accept': 'application/json',
       'Content-Type': 'application/json',
       if (accessToken != null && accessToken.isNotEmpty)
         'Authorization': 'Bearer $accessToken',
+      if (organizationId != null && organizationId.isNotEmpty)
+        'X-Organization-Id': organizationId,
     };
 
     late http.Response response;
@@ -106,11 +122,7 @@ class ApiClient {
       return {
         'statusCode': status,
         'message': message ?? '',
-        'data': data is Map<String, dynamic>
-            ? data
-            : (data is Map
-                ? data.map((k, v) => MapEntry(k.toString(), v))
-                : <String, dynamic>{}),
+        'data': data,
         'code': code,
       };
     }

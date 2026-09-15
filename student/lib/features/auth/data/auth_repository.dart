@@ -51,7 +51,7 @@ class AuthRepository implements AuthGateway {
       },
     );
 
-    final data = envelope['data'] as Map<String, dynamic>? ?? const {};
+    final data = _asJsonMap(envelope['data']);
     if (data['mfa_required'] == true) {
       final challenge = data['mfa_challenge_token']?.toString() ?? '';
       if (challenge.isEmpty) {
@@ -78,7 +78,7 @@ class AuthRepository implements AuthGateway {
         'device_name': deviceName,
       },
     );
-    final data = envelope['data'] as Map<String, dynamic>? ?? const {};
+    final data = _asJsonMap(envelope['data']);
     final session = _sessionFromData(data);
     await _persist(session);
     return session;
@@ -126,5 +126,13 @@ class AuthRepository implements AuthGateway {
         'status': session.user.status,
       }),
     );
+  }
+
+  static Map<String, dynamic> _asJsonMap(Object? value) {
+    if (value is Map<String, dynamic>) return value;
+    if (value is Map) {
+      return value.map((key, item) => MapEntry(key.toString(), item));
+    }
+    return const {};
   }
 }

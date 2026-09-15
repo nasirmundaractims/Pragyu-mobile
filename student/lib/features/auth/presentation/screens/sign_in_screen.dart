@@ -84,7 +84,7 @@ class _SignInScreenState extends State<SignInScreen> {
 
       switch (result) {
         case LoginSuccess():
-          Navigator.of(context).pushReplacementNamed(AppRoutes.authSuccessStub);
+          Navigator.of(context).pushReplacementNamed(AppRoutes.orgPicker);
         case LoginMfaRequired(:final challengeToken):
           setState(() {
             _mfaChallengeToken = challengeToken;
@@ -126,7 +126,7 @@ class _SignInScreenState extends State<SignInScreen> {
         code: code,
       );
       if (!mounted) return;
-      Navigator.of(context).pushReplacementNamed(AppRoutes.authSuccessStub);
+      Navigator.of(context).pushReplacementNamed(AppRoutes.orgPicker);
     } on ApiException catch (error) {
       if (!mounted) return;
       setState(() {

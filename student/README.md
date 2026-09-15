@@ -52,7 +52,8 @@ lib/
   features/
     splash/      # S-01
     welcome/     # S-02
-    auth/        # S-03 Sign in (+ secure token storage)
+    auth/        # S-03 Sign in, S-04 Forgot password
+    organization/# S-05 Org picker + tenant storage
 ```
 
 ## Screens status
@@ -61,7 +62,8 @@ lib/
 - **S-02 Welcome** — implemented
 - **S-03 Sign in** — implemented (`POST /auth/login`, MFA step, secure tokens)
 - **S-04 Forgot password** — implemented (`POST /auth/forgot-password`)
-- **S-05 Org picker** — not started (success lands on temporary stub)
+- **S-05 Org picker** — implemented (`GET /organizations`, stores `X-Organization-Id`)
+- **S-06 Onboarding tips** — not started (post-auth stub)
 
 ## iOS note
 
