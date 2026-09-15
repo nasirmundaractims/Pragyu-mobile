@@ -4,6 +4,8 @@ import 'package:student_mobile/app/router/app_router.dart';
 import 'package:student_mobile/app/theme/app_theme.dart';
 import 'package:student_mobile/core/config/app_config.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
+import 'package:student_mobile/features/onboarding/data/memory_onboarding_store.dart';
+import 'package:student_mobile/features/onboarding/presentation/screens/onboarding_screen.dart';
 import 'package:student_mobile/features/organization/data/organization_repository.dart';
 import 'package:student_mobile/features/organization/domain/organization_summary.dart';
 import 'package:student_mobile/features/organization/presentation/screens/org_picker_screen.dart';
@@ -32,6 +34,19 @@ class _FakeOrgs implements OrganizationGateway {
 
   @override
   Future<String?> readActiveOrganizationId() async => selected?.id;
+}
+
+Route<dynamic> _routes(RouteSettings settings) {
+  if (settings.name == AppRoutes.onboarding) {
+    return MaterialPageRoute<void>(
+      settings: settings,
+      builder: (_) => OnboardingScreen(
+        onboardingStore: MemoryOnboardingStore(),
+        forceShow: true,
+      ),
+    );
+  }
+  return onGenerateRoute(settings);
 }
 
 void main() {
@@ -77,7 +92,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light(),
-        onGenerateRoute: onGenerateRoute,
+        onGenerateRoute: _routes,
         home: OrgPickerScreen(
           organizationRepository: fake,
           autoSelectSingle: false,
@@ -93,7 +108,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(fake.selected?.id, 'org-1');
-    expect(find.textContaining('You’re in'), findsOneWidget);
+    expect(find.text('Learn'), findsOneWidget);
+    expect(find.text('Skip'), findsOneWidget);
   });
 
   testWidgets('S-05 auto-selects single institute', (tester) async {
@@ -110,14 +126,14 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light(),
-        onGenerateRoute: onGenerateRoute,
+        onGenerateRoute: _routes,
         home: OrgPickerScreen(organizationRepository: fake),
       ),
     );
     await tester.pumpAndSettle();
 
     expect(fake.selected?.id, 'only-org');
-    expect(find.textContaining('You’re in'), findsOneWidget);
+    expect(find.text('Learn'), findsOneWidget);
   });
 
   testWidgets('S-05 shows load error', (tester) async {

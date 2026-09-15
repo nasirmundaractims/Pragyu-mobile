@@ -84,10 +84,10 @@ class _OrgPickerScreenState extends State<OrgPickerScreen> {
       await _orgs.selectOrganization(organization);
       if (!mounted) return;
       if (replace) {
-        Navigator.of(context).pushReplacementNamed(AppRoutes.postAuthStub);
+        Navigator.of(context).pushReplacementNamed(AppRoutes.onboarding);
       } else {
         Navigator.of(context).pushNamedAndRemoveUntil(
-          AppRoutes.postAuthStub,
+          AppRoutes.onboarding,
           (route) => false,
         );
       }
