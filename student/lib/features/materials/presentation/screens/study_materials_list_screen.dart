@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:student_mobile/app/router/app_router.dart';
 import 'package:student_mobile/app/theme/app_colors.dart';
 import 'package:student_mobile/features/materials/data/materials_repository.dart';
 import 'package:student_mobile/features/materials/domain/material_models.dart';
@@ -72,12 +73,15 @@ class _StudyMaterialsListScreenState extends State<StudyMaterialsListScreen> {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          '${material.title} — opens ${material.nextScreenId} when the material viewer ships.',
-        ),
-        behavior: SnackBarBehavior.floating,
+    Navigator.of(context).pushNamed(
+      AppRoutes.materialViewer,
+      arguments: MaterialViewerArgs(
+        materialId: material.id,
+        title: material.title,
+        externalUrl: material.externalUrl,
+        mediaFileId: material.mediaFileId,
+        resourceType: material.materialType.name,
+        seed: material,
       ),
     );
   }

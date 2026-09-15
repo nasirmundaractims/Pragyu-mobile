@@ -6,6 +6,7 @@ import 'package:student_mobile/app/router/app_router.dart';
 import 'package:student_mobile/app/theme/app_colors.dart';
 import 'package:student_mobile/features/home/presentation/screens/home_screen.dart';
 import 'package:student_mobile/features/learn/domain/learn_models.dart';
+import 'package:student_mobile/features/materials/domain/material_models.dart';
 import 'package:student_mobile/features/search/data/search_repository.dart';
 import 'package:student_mobile/features/search/domain/search_models.dart';
 
@@ -143,6 +144,31 @@ class _QuickSearchSheetState extends State<QuickSearchSheet> {
         arguments: CourseDetailArgs(
           courseId: hit.id,
           title: hit.title,
+        ),
+      );
+      return;
+    }
+
+    if (hit.kind == SearchHitKind.material) {
+      shell?.goToTab(1);
+      final type = (hit.materialType ?? '').toLowerCase();
+      if (type == 'lesson') {
+        navigator.pushNamed(
+          AppRoutes.lessonPlayer,
+          arguments: LessonDetailArgs(
+            lessonId: hit.id,
+            title: hit.title,
+          ),
+        );
+        return;
+      }
+      navigator.pushNamed(
+        AppRoutes.materialViewer,
+        arguments: MaterialViewerArgs(
+          resourceId: hit.id,
+          title: hit.title,
+          resourceType: hit.materialType,
+          isDownloadable: type == 'pdf' || type == 'notes',
         ),
       );
       return;

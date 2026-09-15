@@ -55,7 +55,8 @@ class SearchRepository implements SearchGateway {
           .map((item) {
             final map = item.map((k, v) => MapEntry(k.toString(), v));
             final type = map['type']?.toString() ?? 'material';
-            final id = (map['lesson_id'] ?? map['id'])?.toString() ?? '';
+            // Use resource/lesson row id — do not prefer lesson_id for pdf/notes.
+            final id = map['id']?.toString() ?? '';
             final title = map['title']?.toString() ?? 'Material';
             if (id.isEmpty) return null;
             // Prefer lesson/pdf/notes for "material" jump targets.

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:student_mobile/app/router/app_router.dart';
 import 'package:student_mobile/app/theme/app_theme.dart';
 import 'package:student_mobile/core/config/app_config.dart';
 import 'package:student_mobile/features/materials/data/materials_repository.dart';
@@ -19,6 +20,19 @@ class _FakeMaterials implements MaterialsGateway {
   }) async {
     lastCourseId = courseId;
     return snapshot;
+  }
+
+  @override
+  Future<MaterialViewerSnapshot> loadMaterialViewer(
+    MaterialViewerArgs args,
+  ) async {
+    return MaterialViewerSnapshot(
+      id: args.materialId ?? args.resourceId ?? 'unknown',
+      title: args.title ?? 'Material',
+      source: args.isLibraryMode
+          ? MaterialViewerSource.library
+          : MaterialViewerSource.resource,
+    );
   }
 }
 
@@ -122,7 +136,8 @@ void main() {
     expect(find.textContaining('is locked'), findsOneWidget);
   });
 
-  testWidgets('S-27 openable tap stubs S-28', (tester) async {
+  testWidgets('S-27 openable tap navigates to S-28', (tester) async {
+    Object? pushedArgs;
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light(),
@@ -135,19 +150,35 @@ void main() {
                   title: 'Polity Handout',
                   materialType: StudyMaterialKind.pdf,
                   accessState: MaterialAccessState.playable,
+                  externalUrl: 'https://example.test/handout.pdf',
                 ),
               ],
             ),
           ),
         ),
+        onGenerateRoute: (settings) {
+          if (settings.name == AppRoutes.materialViewer) {
+            pushedArgs = settings.arguments;
+            return MaterialPageRoute<void>(
+              settings: settings,
+              builder: (_) => const Scaffold(
+                body: Text('Material viewer'),
+              ),
+            );
+          }
+          return null;
+        },
       ),
     );
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Polity Handout'));
-    await tester.pump();
+    await tester.pumpAndSettle();
 
-    expect(find.textContaining('S-28'), findsOneWidget);
+    expect(find.text('Material viewer'), findsOneWidget);
+    expect(pushedArgs, isA<MaterialViewerArgs>());
+    final args = pushedArgs! as MaterialViewerArgs;
+    expect(args.materialId, 'm1');
   });
 
   test('StudyMaterial.fromJson maps type and access', () {

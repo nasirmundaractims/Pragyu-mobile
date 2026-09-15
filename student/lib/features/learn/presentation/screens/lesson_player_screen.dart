@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:student_mobile/app/router/app_router.dart';
 import 'package:student_mobile/app/theme/app_colors.dart';
 import 'package:student_mobile/features/learn/data/learn_repository.dart';
 import 'package:student_mobile/features/learn/domain/learn_models.dart';
+import 'package:student_mobile/features/materials/domain/material_models.dart';
 
 /// S-22 Lesson / content player — text lesson, resources, mark complete.
 class LessonPlayerScreen extends StatefulWidget {
@@ -135,12 +137,14 @@ class _LessonPlayerScreenState extends State<LessonPlayerScreen> {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          '${resource.title} — opens S-28 when the material viewer ships.',
-        ),
-        behavior: SnackBarBehavior.floating,
+    Navigator.of(context).pushNamed(
+      AppRoutes.materialViewer,
+      arguments: MaterialViewerArgs(
+        resourceId: resource.id,
+        title: resource.title,
+        externalUrl: resource.externalUrl,
+        resourceType: resource.resourceType,
+        isDownloadable: resource.isDownloadable,
       ),
     );
   }

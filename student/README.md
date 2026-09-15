@@ -59,7 +59,7 @@ lib/
     search/      # S-12
     learn/       # S-20 / S-21 / S-22
     lectures/    # S-23 … S-26
-    materials/   # S-27
+    materials/   # S-27 / S-28
 ```
 
 ## Screens status
@@ -75,7 +75,8 @@ lib/
 - **S-24 Live lobby** — implemented (countdown, check-in / join)
 - **S-25 Live room** — implemented (stub media, chat, heartbeat, leave)
 - **S-26 Recorded player** — implemented (progress, playback link, mark complete)
-- **S-27 Study materials list** — implemented (course PDFs/notes; tap → S-28 stub)
+- **S-27 Study materials list** — implemented (course PDFs/notes)
+- **S-28 Material viewer** — implemented (open/copy link; library + lesson resource)
 - **S-40 / S-50 / S-70** — tab placeholders only
 
 ## iOS note
