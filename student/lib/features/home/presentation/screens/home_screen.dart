@@ -206,6 +206,13 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
             _ShortcutChip(
+              label: 'Calendar',
+              icon: Icons.calendar_month_rounded,
+              onTap: () {
+                Navigator.of(context).pushNamed(AppRoutes.calendar);
+              },
+            ),
+            _ShortcutChip(
               label: 'Tests',
               icon: Icons.quiz_outlined,
               onTap: () => _openTab(context, 2),

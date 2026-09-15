@@ -60,6 +60,7 @@ lib/
     learn/       # S-20 / S-21 / S-22
     lectures/    # S-23 … S-26
     materials/   # S-27 / S-28
+    calendar/    # S-30
 ```
 
 ## Screens status
@@ -77,6 +78,7 @@ lib/
 - **S-26 Recorded player** — implemented (progress, playback link, mark complete)
 - **S-27 Study materials list** — implemented (course PDFs/notes)
 - **S-28 Material viewer** — implemented (open/copy link; library + lesson resource)
+- **S-30 Calendar** — implemented (14-day agenda: live classes + test deadlines)
 - **S-40 / S-50 / S-70** — tab placeholders only
 
 ## iOS note

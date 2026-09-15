@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../features/auth/presentation/screens/forgot_password_screen.dart';
 import '../../features/auth/presentation/screens/sign_in_screen.dart';
+import '../../features/calendar/presentation/screens/calendar_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
 import '../../features/home/presentation/screens/today_detail_screen.dart';
 import '../../features/learn/domain/learn_models.dart';
@@ -39,6 +40,7 @@ abstract final class AppRoutes {
   static const recordedLecture = '/recorded-lecture';
   static const studyMaterials = '/study-materials';
   static const materialViewer = '/material-viewer';
+  static const calendar = '/calendar';
   static const createAccountStub = '/create-account-stub';
 }
 
@@ -139,6 +141,11 @@ Route<dynamic> onGenerateRoute(RouteSettings settings) {
         builder: (_) => MaterialViewerScreen(
           args: MaterialViewerArgs.fromObject(settings.arguments),
         ),
+      );
+    case AppRoutes.calendar:
+      return MaterialPageRoute<void>(
+        settings: settings,
+        builder: (_) => const CalendarScreen(),
       );
     case AppRoutes.createAccountStub:
       return MaterialPageRoute<void>(
