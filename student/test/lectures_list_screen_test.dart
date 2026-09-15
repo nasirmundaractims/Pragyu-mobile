@@ -27,6 +27,19 @@ class _FakeLectures implements LecturesGateway {
   Future<LiveJoinResult> joinLive(String lectureId) async {
     return const LiveJoinResult(inWaitingRoom: true);
   }
+
+  @override
+  Future<List<LiveChatMessage>> listLiveChat(String lectureId) async {
+    return const [];
+  }
+
+  @override
+  Future<LiveChatMessage> postLiveChat(String lectureId, String body) async {
+    return LiveChatMessage(id: 'm1', body: body);
+  }
+
+  @override
+  Future<void> sendAttendanceHeartbeat(String lectureId) async {}
 }
 
 void main() {

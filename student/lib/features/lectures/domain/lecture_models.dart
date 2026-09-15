@@ -379,9 +379,75 @@ class LiveJoinResult {
     required this.inWaitingRoom,
     this.hasMediaToken = false,
     this.sessionStatus,
+    this.mediaUrl,
   });
 
   final bool inWaitingRoom;
   final bool hasMediaToken;
   final LiveSessionStatus? sessionStatus;
+  final String? mediaUrl;
+}
+
+/// Route args for S-25 Live class room.
+class LiveRoomArgs {
+  const LiveRoomArgs({
+    required this.lectureId,
+    this.title,
+    this.mediaUrl,
+  });
+
+  final String lectureId;
+  final String? title;
+  final String? mediaUrl;
+
+  factory LiveRoomArgs.fromObject(Object? raw) {
+    if (raw is LiveRoomArgs) return raw;
+    if (raw is Map) {
+      final map = raw.map((k, v) => MapEntry(k.toString(), v));
+      return LiveRoomArgs(
+        lectureId: map['lectureId']?.toString() ??
+            map['lecture_id']?.toString() ??
+            '',
+        title: map['title']?.toString(),
+        mediaUrl: map['mediaUrl']?.toString() ?? map['media_url']?.toString(),
+      );
+    }
+    if (raw is String) {
+      return LiveRoomArgs(lectureId: raw);
+    }
+    return const LiveRoomArgs(lectureId: '');
+  }
+}
+
+class LiveChatMessage {
+  const LiveChatMessage({
+    required this.id,
+    required this.body,
+    this.authorRole = 'student',
+    this.createdAt,
+  });
+
+  final String id;
+  final String body;
+  final String authorRole;
+  final DateTime? createdAt;
+
+  bool get isFaculty =>
+      authorRole == 'faculty' ||
+      authorRole == 'teacher' ||
+      authorRole == 'staff';
+
+  String get authorLabel => isFaculty ? 'Teacher' : 'Student';
+
+  factory LiveChatMessage.fromJson(Map<String, dynamic> json) {
+    final createdRaw = json['created_at']?.toString();
+    return LiveChatMessage(
+      id: json['id']?.toString() ?? '',
+      body: json['body']?.toString() ?? '',
+      authorRole: json['author_role']?.toString() ?? 'student',
+      createdAt: createdRaw == null
+          ? null
+          : DateTime.tryParse(createdRaw)?.toLocal(),
+    );
+  }
 }

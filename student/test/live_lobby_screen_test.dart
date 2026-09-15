@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:student_mobile/app/router/app_router.dart';
 import 'package:student_mobile/app/theme/app_theme.dart';
 import 'package:student_mobile/core/config/app_config.dart';
 import 'package:student_mobile/features/lectures/data/lectures_repository.dart';
 import 'package:student_mobile/features/lectures/domain/lecture_models.dart';
 import 'package:student_mobile/features/lectures/presentation/screens/live_lobby_screen.dart';
+import 'package:student_mobile/features/lectures/presentation/screens/live_room_screen.dart';
 
 class _FakeLectures implements LecturesGateway {
   _FakeLectures({
@@ -29,6 +31,25 @@ class _FakeLectures implements LecturesGateway {
     joinCalled = true;
     return joinResult;
   }
+
+  @override
+  Future<List<LiveChatMessage>> listLiveChat(String lectureId) async {
+    return const [
+      LiveChatMessage(
+        id: 'c1',
+        body: 'Welcome to class',
+        authorRole: 'faculty',
+      ),
+    ];
+  }
+
+  @override
+  Future<LiveChatMessage> postLiveChat(String lectureId, String body) async {
+    return LiveChatMessage(id: 'c2', body: body);
+  }
+
+  @override
+  Future<void> sendAttendanceHeartbeat(String lectureId) async {}
 }
 
 void main() {
@@ -78,7 +99,7 @@ void main() {
     expect(find.textContaining('Checked in'), findsWidgets);
   });
 
-  testWidgets('S-24 join live stubs S-25', (tester) async {
+  testWidgets('S-24 join live opens S-25', (tester) async {
     final fake = _FakeLectures(
       lobby: const LiveLobbySnapshot(
         lectureId: 'lec-2',
@@ -89,12 +110,27 @@ void main() {
         inWaitingRoom: false,
         hasMediaToken: true,
         sessionStatus: LiveSessionStatus.live,
+        mediaUrl: 'https://example.test/room',
       ),
     );
 
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light(),
+        onGenerateRoute: (settings) {
+          if (settings.name == AppRoutes.liveRoom) {
+            return MaterialPageRoute<void>(
+              settings: settings,
+              builder: (_) => LiveRoomScreen(
+                args: LiveRoomArgs.fromObject(settings.arguments),
+                lecturesRepository: fake,
+                chatPollInterval: null,
+                heartbeatInterval: null,
+              ),
+            );
+          }
+          return onGenerateRoute(settings);
+        },
         home: LiveLobbyScreen(
           args: const LiveLobbyArgs(lectureId: 'lec-2', title: 'Evening Class'),
           lecturesRepository: fake,
@@ -104,14 +140,14 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Live now'), findsOneWidget);
     expect(find.text('Join class'), findsOneWidget);
 
     await tester.tap(find.text('Join class'));
     await tester.pumpAndSettle();
 
     expect(fake.joinCalled, isTrue);
-    expect(find.textContaining('opens S-25'), findsOneWidget);
+    expect(find.text('Live room'), findsOneWidget);
+    expect(find.text('Welcome to class'), findsOneWidget);
   });
 
   testWidgets('S-24 ended disables action', (tester) async {

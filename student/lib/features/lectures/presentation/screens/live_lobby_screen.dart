@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:student_mobile/app/router/app_router.dart';
 import 'package:student_mobile/app/theme/app_colors.dart';
 import 'package:student_mobile/features/lectures/data/lectures_repository.dart';
 import 'package:student_mobile/features/lectures/domain/lecture_models.dart';
@@ -118,12 +119,16 @@ class _LiveLobbyScreenState extends State<LiveLobbyScreen> {
           );
           _acting = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Joined — opens S-25 when the live room ships.'),
-            behavior: SnackBarBehavior.floating,
+        if (!mounted) return;
+        await Navigator.of(context).pushNamed(
+          AppRoutes.liveRoom,
+          arguments: LiveRoomArgs(
+            lectureId: snapshot.lectureId,
+            title: snapshot.title,
+            mediaUrl: result.mediaUrl,
           ),
         );
+        await _load(silent: true);
         return;
       }
 

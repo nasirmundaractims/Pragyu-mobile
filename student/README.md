@@ -58,7 +58,7 @@ lib/
     home/        # S-10 / S-11
     search/      # S-12
     learn/       # S-20 / S-21 / S-22
-    lectures/    # S-23 / S-24
+    lectures/    # S-23 / S-24 / S-25
 ```
 
 ## Screens status
@@ -71,7 +71,8 @@ lib/
 - **S-21 Course detail** — implemented (modules, progress, Continue)
 - **S-22 Lesson player** — implemented (text/HTML, resources, mark complete)
 - **S-23 Lectures list** — implemented (live / upcoming / recorded)
-- **S-24 Live lobby** — implemented (countdown, check-in / join → S-25 stub)
+- **S-24 Live lobby** — implemented (countdown, check-in / join)
+- **S-25 Live room** — implemented (stub media, chat, heartbeat, leave)
 - **S-40 / S-50 / S-70** — tab placeholders only
 
 ## iOS note

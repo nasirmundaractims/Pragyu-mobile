@@ -7,6 +7,9 @@ abstract class LecturesGateway {
   Future<LecturesSnapshot> loadLectures({String? courseId});
   Future<LiveLobbySnapshot> loadLiveLobby(String lectureId);
   Future<LiveJoinResult> joinLive(String lectureId);
+  Future<List<LiveChatMessage>> listLiveChat(String lectureId);
+  Future<LiveChatMessage> postLiveChat(String lectureId, String body);
+  Future<void> sendAttendanceHeartbeat(String lectureId);
 }
 
 class LecturesRepository implements LecturesGateway {
@@ -123,6 +126,81 @@ class LecturesRepository implements LecturesGateway {
       inWaitingRoom: waiting,
       hasMediaToken: hasMedia,
       sessionStatus: status,
+      mediaUrl: token['url']?.toString(),
+    );
+  }
+
+  @override
+  Future<List<LiveChatMessage>> listLiveChat(String lectureId) async {
+    final id = lectureId.trim();
+    if (id.isEmpty) {
+      throw ArgumentError('lectureId is required');
+    }
+
+    final session = await _requireSession();
+    final envelope = await _api.get(
+      '/lectures/$id/live/chat',
+      accessToken: session.accessToken,
+      organizationId: session.organizationId,
+    );
+
+    final data = envelope['data'];
+    if (data is! List) return const [];
+    return data
+        .whereType<Map>()
+        .map(
+          (item) => LiveChatMessage.fromJson(
+            item.map((k, v) => MapEntry(k.toString(), v)),
+          ),
+        )
+        .where((m) => m.id.isNotEmpty && m.body.trim().isNotEmpty)
+        .toList(growable: false);
+  }
+
+  @override
+  Future<LiveChatMessage> postLiveChat(String lectureId, String body) async {
+    final id = lectureId.trim();
+    final text = body.trim();
+    if (id.isEmpty) {
+      throw ArgumentError('lectureId is required');
+    }
+    if (text.isEmpty) {
+      throw ArgumentError('body is required');
+    }
+
+    final session = await _requireSession();
+    final envelope = await _api.post(
+      '/lectures/$id/live/chat',
+      body: {'body': text},
+      accessToken: session.accessToken,
+      organizationId: session.organizationId,
+    );
+
+    final data = envelope['data'];
+    if (data is Map) {
+      return LiveChatMessage.fromJson(
+        data.map((k, v) => MapEntry(k.toString(), v)),
+      );
+    }
+    return LiveChatMessage(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      body: text,
+      authorRole: 'student',
+      createdAt: DateTime.now(),
+    );
+  }
+
+  @override
+  Future<void> sendAttendanceHeartbeat(String lectureId) async {
+    final id = lectureId.trim();
+    if (id.isEmpty) return;
+
+    final session = await _requireSession();
+    await _api.post(
+      '/lectures/$id/live/attendance-heartbeat',
+      body: const {},
+      accessToken: session.accessToken,
+      organizationId: session.organizationId,
     );
   }
 
