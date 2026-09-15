@@ -451,3 +451,172 @@ class LiveChatMessage {
     );
   }
 }
+
+/// Route args for S-26 Recorded lecture player.
+class RecordedLectureArgs {
+  const RecordedLectureArgs({
+    required this.lectureId,
+    this.title,
+  });
+
+  final String lectureId;
+  final String? title;
+
+  factory RecordedLectureArgs.fromObject(Object? raw) {
+    if (raw is RecordedLectureArgs) return raw;
+    if (raw is Map) {
+      final map = raw.map((k, v) => MapEntry(k.toString(), v));
+      return RecordedLectureArgs(
+        lectureId: map['lectureId']?.toString() ??
+            map['lecture_id']?.toString() ??
+            '',
+        title: map['title']?.toString(),
+      );
+    }
+    if (raw is String) {
+      return RecordedLectureArgs(lectureId: raw);
+    }
+    return const RecordedLectureArgs(lectureId: '');
+  }
+}
+
+class LecturePlaybackInfo {
+  const LecturePlaybackInfo({
+    this.playbackUrl,
+    this.hlsUrl,
+    this.mimeType,
+    this.expiresAt,
+    this.qualities = const [],
+    this.playbackSpeeds = const [],
+    this.durationSeconds,
+    this.allowDownload = false,
+  });
+
+  final String? playbackUrl;
+  final String? hlsUrl;
+  final String? mimeType;
+  final String? expiresAt;
+  final List<String> qualities;
+  final List<double> playbackSpeeds;
+  final int? durationSeconds;
+  final bool allowDownload;
+
+  String? get bestUrl {
+    final playback = playbackUrl?.trim();
+    if (playback != null && playback.isNotEmpty) return playback;
+    final hls = hlsUrl?.trim();
+    if (hls != null && hls.isNotEmpty) return hls;
+    return null;
+  }
+
+  factory LecturePlaybackInfo.fromJson(Map<String, dynamic> json) {
+    final qualitiesRaw = json['qualities'];
+    final qualities = <String>[];
+    if (qualitiesRaw is List) {
+      for (final item in qualitiesRaw) {
+        if (item is String && item.isNotEmpty) {
+          qualities.add(item);
+        } else if (item is Map) {
+          final label = (item['label'] ?? item['name'] ?? item['quality'])
+              ?.toString();
+          if (label != null && label.isNotEmpty) qualities.add(label);
+        } else if (item != null) {
+          qualities.add(item.toString());
+        }
+      }
+    }
+
+    final speedsRaw = json['playback_speeds'];
+    final speeds = <double>[];
+    if (speedsRaw is List) {
+      for (final item in speedsRaw) {
+        if (item is num) speeds.add(item.toDouble());
+      }
+    }
+
+    final durationRaw = json['duration_seconds'];
+    int? durationSeconds;
+    if (durationRaw is num) {
+      durationSeconds = durationRaw.round();
+    } else {
+      durationSeconds = int.tryParse(durationRaw?.toString() ?? '');
+    }
+
+    return LecturePlaybackInfo(
+      playbackUrl: json['playback_url']?.toString(),
+      hlsUrl: json['hls_url']?.toString(),
+      mimeType: json['mime_type']?.toString(),
+      expiresAt: json['expires_at']?.toString(),
+      qualities: qualities,
+      playbackSpeeds: speeds,
+      durationSeconds: durationSeconds,
+      allowDownload: json['allow_download'] == true,
+    );
+  }
+}
+
+class RecordedLectureSnapshot {
+  const RecordedLectureSnapshot({
+    required this.lectureId,
+    required this.title,
+    this.description,
+    this.courseName,
+    this.subjectName,
+    this.durationSeconds,
+    this.accessState,
+    this.progressPercent = 0,
+    this.isCompleted = false,
+    this.positionSeconds = 0,
+    this.hasVideo = false,
+  });
+
+  final String lectureId;
+  final String title;
+  final String? description;
+  final String? courseName;
+  final String? subjectName;
+  final int? durationSeconds;
+  final String? accessState;
+  final int progressPercent;
+  final bool isCompleted;
+  final int positionSeconds;
+  final bool hasVideo;
+
+  bool get isLocked =>
+      accessState == 'locked' || accessState == 'subscription_required';
+
+  String get subtitle {
+    final parts = <String>[
+      if (subjectName != null && subjectName!.isNotEmpty) subjectName!,
+      if (courseName != null && courseName!.isNotEmpty) courseName!,
+    ];
+    return parts.join(' · ');
+  }
+
+  String get durationLabel {
+    final seconds = durationSeconds;
+    if (seconds == null || seconds <= 0) return 'Duration unknown';
+    final mins = (seconds / 60).ceil();
+    return '$mins min';
+  }
+
+  RecordedLectureSnapshot copyWith({
+    int? progressPercent,
+    bool? isCompleted,
+    int? positionSeconds,
+  }) {
+    return RecordedLectureSnapshot(
+      lectureId: lectureId,
+      title: title,
+      description: description,
+      courseName: courseName,
+      subjectName: subjectName,
+      durationSeconds: durationSeconds,
+      accessState: accessState,
+      progressPercent: progressPercent ?? this.progressPercent,
+      isCompleted: isCompleted ?? this.isCompleted,
+      positionSeconds: positionSeconds ?? this.positionSeconds,
+      hasVideo: hasVideo,
+    );
+  }
+}

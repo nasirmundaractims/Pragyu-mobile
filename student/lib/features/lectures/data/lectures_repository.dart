@@ -10,6 +10,9 @@ abstract class LecturesGateway {
   Future<List<LiveChatMessage>> listLiveChat(String lectureId);
   Future<LiveChatMessage> postLiveChat(String lectureId, String body);
   Future<void> sendAttendanceHeartbeat(String lectureId);
+  Future<RecordedLectureSnapshot> loadRecordedLecture(String lectureId);
+  Future<LecturePlaybackInfo> loadPlayback(String lectureId);
+  Future<RecordedLectureSnapshot> completeRecordedLecture(String lectureId);
 }
 
 class LecturesRepository implements LecturesGateway {
@@ -201,6 +204,127 @@ class LecturesRepository implements LecturesGateway {
       body: const {},
       accessToken: session.accessToken,
       organizationId: session.organizationId,
+    );
+  }
+
+  @override
+  Future<RecordedLectureSnapshot> loadRecordedLecture(String lectureId) async {
+    final id = lectureId.trim();
+    if (id.isEmpty) {
+      throw ArgumentError('lectureId is required');
+    }
+
+    final session = await _requireSession();
+    final envelope = await _api.get(
+      '/lectures/$id',
+      accessToken: session.accessToken,
+      organizationId: session.organizationId,
+    );
+
+    return _parseRecorded(envelope['data'], fallbackId: id);
+  }
+
+  @override
+  Future<LecturePlaybackInfo> loadPlayback(String lectureId) async {
+    final id = lectureId.trim();
+    if (id.isEmpty) {
+      throw ArgumentError('lectureId is required');
+    }
+
+    final session = await _requireSession();
+    final envelope = await _api.get(
+      '/lectures/$id/playback',
+      accessToken: session.accessToken,
+      organizationId: session.organizationId,
+    );
+
+    final data = envelope['data'];
+    if (data is Map) {
+      return LecturePlaybackInfo.fromJson(
+        data.map((k, v) => MapEntry(k.toString(), v)),
+      );
+    }
+    return const LecturePlaybackInfo();
+  }
+
+  @override
+  Future<RecordedLectureSnapshot> completeRecordedLecture(
+    String lectureId,
+  ) async {
+    final id = lectureId.trim();
+    if (id.isEmpty) {
+      throw ArgumentError('lectureId is required');
+    }
+
+    final session = await _requireSession();
+    await _api.post(
+      '/lectures/$id/complete',
+      body: const {},
+      accessToken: session.accessToken,
+      organizationId: session.organizationId,
+    );
+
+    return loadRecordedLecture(id);
+  }
+
+  RecordedLectureSnapshot _parseRecorded(
+    Object? raw, {
+    required String fallbackId,
+  }) {
+    final map = raw is Map
+        ? raw.map((k, v) => MapEntry(k.toString(), v))
+        : <String, dynamic>{};
+
+    final video = map['video'];
+    final hasVideo = video is Map && video.isNotEmpty;
+
+    final progress = map['progress'];
+    final progressMap = progress is Map
+        ? progress.map((k, v) => MapEntry(k.toString(), v))
+        : <String, dynamic>{};
+
+    int progressPercent = 0;
+    final percentRaw =
+        progressMap['progress_percent'] ?? progressMap['percent'];
+    if (percentRaw is num) {
+      progressPercent = percentRaw.round().clamp(0, 100);
+    } else {
+      progressPercent =
+          int.tryParse(percentRaw?.toString() ?? '')?.clamp(0, 100) ?? 0;
+    }
+
+    int positionSeconds = 0;
+    final positionRaw = progressMap['position_seconds'];
+    if (positionRaw is num) {
+      positionSeconds = positionRaw.round();
+    } else {
+      positionSeconds = int.tryParse(positionRaw?.toString() ?? '') ?? 0;
+    }
+
+    int? durationSeconds;
+    final durationRaw = map['duration_seconds'] ??
+        (video is Map ? video['duration_seconds'] : null);
+    if (durationRaw is num) {
+      durationSeconds = durationRaw.round();
+    } else {
+      durationSeconds = int.tryParse(durationRaw?.toString() ?? '');
+    }
+
+    final isCompleted = progressMap['is_completed'] == true ||
+        progressPercent >= 100;
+
+    return RecordedLectureSnapshot(
+      lectureId: map['id']?.toString() ?? fallbackId,
+      title: (map['title'] ?? 'Lecture').toString(),
+      description: map['description']?.toString(),
+      courseName: map['course_name']?.toString(),
+      subjectName: map['subject_name']?.toString(),
+      durationSeconds: durationSeconds,
+      accessState: map['access_state']?.toString(),
+      progressPercent: progressPercent,
+      isCompleted: isCompleted,
+      positionSeconds: positionSeconds,
+      hasVideo: hasVideo,
     );
   }
 

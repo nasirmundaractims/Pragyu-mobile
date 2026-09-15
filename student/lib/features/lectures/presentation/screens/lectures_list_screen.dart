@@ -70,6 +70,17 @@ class _LecturesListScreenState extends State<LecturesListScreen> {
       return;
     }
 
+    if (lecture.nextScreenId == 'S-26') {
+      Navigator.of(context).pushNamed(
+        AppRoutes.recordedLecture,
+        arguments: RecordedLectureArgs(
+          lectureId: lecture.id,
+          title: lecture.title,
+        ),
+      );
+      return;
+    }
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(

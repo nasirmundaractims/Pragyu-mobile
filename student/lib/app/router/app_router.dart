@@ -11,6 +11,7 @@ import '../../features/lectures/domain/lecture_models.dart';
 import '../../features/lectures/presentation/screens/lectures_list_screen.dart';
 import '../../features/lectures/presentation/screens/live_lobby_screen.dart';
 import '../../features/lectures/presentation/screens/live_room_screen.dart';
+import '../../features/lectures/presentation/screens/recorded_lecture_screen.dart';
 import '../../features/onboarding/presentation/screens/onboarding_screen.dart';
 import '../../features/organization/presentation/screens/org_picker_screen.dart';
 import '../../features/splash/presentation/screens/splash_screen.dart';
@@ -32,6 +33,7 @@ abstract final class AppRoutes {
   static const lecturesList = '/lectures';
   static const liveLobby = '/live-lobby';
   static const liveRoom = '/live-room';
+  static const recordedLecture = '/recorded-lecture';
   static const createAccountStub = '/create-account-stub';
 }
 
@@ -110,6 +112,13 @@ Route<dynamic> onGenerateRoute(RouteSettings settings) {
         settings: settings,
         builder: (_) => LiveRoomScreen(
           args: LiveRoomArgs.fromObject(settings.arguments),
+        ),
+      );
+    case AppRoutes.recordedLecture:
+      return MaterialPageRoute<void>(
+        settings: settings,
+        builder: (_) => RecordedLectureScreen(
+          args: RecordedLectureArgs.fromObject(settings.arguments),
         ),
       );
     case AppRoutes.createAccountStub:

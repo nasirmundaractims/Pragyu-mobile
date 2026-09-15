@@ -40,6 +40,35 @@ class _FakeLectures implements LecturesGateway {
 
   @override
   Future<void> sendAttendanceHeartbeat(String lectureId) async {}
+
+  @override
+  Future<RecordedLectureSnapshot> loadRecordedLecture(String lectureId) async {
+    return RecordedLectureSnapshot(
+      lectureId: lectureId,
+      title: 'Recording',
+      hasVideo: true,
+    );
+  }
+
+  @override
+  Future<LecturePlaybackInfo> loadPlayback(String lectureId) async {
+    return const LecturePlaybackInfo(
+      playbackUrl: 'https://example.test/video.m3u8',
+    );
+  }
+
+  @override
+  Future<RecordedLectureSnapshot> completeRecordedLecture(
+    String lectureId,
+  ) async {
+    return RecordedLectureSnapshot(
+      lectureId: lectureId,
+      title: 'Recording',
+      isCompleted: true,
+      progressPercent: 100,
+      hasVideo: true,
+    );
+  }
 }
 
 void main() {
