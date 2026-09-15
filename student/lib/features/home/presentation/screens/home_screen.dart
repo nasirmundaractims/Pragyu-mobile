@@ -7,6 +7,8 @@ import 'package:student_mobile/app/theme/app_colors.dart';
 import 'package:student_mobile/features/home/data/home_repository.dart';
 import 'package:student_mobile/features/home/domain/greeting.dart';
 import 'package:student_mobile/features/home/domain/home_models.dart';
+import 'package:student_mobile/features/learn/data/learn_repository.dart';
+import 'package:student_mobile/features/learn/presentation/screens/my_learning_screen.dart';
 import 'package:student_mobile/features/search/presentation/widgets/quick_search_sheet.dart';
 
 /// S-10 Home — Today: greeting, next class, due tests, alerts strip, shortcuts.
@@ -472,10 +474,12 @@ class StudentShell extends StatefulWidget {
     super.key,
     this.initialIndex = 0,
     this.homeRepository,
+    this.learnRepository,
   });
 
   final int initialIndex;
   final HomeGateway? homeRepository;
+  final LearnGateway? learnRepository;
 
   static StudentShellState? of(BuildContext context) {
     return context.findAncestorStateOfType<StudentShellState>();
@@ -487,37 +491,57 @@ class StudentShell extends StatefulWidget {
 
 class StudentShellState extends State<StudentShell> {
   late int _index = widget.initialIndex;
+  final Set<int> _mountedTabs = <int>{};
+
+  @override
+  void initState() {
+    super.initState();
+    _mountedTabs.add(_index);
+  }
 
   void goToTab(int index) {
     if (index < 0 || index > 4) return;
-    setState(() => _index = index);
+    setState(() {
+      _index = index;
+      _mountedTabs.add(index);
+    });
+  }
+
+  Widget _tab(int index) {
+    if (!_mountedTabs.contains(index)) {
+      return const SizedBox.shrink();
+    }
+    switch (index) {
+      case 0:
+        return HomeScreen(homeRepository: widget.homeRepository);
+      case 1:
+        return MyLearningScreen(learnRepository: widget.learnRepository);
+      case 2:
+        return const FeaturePlaceholderScreen(
+          title: 'Tests',
+          nextScreenId: 'S-40',
+          message: 'Assessments and practice will live here.',
+        );
+      case 3:
+        return const FeaturePlaceholderScreen(
+          title: 'Alerts',
+          nextScreenId: 'S-50',
+          message: 'Your notification inbox will live here.',
+        );
+      case 4:
+        return const FeaturePlaceholderScreen(
+          title: 'Me',
+          nextScreenId: 'S-70',
+          message: 'Profile and settings will live here.',
+        );
+      default:
+        return const SizedBox.shrink();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final pages = [
-      HomeScreen(homeRepository: widget.homeRepository),
-      const FeaturePlaceholderScreen(
-        title: 'Learn',
-        nextScreenId: 'S-20',
-        message: 'Courses, lectures, and materials will live here.',
-      ),
-      const FeaturePlaceholderScreen(
-        title: 'Tests',
-        nextScreenId: 'S-40',
-        message: 'Assessments and practice will live here.',
-      ),
-      const FeaturePlaceholderScreen(
-        title: 'Alerts',
-        nextScreenId: 'S-50',
-        message: 'Your notification inbox will live here.',
-      ),
-      const FeaturePlaceholderScreen(
-        title: 'Me',
-        nextScreenId: 'S-70',
-        message: 'Profile and settings will live here.',
-      ),
-    ];
+    final pages = List<Widget>.generate(5, _tab);
 
     return Scaffold(
       body: IndexedStack(index: _index, children: pages),

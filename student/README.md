@@ -57,6 +57,7 @@ lib/
     onboarding/  # S-06
     home/        # S-10 / S-11
     search/      # S-12
+    learn/       # S-20
 ```
 
 ## Screens status
@@ -65,7 +66,8 @@ lib/
 - **S-10 Home** — implemented
 - **S-11 Today detail** — implemented
 - **S-12 Quick search** — implemented (sheet: courses / tests / materials)
-- **S-20 / S-40 / S-50 / S-70** — tab placeholders only
+- **S-20 My learning** — implemented (Learn tab: enrolled courses)
+- **S-40 / S-50 / S-70** — tab placeholders only
 
 ## iOS note
 

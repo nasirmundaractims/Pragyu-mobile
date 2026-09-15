@@ -10,7 +10,7 @@ import '../../features/splash/presentation/screens/splash_screen.dart';
 import '../../features/welcome/presentation/screens/auth_flow_stub_screen.dart';
 import '../../features/welcome/presentation/screens/welcome_screen.dart';
 
-/// Central route names. Next feature screens are tab placeholders (S-20+).
+/// Central route names. Remaining tab roots after Learn are placeholders (S-40+).
 abstract final class AppRoutes {
   static const splash = '/';
   static const welcome = '/welcome';
