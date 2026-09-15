@@ -1,0 +1,14 @@
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.iml
+
+# Secrets
+.env
+.env.*.local
+.env.production
+**/*.jks
+**/*.keystore
+**/key.properties
