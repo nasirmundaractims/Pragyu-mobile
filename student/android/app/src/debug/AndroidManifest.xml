@@ -4,4 +4,6 @@
          to allow setting breakpoints, to provide hot reload, etc.
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Local Pragyu API over HTTP (emulator 10.0.2.2) during debug only. -->
+    <application android:usesCleartextTraffic="true" />
 </manifest>

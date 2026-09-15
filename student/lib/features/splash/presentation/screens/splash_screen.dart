@@ -6,7 +6,7 @@ import 'package:student_mobile/app/theme/app_colors.dart';
 import 'package:student_mobile/core/config/app_config.dart';
 import 'package:student_mobile/core/constants/app_constants.dart';
 
-/// S-01 Splash Screen — brand mark only; no auth UI (S-02 comes later).
+/// S-01 Splash Screen — brand mark only; hands off to S-02 Welcome.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -49,8 +49,7 @@ class _SplashScreenState extends State<SplashScreen>
 
     if (!mounted) return;
 
-    // Do not open S-02 yet — park on an internal placeholder until approved.
-    Navigator.of(context).pushReplacementNamed(AppRoutes.startupPlaceholder);
+    Navigator.of(context).pushReplacementNamed(AppRoutes.welcome);
   }
 
   @override

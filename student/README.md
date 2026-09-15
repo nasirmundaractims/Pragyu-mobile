@@ -47,17 +47,21 @@ Never commit production secrets.
 
 ```text
 lib/
-  app/           # bootstrap, theme, router
-  core/          # config, constants (API/auth layers next)
+  app/           # bootstrap, theme, router, shared widgets
+  core/          # config, network
   features/
     splash/      # S-01
-    startup/     # internal placeholder (not S-02)
+    welcome/     # S-02
+    auth/        # S-03 Sign in (+ secure token storage)
 ```
 
 ## Screens status
 
 - **S-01 Splash** — implemented
-- **S-02 Welcome** — not started (awaiting approval)
+- **S-02 Welcome** — implemented
+- **S-03 Sign in** — implemented (`POST /auth/login`, MFA step, secure tokens)
+- **S-04 Forgot password** — stub only (link from Sign in)
+- **S-05 Org picker** — not started (success lands on temporary stub)
 
 ## iOS note
 

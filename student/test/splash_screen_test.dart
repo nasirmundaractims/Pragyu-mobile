@@ -9,12 +9,13 @@ void main() {
     await AppConfig.load();
   });
 
-  testWidgets('S-01 splash shows Pragyu brand', (tester) async {
+  testWidgets('S-01 splash shows Pragyu brand then opens S-02', (tester) async {
     await tester.pumpWidget(const PragyuApp());
     expect(find.text('Pragyu'), findsOneWidget);
     expect(find.text('Learn with clarity'), findsOneWidget);
     await tester.pump(const Duration(seconds: 3));
     await tester.pumpAndSettle();
-    expect(find.textContaining('S-01 Splash complete'), findsOneWidget);
+    expect(find.text('Sign in'), findsOneWidget);
+    expect(find.text('Create account'), findsOneWidget);
   });
 }
