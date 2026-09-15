@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:student_mobile/app/router/app_router.dart';
 import 'package:student_mobile/app/theme/app_colors.dart';
 import 'package:student_mobile/features/lectures/data/lectures_repository.dart';
 import 'package:student_mobile/features/lectures/domain/lecture_models.dart';
@@ -58,6 +59,17 @@ class _LecturesListScreenState extends State<LecturesListScreen> {
   }
 
   void _openLecture(LectureItem lecture) {
+    if (lecture.nextScreenId == 'S-24') {
+      Navigator.of(context).pushNamed(
+        AppRoutes.liveLobby,
+        arguments: LiveLobbyArgs(
+          lectureId: lecture.id,
+          title: lecture.title,
+        ),
+      );
+      return;
+    }
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(

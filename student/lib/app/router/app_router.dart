@@ -9,6 +9,7 @@ import '../../features/learn/presentation/screens/course_detail_screen.dart';
 import '../../features/learn/presentation/screens/lesson_player_screen.dart';
 import '../../features/lectures/domain/lecture_models.dart';
 import '../../features/lectures/presentation/screens/lectures_list_screen.dart';
+import '../../features/lectures/presentation/screens/live_lobby_screen.dart';
 import '../../features/onboarding/presentation/screens/onboarding_screen.dart';
 import '../../features/organization/presentation/screens/org_picker_screen.dart';
 import '../../features/splash/presentation/screens/splash_screen.dart';
@@ -28,6 +29,7 @@ abstract final class AppRoutes {
   static const courseDetail = '/course-detail';
   static const lessonPlayer = '/lesson';
   static const lecturesList = '/lectures';
+  static const liveLobby = '/live-lobby';
   static const createAccountStub = '/create-account-stub';
 }
 
@@ -92,6 +94,13 @@ Route<dynamic> onGenerateRoute(RouteSettings settings) {
         settings: settings,
         builder: (_) => LecturesListScreen(
           args: LecturesListArgs.fromObject(settings.arguments),
+        ),
+      );
+    case AppRoutes.liveLobby:
+      return MaterialPageRoute<void>(
+        settings: settings,
+        builder: (_) => LiveLobbyScreen(
+          args: LiveLobbyArgs.fromObject(settings.arguments),
         ),
       );
     case AppRoutes.createAccountStub:

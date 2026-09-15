@@ -13,6 +13,20 @@ class _FakeLectures implements LecturesGateway {
 
   @override
   Future<LecturesSnapshot> loadLectures({String? courseId}) async => snapshot;
+
+  @override
+  Future<LiveLobbySnapshot> loadLiveLobby(String lectureId) async {
+    return LiveLobbySnapshot(
+      lectureId: lectureId,
+      title: 'Lobby',
+      sessionStatus: LiveSessionStatus.scheduled,
+    );
+  }
+
+  @override
+  Future<LiveJoinResult> joinLive(String lectureId) async {
+    return const LiveJoinResult(inWaitingRoom: true);
+  }
 }
 
 void main() {
