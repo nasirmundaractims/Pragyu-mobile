@@ -279,4 +279,15 @@ void main() {
     expect((playerArgs! as AttemptPlayerArgs).attemptId, 'att9');
     expect((playerArgs! as AttemptPlayerArgs).submissionId, 'sub9');
   });
+  @override
+  Future<AnswerImageAttachment> uploadAnswerImage({
+    required String submissionId,
+    required List<int> bytes,
+    required String fileName,
+    required String mimeType,
+    required int pageNumber,
+  }) async {
+    throw UnimplementedError();
+  }
+
 }

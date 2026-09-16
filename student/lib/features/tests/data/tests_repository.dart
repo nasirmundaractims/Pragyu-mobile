@@ -2,6 +2,7 @@ import 'package:student_mobile/core/network/api_client.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/core/session/session_service.dart';
 import 'package:student_mobile/features/home/domain/due_state.dart';
+import 'package:student_mobile/features/tests/data/answer_media_uploader.dart';
 import 'package:student_mobile/features/tests/domain/assessment_detail_models.dart';
 import 'package:student_mobile/features/tests/domain/attempt_flow_models.dart';
 import 'package:student_mobile/features/tests/domain/cbt_player_models.dart';
@@ -50,17 +51,28 @@ abstract class TestsGateway {
   Future<RewriteResultPayload?> getRewriteResult(String rewriteRequestId);
 
   Future<RewriteRequestSummary> processRewrite(String rewriteRequestId);
+
+  Future<AnswerImageAttachment> uploadAnswerImage({
+    required String submissionId,
+    required List<int> bytes,
+    required String fileName,
+    required String mimeType,
+    required int pageNumber,
+  });
 }
 
 class TestsRepository implements TestsGateway {
   TestsRepository({
     ApiClient? apiClient,
     SessionService? sessionService,
+    AnswerMediaGateway? answerMediaUploader,
   })  : _api = apiClient ?? ApiClient(),
-        _session = sessionService ?? SessionService();
+        _session = sessionService ?? SessionService(),
+        _media = answerMediaUploader ?? AnswerMediaUploader();
 
   final ApiClient _api;
   final SessionService _session;
+  final AnswerMediaGateway _media;
 
   @override
   Future<TestsSnapshot> loadTests() async {
@@ -565,6 +577,23 @@ class TestsRepository implements TestsGateway {
       organizationId: session.organizationId,
     );
     return RewriteRequestSummary.fromJson(_asMap(envelope['data']));
+  }
+
+  @override
+  Future<AnswerImageAttachment> uploadAnswerImage({
+    required String submissionId,
+    required List<int> bytes,
+    required String fileName,
+    required String mimeType,
+    required int pageNumber,
+  }) {
+    return _media.uploadAnswerImage(
+      submissionId: submissionId,
+      bytes: bytes,
+      fileName: fileName,
+      mimeType: mimeType,
+      pageNumber: pageNumber,
+    );
   }
 
   List<FeedbackSuggestionItem> _parseSuggestions(Object? data) {

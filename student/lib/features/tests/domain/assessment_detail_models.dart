@@ -74,6 +74,8 @@ class AssessmentQuestionPreview {
     this.maxMarks,
     this.type,
     this.choices = const [],
+    this.wordLimit,
+    this.allowsImageUpload = false,
   });
 
   /// Assessment-question link id (row id).
@@ -86,6 +88,8 @@ class AssessmentQuestionPreview {
   final double? maxMarks;
   final String? type;
   final List<AnswerChoice> choices;
+  final int? wordLimit;
+  final bool allowsImageUpload;
 
   String get answerKey {
     final source = questionId?.trim();
@@ -131,14 +135,51 @@ class AssessmentQuestionPreview {
         snapMap?['id']?.toString();
     final linkId = json['id']?.toString() ?? '';
 
+    final type = (snapMap?['type'] ?? json['type'])?.toString();
+    final metadata = snapMap?['metadata'];
+    final rubric = snapMap?['marking_rubric'] ?? snapMap?['markingRubric'];
+    int? wordLimit;
+    if (metadata is Map) {
+      final metaMap = metadata.map((k, v) => MapEntry(k.toString(), v));
+      wordLimit = _readWordLimit(metaMap['word_limit']);
+    }
+    if (wordLimit == null && rubric is Map) {
+      final rubricMap = rubric.map((k, v) => MapEntry(k.toString(), v));
+      wordLimit = _readWordLimit(rubricMap['word_limit']);
+    }
+
     return AssessmentQuestionPreview(
       id: linkId.isNotEmpty ? linkId : (sourceQuestionId ?? ''),
       questionId: sourceQuestionId,
       sortOrder: asInt(json['sort_order']),
       content: content,
       maxMarks: asDouble(json['max_marks'] ?? snapMap?['max_marks']),
-      type: (snapMap?['type'] ?? json['type'])?.toString(),
+      type: type,
       choices: _readChoices(snapMap, json),
+      wordLimit: wordLimit,
+      allowsImageUpload: _allowsImageUpload(type),
+    );
+  }
+
+  static int? _readWordLimit(Object? raw) {
+    if (raw is num && raw > 0) return raw.round();
+    return int.tryParse(raw?.toString() ?? '');
+  }
+
+  static bool _allowsImageUpload(String? type) {
+    final normalized = (type ?? '').toLowerCase().replaceAll('-', '_');
+    if (normalized.isEmpty) return false;
+    return !(
+      normalized == 'mcq' ||
+      normalized == 'objective' ||
+      normalized == 'single_choice' ||
+      normalized == 'single_select' ||
+      normalized == 'true_false' ||
+      normalized == 'truefalse' ||
+      normalized == 'boolean' ||
+      normalized == 'multiple_select' ||
+      normalized.contains('mcq') ||
+      normalized.contains('true_false')
     );
   }
 

@@ -1,6 +1,6 @@
 import 'package:student_mobile/features/tests/domain/assessment_detail_models.dart';
 
-enum CbtQuestionKind { mcq, trueFalse, shortText, unsupported }
+enum CbtQuestionKind { mcq, trueFalse, shortText, essay, unsupported }
 
 enum CbtPaletteStatus {
   notVisited,
@@ -13,20 +13,71 @@ enum CbtPaletteStatus {
 
 enum CbtAutosaveState { idle, saving, saved, error }
 
+class AnswerImageAttachment {
+  const AnswerImageAttachment({
+    required this.mediaFileId,
+    required this.fileName,
+    this.url,
+    required this.uploadedAt,
+    this.pageNumber,
+  });
+
+  final String mediaFileId;
+  final String fileName;
+  final String? url;
+  final String uploadedAt;
+  final int? pageNumber;
+
+  Map<String, dynamic> toJson() => {
+        'mediaFileId': mediaFileId,
+        'fileName': fileName,
+        if (url != null && url!.isNotEmpty) 'url': url,
+        'uploadedAt': uploadedAt,
+        if (pageNumber != null) 'pageNumber': pageNumber,
+      };
+
+  factory AnswerImageAttachment.fromJson(Map<String, dynamic> json) {
+    int? page;
+    final rawPage = json['pageNumber'] ?? json['page_number'];
+    if (rawPage is num) {
+      page = rawPage.round();
+    } else {
+      page = int.tryParse(rawPage?.toString() ?? '');
+    }
+
+    return AnswerImageAttachment(
+      mediaFileId: json['mediaFileId']?.toString() ??
+          json['media_file_id']?.toString() ??
+          '',
+      fileName: json['fileName']?.toString() ??
+          json['file_name']?.toString() ??
+          'answer.jpg',
+      url: json['url']?.toString() ?? json['download_url']?.toString(),
+      uploadedAt: json['uploadedAt']?.toString() ??
+          json['uploaded_at']?.toString() ??
+          DateTime.now().toUtc().toIso8601String(),
+      pageNumber: page,
+    );
+  }
+}
+
 class StudentAnswerValue {
   const StudentAnswerValue({
     this.choiceId,
     this.choiceLabel,
     this.text,
+    this.images = const [],
   });
 
   final String? choiceId;
   final String? choiceLabel;
   final String? text;
+  final List<AnswerImageAttachment> images;
 
   bool get isAnswered {
     if (choiceId != null && choiceId!.trim().isNotEmpty) return true;
     if (text != null && text!.trim().isNotEmpty) return true;
+    if (images.isNotEmpty) return true;
     return false;
   }
 
@@ -36,16 +87,34 @@ class StudentAnswerValue {
       if (choiceLabel != null && choiceLabel!.isNotEmpty)
         'choiceLabel': choiceLabel,
       if (text != null) 'text': text,
+      if (images.isNotEmpty)
+        'images': images.map((image) => image.toJson()).toList(),
     };
   }
 
   factory StudentAnswerValue.fromJson(Map<String, dynamic> json) {
+    final images = <AnswerImageAttachment>[];
+    final rawImages = json['images'];
+    if (rawImages is List) {
+      for (final item in rawImages) {
+        if (item is Map) {
+          final attachment = AnswerImageAttachment.fromJson(
+            item.map((k, v) => MapEntry(k.toString(), v)),
+          );
+          if (attachment.mediaFileId.isNotEmpty) {
+            images.add(attachment);
+          }
+        }
+      }
+    }
+
     return StudentAnswerValue(
       choiceId: json['choiceId']?.toString() ??
           json['choice_id']?.toString(),
       choiceLabel: json['choiceLabel']?.toString() ??
           json['choice_label']?.toString(),
       text: json['text']?.toString(),
+      images: images,
     );
   }
 
@@ -63,6 +132,36 @@ class StudentAnswerValue {
   factory StudentAnswerValue.written(String text) {
     return StudentAnswerValue(text: text);
   }
+
+  StudentAnswerValue copyWith({
+    String? text,
+    List<AnswerImageAttachment>? images,
+  }) {
+    return StudentAnswerValue(
+      choiceId: choiceId,
+      choiceLabel: choiceLabel,
+      text: text ?? this.text,
+      images: images ?? this.images,
+    );
+  }
+}
+
+List<Map<String, dynamic>> buildMediaFilesMetadata(
+  Map<String, StudentAnswerValue> answers,
+) {
+  final out = <Map<String, dynamic>>[];
+  for (final answer in answers.values) {
+    for (final image in answer.images) {
+      out.add({
+        'media_file_id': image.mediaFileId,
+        'file_name': image.fileName,
+        if (image.url != null && image.url!.isNotEmpty) 'url': image.url,
+        'uploaded_at': image.uploadedAt,
+        'page_number': image.pageNumber,
+      });
+    }
+  }
+  return out;
 }
 
 class CbtPlayerState {
@@ -178,11 +277,15 @@ CbtQuestionKind parseCbtQuestionKind(String? raw, {int choiceCount = 0}) {
     case 'truefalse':
     case 'boolean':
       return CbtQuestionKind.trueFalse;
+    case 'essay':
+    case 'subjective':
+    case 'long_answer':
+    case 'long_text':
+    case 'descriptive':
+      return CbtQuestionKind.essay;
     case 'short_answer':
     case 'short_text':
     case 'text':
-    case 'subjective':
-    case 'essay':
       return CbtQuestionKind.shortText;
     default:
       if (choiceCount >= 2) return CbtQuestionKind.mcq;

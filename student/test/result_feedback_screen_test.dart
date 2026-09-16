@@ -247,4 +247,15 @@ void main() {
       findsOneWidget,
     );
   });
+  @override
+  Future<AnswerImageAttachment> uploadAnswerImage({
+    required String submissionId,
+    required List<int> bytes,
+    required String fileName,
+    required String mimeType,
+    required int pageNumber,
+  }) async {
+    throw UnimplementedError();
+  }
+
 }

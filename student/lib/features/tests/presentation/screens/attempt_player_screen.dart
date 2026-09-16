@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 
 import 'package:student_mobile/app/router/app_router.dart';
 import 'package:student_mobile/app/theme/app_colors.dart';
@@ -48,6 +49,9 @@ class _AttemptPlayerScreenState extends State<AttemptPlayerScreen> {
   Timer? _clock;
   Duration _remaining = Duration.zero;
   bool _finalized = false;
+  bool _uploadingImages = false;
+  int _uploadProgress = 0;
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
@@ -157,7 +161,9 @@ class _AttemptPlayerScreenState extends State<AttemptPlayerScreen> {
     final question = _current;
     if (question == null) return;
     setState(() {
-      _answers[question.answerKey] = StudentAnswerValue.written(text);
+      final current = _answers[question.answerKey];
+      _answers[question.answerKey] = (current ?? const StudentAnswerValue())
+          .copyWith(text: text);
     });
     _schedulePersist();
   }
@@ -170,6 +176,138 @@ class _AttemptPlayerScreenState extends State<AttemptPlayerScreen> {
     });
     _schedulePersist();
   }
+
+  Future<void> _addImages() async {
+    final question = _current;
+    final snapshot = _snapshot;
+    if (question == null || snapshot == null || _uploadingImages) return;
+
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_library_outlined),
+                title: const Text('Choose from gallery'),
+                onTap: () => Navigator.pop(context, ImageSource.gallery),
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_camera_outlined),
+                title: const Text('Take a photo'),
+                onTap: () => Navigator.pop(context, ImageSource.camera),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+    if (source == null || !mounted) return;
+
+    List<XFile> files;
+    if (source == ImageSource.gallery) {
+      files = await _picker.pickMultiImage(imageQuality: 85);
+    } else {
+      final photo = await _picker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 85,
+      );
+      files = photo == null ? const [] : [photo];
+    }
+    if (files.isEmpty || !mounted) return;
+
+    final batch = files.take(12).toList(growable: false);
+    setState(() {
+      _uploadingImages = true;
+      _uploadProgress = 0;
+    });
+
+    final current = _answers[question.answerKey] ?? const StudentAnswerValue();
+    final uploaded = <AnswerImageAttachment>[...current.images];
+    final startPage = uploaded.length + 1;
+
+    try {
+      for (var i = 0; i < batch.length; i++) {
+        final file = batch[i];
+        final bytes = await file.readAsBytes();
+        final attachment = await _tests.uploadAnswerImage(
+          submissionId: snapshot.submissionId,
+          bytes: bytes,
+          fileName: file.name.isNotEmpty ? file.name : 'answer-${i + 1}.jpg',
+          mimeType: file.mimeType ?? 'image/jpeg',
+          pageNumber: startPage + i,
+        );
+        uploaded.add(attachment);
+        if (!mounted) return;
+        setState(() {
+          _uploadProgress = (((i + 1) / batch.length) * 100).round();
+        });
+      }
+
+      setState(() {
+        _answers[question.answerKey] = current.copyWith(images: uploaded);
+        _uploadingImages = false;
+        _uploadProgress = 0;
+      });
+      _schedulePersist();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            batch.length == 1
+                ? 'Answer image uploaded.'
+                : '${batch.length} answer images uploaded.',
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _uploadingImages = false;
+        _uploadProgress = 0;
+        if (uploaded.isNotEmpty) {
+          _answers[question.answerKey] = current.copyWith(images: uploaded);
+        }
+      });
+      if (uploaded.isNotEmpty) _schedulePersist();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            error is ApiException
+                ? error.message
+                : 'Unable to upload answer image.',
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  void _removeImage(String mediaFileId) {
+    final question = _current;
+    if (question == null) return;
+    final current = _answers[question.answerKey];
+    if (current == null) return;
+    final nextImages = current.images
+        .where((image) => image.mediaFileId != mediaFileId)
+        .toList(growable: false);
+    setState(() {
+      if (nextImages.isEmpty &&
+          (current.text == null || current.text!.trim().isEmpty)) {
+        _answers.remove(question.answerKey);
+      } else {
+        _answers[question.answerKey] = current.copyWith(images: nextImages);
+      }
+    });
+    _schedulePersist();
+  }
+
+  bool get _includesMediaAnswers =>
+      _answers.values.any((answer) => answer.images.isNotEmpty);
 
   void _toggleMark({bool advance = false}) {
     final question = _current;
@@ -218,6 +356,7 @@ class _AttemptPlayerScreenState extends State<AttemptPlayerScreen> {
           for (final entry in _answers.entries) entry.key: entry.value.toJson(),
         },
         'player': _player.toJson(),
+        'media_files': buildMediaFilesMetadata(_answers),
         'submit_reason': ?submitReason,
       };
       await _tests.updateSubmissionMetadata(snapshot.submissionId, metadata);
@@ -293,6 +432,7 @@ class _AttemptPlayerScreenState extends State<AttemptPlayerScreen> {
           assessmentId: snapshot.assessment.id,
           title: snapshot.assessment.title,
           initialStatus: summary.status,
+          includesMedia: _includesMediaAnswers,
         ),
       );
     } catch (error) {
@@ -423,6 +563,10 @@ class _AttemptPlayerScreenState extends State<AttemptPlayerScreen> {
       answer: _answers[question.answerKey],
       onChoice: _selectChoice,
       onTextChanged: _setText,
+      onAddImages: question.allowsImageUpload ? _addImages : null,
+      onRemoveImage: question.allowsImageUpload ? _removeImage : null,
+      isUploading: _uploadingImages,
+      uploadProgress: _uploadProgress,
     );
   }
 }

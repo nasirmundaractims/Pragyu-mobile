@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:student_mobile/app/theme/app_colors.dart';
 import 'package:student_mobile/features/tests/domain/assessment_detail_models.dart';
 import 'package:student_mobile/features/tests/domain/cbt_player_models.dart';
+import 'package:student_mobile/features/tests/presentation/widgets/cbt_subjective_answer_panel.dart';
 
 class CbtQuestionBody extends StatelessWidget {
   const CbtQuestionBody({
@@ -13,6 +14,10 @@ class CbtQuestionBody extends StatelessWidget {
     required this.answer,
     required this.onChoice,
     required this.onTextChanged,
+    this.onAddImages,
+    this.onRemoveImage,
+    this.isUploading = false,
+    this.uploadProgress = 0,
   });
 
   final AssessmentQuestionPreview question;
@@ -21,6 +26,10 @@ class CbtQuestionBody extends StatelessWidget {
   final StudentAnswerValue? answer;
   final ValueChanged<AnswerChoice> onChoice;
   final ValueChanged<String> onTextChanged;
+  final VoidCallback? onAddImages;
+  final ValueChanged<String>? onRemoveImage;
+  final bool isUploading;
+  final int uploadProgress;
 
   @override
   Widget build(BuildContext context) {
@@ -108,25 +117,17 @@ class CbtQuestionBody extends StatelessWidget {
               ),
             );
           })
-        else if (kind == CbtQuestionKind.shortText)
-          TextFormField(
-            initialValue: answer?.text ?? '',
-            minLines: 4,
-            maxLines: 8,
-            onChanged: onTextChanged,
-            decoration: InputDecoration(
-              hintText: 'Type your answer',
-              filled: true,
-              fillColor: AppColors.surface,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(color: AppColors.brandSoft),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(color: AppColors.brandSoft),
-              ),
-            ),
+        else if (kind == CbtQuestionKind.shortText ||
+            kind == CbtQuestionKind.essay)
+          CbtSubjectiveAnswerPanel(
+            question: question,
+            kind: kind,
+            answer: answer,
+            onTextChanged: onTextChanged,
+            onAddImages: onAddImages,
+            onRemoveImage: onRemoveImage,
+            isUploading: isUploading,
+            uploadProgress: uploadProgress,
           )
         else
           const Text(

@@ -66,6 +66,10 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>Pragyu needs camera access to photograph handwritten answer pages.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Pragyu needs photo access to upload handwritten answer pages.</string>
 	<!-- Allow HTTP to local/dev Pragyu API (disable for App Store production builds). -->
 	<key>NSAppTransportSecurity</key>
 	<dict>

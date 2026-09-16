@@ -7,12 +7,14 @@ class SubmissionStatusArgs {
     this.assessmentId,
     this.title,
     this.initialStatus,
+    this.includesMedia = false,
   });
 
   final String submissionId;
   final String? assessmentId;
   final String? title;
   final String? initialStatus;
+  final bool includesMedia;
 
   factory SubmissionStatusArgs.fromObject(Object? raw) {
     if (raw is SubmissionStatusArgs) return raw;
@@ -29,6 +31,8 @@ class SubmissionStatusArgs {
         initialStatus: map['initialStatus']?.toString() ??
             map['initial_status']?.toString() ??
             map['status']?.toString(),
+        includesMedia: map['includesMedia'] == true ||
+            map['includes_media'] == true,
       );
     }
     if (raw is String && raw.isNotEmpty) {
@@ -58,6 +62,16 @@ class SubmissionStatusPayload {
   bool get isPending => SubmissionPipeline.isPending(status);
 
   String get statusLabel => submissionStatusLabel(status);
+
+  bool get isOcrStage {
+    switch (status.toLowerCase()) {
+      case 'media_processing':
+      case 'ocr_processing':
+        return true;
+      default:
+        return false;
+    }
+  }
 
   factory SubmissionStatusPayload.fromJson(Map<String, dynamic> json) {
     return SubmissionStatusPayload(

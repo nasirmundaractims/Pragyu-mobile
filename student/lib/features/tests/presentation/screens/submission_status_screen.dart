@@ -130,9 +130,13 @@ class _SubmissionStatusScreenState extends State<SubmissionStatusScreen> {
                   ),
                 ),
                 const SizedBox(height: 6),
-                const Text(
-                  'Your answers were submitted. We are preparing feedback.',
-                  style: TextStyle(color: AppColors.muted, height: 1.4),
+                Text(
+                  _subtitle(
+                    stage: stage,
+                    includesMedia: widget.args.includesMedia,
+                    isOcr: _payload.isOcrStage,
+                  ),
+                  style: const TextStyle(color: AppColors.muted, height: 1.4),
                 ),
                 const SizedBox(height: 20),
                 if (_loading && widget.args.initialStatus == null)
@@ -149,7 +153,11 @@ class _SubmissionStatusScreenState extends State<SubmissionStatusScreen> {
                     failureReason: _payload.failureReason,
                   ),
                   const SizedBox(height: 20),
-                  _PipelineSteps(stage: stage),
+                  _PipelineSteps(
+                    stage: stage,
+                    includesMedia: widget.args.includesMedia ||
+                        _payload.isOcrStage,
+                  ),
                   if (_error != null) ...[
                     const SizedBox(height: 16),
                     Text(
@@ -213,6 +221,22 @@ class _SubmissionStatusScreenState extends State<SubmissionStatusScreen> {
         ),
       ),
     );
+  }
+
+  static String _subtitle({
+    required SubmissionPipelineStage stage,
+    required bool includesMedia,
+    required bool isOcr,
+  }) {
+    if (includesMedia || isOcr) {
+      if (stage == SubmissionPipelineStage.processing) {
+        return 'Your handwritten pages are being read with OCR before AI scoring.';
+      }
+      if (stage == SubmissionPipelineStage.evaluating) {
+        return 'OCR finished. AI is evaluating your answers now.';
+      }
+    }
+    return 'Your answers were submitted. We are preparing feedback.';
   }
 }
 
@@ -287,29 +311,57 @@ class _StatusHero extends StatelessWidget {
 }
 
 class _PipelineSteps extends StatelessWidget {
-  const _PipelineSteps({required this.stage});
+  const _PipelineSteps({
+    required this.stage,
+    this.includesMedia = false,
+  });
 
   final SubmissionPipelineStage stage;
+  final bool includesMedia;
 
   @override
   Widget build(BuildContext context) {
-    final steps = <(String, bool)>[
-      (
-        'Processing',
-        stage == SubmissionPipelineStage.processing ||
-            stage == SubmissionPipelineStage.evaluating ||
-            stage == SubmissionPipelineStage.ready,
-      ),
-      (
-        'AI evaluating',
-        stage == SubmissionPipelineStage.evaluating ||
-            stage == SubmissionPipelineStage.ready,
-      ),
-      (
-        'Ready',
-        stage == SubmissionPipelineStage.ready,
-      ),
-    ];
+    final steps = includesMedia
+        ? <(String, bool)>[
+            (
+              'Submitted',
+              stage == SubmissionPipelineStage.processing ||
+                  stage == SubmissionPipelineStage.evaluating ||
+                  stage == SubmissionPipelineStage.ready,
+            ),
+            (
+              'OCR reading pages',
+              stage == SubmissionPipelineStage.processing ||
+                  stage == SubmissionPipelineStage.evaluating ||
+                  stage == SubmissionPipelineStage.ready,
+            ),
+            (
+              'AI evaluating',
+              stage == SubmissionPipelineStage.evaluating ||
+                  stage == SubmissionPipelineStage.ready,
+            ),
+            (
+              'Ready',
+              stage == SubmissionPipelineStage.ready,
+            ),
+          ]
+        : <(String, bool)>[
+            (
+              'Processing',
+              stage == SubmissionPipelineStage.processing ||
+                  stage == SubmissionPipelineStage.evaluating ||
+                  stage == SubmissionPipelineStage.ready,
+            ),
+            (
+              'AI evaluating',
+              stage == SubmissionPipelineStage.evaluating ||
+                  stage == SubmissionPipelineStage.ready,
+            ),
+            (
+              'Ready',
+              stage == SubmissionPipelineStage.ready,
+            ),
+          ];
 
     if (stage == SubmissionPipelineStage.failed) {
       return const Text(
@@ -324,11 +376,18 @@ class _PipelineSteps extends StatelessWidget {
           _StepRow(
             label: steps[i].$1,
             done: steps[i].$2,
-            active: i == 0
-                ? stage == SubmissionPipelineStage.processing
-                : i == 1
-                    ? stage == SubmissionPipelineStage.evaluating
-                    : stage == SubmissionPipelineStage.ready,
+            active: includesMedia
+                ? switch (i) {
+                    0 => false,
+                    1 => stage == SubmissionPipelineStage.processing,
+                    2 => stage == SubmissionPipelineStage.evaluating,
+                    _ => stage == SubmissionPipelineStage.ready,
+                  }
+                : i == 0
+                    ? stage == SubmissionPipelineStage.processing
+                    : i == 1
+                        ? stage == SubmissionPipelineStage.evaluating
+                        : stage == SubmissionPipelineStage.ready,
           ),
           if (i < steps.length - 1) const SizedBox(height: 8),
         ],

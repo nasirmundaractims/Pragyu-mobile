@@ -110,6 +110,16 @@ class _FakeTests implements TestsGateway {
     throw UnimplementedError();
   }
 
+  @override
+  Future<AnswerImageAttachment> uploadAnswerImage({
+    required String submissionId,
+    required List<int> bytes,
+    required String fileName,
+    required String mimeType,
+    required int pageNumber,
+  }) async {
+    throw UnimplementedError();
+  }
 }
 
 void main() {
@@ -207,4 +217,15 @@ void main() {
     expect(find.text('OCR could not read the pages.'), findsOneWidget);
     expect(find.text('Check again'), findsOneWidget);
   });
+  @override
+  Future<AnswerImageAttachment> uploadAnswerImage({
+    required String submissionId,
+    required List<int> bytes,
+    required String fileName,
+    required String mimeType,
+    required int pageNumber,
+  }) async {
+    throw UnimplementedError();
+  }
+
 }

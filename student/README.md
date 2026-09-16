@@ -156,7 +156,7 @@ lib/
     materials/   # S-27 / S-28
     catalog/     # S-29
     calendar/    # S-30
-    tests/       # S-40 … S-47
+    tests/       # S-40 … S-48
     alerts/      # S-50
     me/          # S-70
 ```
@@ -186,6 +186,7 @@ lib/
 - **S-45 Submission status** — poll processing / AI evaluating / ready → S-46
 - **S-46 Result / feedback** — score, per-question breakdown, AI feedback
 - **S-47 Deep feedback** — suggestions, AI rewrite / improved answer, model answer
+- **S-48 Essay / media answers** — long subjective text, handwritten page upload, OCR-aware submit status
 - **S-50 Alerts** — notification + engagement inbox, mark read / mark all, tab badge
 - **S-70 Me** — profile summary, email/study prefs, switch institute, sign out
 
