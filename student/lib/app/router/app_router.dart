@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../features/ai_mentor/presentation/screens/ai_mentor_screen.dart';
+import '../../features/analytics/presentation/screens/performance_analytics_screen.dart';
 import '../../features/auth/presentation/screens/forgot_password_screen.dart';
 import '../../features/notes_bookmarks/presentation/screens/notes_bookmarks_screen.dart';
 import '../../features/recommendations/presentation/screens/recommendations_screen.dart';
@@ -73,6 +74,7 @@ abstract final class AppRoutes {
   static const studyPlanner = '/study-planner';
   static const recommendations = '/recommendations';
   static const notesBookmarks = '/notes-bookmarks';
+  static const performance = '/performance';
   static const createAccountStub = '/create-account-stub';
 }
 
@@ -264,6 +266,11 @@ Route<dynamic> onGenerateRoute(RouteSettings settings) {
       return MaterialPageRoute<void>(
         settings: settings,
         builder: (_) => const NotesBookmarksScreen(),
+      );
+    case AppRoutes.performance:
+      return MaterialPageRoute<void>(
+        settings: settings,
+        builder: (_) => const PerformanceAnalyticsScreen(),
       );
     case AppRoutes.createAccountStub:
       return MaterialPageRoute<void>(
