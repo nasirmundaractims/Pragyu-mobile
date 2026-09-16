@@ -5,6 +5,7 @@ import 'package:student_mobile/features/home/domain/due_state.dart';
 import 'package:student_mobile/features/tests/domain/assessment_detail_models.dart';
 import 'package:student_mobile/features/tests/domain/attempt_flow_models.dart';
 import 'package:student_mobile/features/tests/domain/cbt_player_models.dart';
+import 'package:student_mobile/features/tests/domain/deep_feedback_models.dart';
 import 'package:student_mobile/features/tests/domain/result_feedback_models.dart';
 import 'package:student_mobile/features/tests/domain/submission_status_models.dart';
 import 'package:student_mobile/features/tests/domain/tests_models.dart';
@@ -30,6 +31,25 @@ abstract class TestsGateway {
   Future<SubmissionStatusPayload> getSubmissionStatus(String submissionId);
 
   Future<ResultFeedbackSnapshot> loadResultFeedback(ResultFeedbackArgs args);
+
+  Future<DeepFeedbackSnapshot> loadDeepFeedback(DeepFeedbackArgs args);
+
+  Future<List<FeedbackSuggestionItem>> listSuggestions(String evaluationId);
+
+  Future<List<FeedbackSuggestionItem>> generateSuggestions(String feedbackId);
+
+  Future<RewriteRequestSummary> requestRewrite(
+    String evaluationId,
+    RewriteOptions options,
+  );
+
+  Future<RewriteRequestSummary?> getLatestRewrite(String evaluationId);
+
+  Future<RewriteRequestSummary> getRewriteRequest(String rewriteRequestId);
+
+  Future<RewriteResultPayload?> getRewriteResult(String rewriteRequestId);
+
+  Future<RewriteRequestSummary> processRewrite(String rewriteRequestId);
 }
 
 class TestsRepository implements TestsGateway {
@@ -357,6 +377,218 @@ class TestsRepository implements TestsGateway {
       scores: scores,
       feedback: feedback,
     );
+  }
+
+  @override
+  Future<DeepFeedbackSnapshot> loadDeepFeedback(DeepFeedbackArgs args) async {
+    final evaluationId = args.evaluationId.trim();
+    if (evaluationId.isEmpty) {
+      throw ArgumentError('evaluationId is required');
+    }
+
+    final submissionId = args.submissionId.trim();
+    String? originalText;
+    if (submissionId.isNotEmpty) {
+      try {
+        final submission = await _getSubmission(submissionId);
+        originalText = extractOriginalAnswerText(submission.metadata);
+      } catch (_) {
+        originalText = null;
+      }
+    }
+
+    final suggestions = await listSuggestions(evaluationId);
+    final latest = await getLatestRewrite(evaluationId);
+    RewriteResultPayload? result;
+    if (latest != null && latest.id.isNotEmpty) {
+      result = await getRewriteResult(latest.id);
+    }
+
+    return DeepFeedbackSnapshot(
+      suggestions: suggestions,
+      latestRewrite: latest,
+      rewriteResult: result,
+      originalAnswerText: originalText,
+    );
+  }
+
+  @override
+  Future<List<FeedbackSuggestionItem>> listSuggestions(
+    String evaluationId,
+  ) async {
+    final id = evaluationId.trim();
+    if (id.isEmpty) return const [];
+    try {
+      final session = await _requireSession();
+      final envelope = await _api.get(
+        '/evaluations/$id/suggestions',
+        accessToken: session.accessToken,
+        organizationId: session.organizationId,
+      );
+      return _parseSuggestions(envelope['data']);
+    } on ApiException {
+      return const [];
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  @override
+  Future<List<FeedbackSuggestionItem>> generateSuggestions(
+    String feedbackId,
+  ) async {
+    final id = feedbackId.trim();
+    if (id.isEmpty) {
+      throw ArgumentError('feedbackId is required');
+    }
+    final session = await _requireSession();
+    final envelope = await _api.post(
+      '/feedback/$id/suggestions/generate',
+      accessToken: session.accessToken,
+      organizationId: session.organizationId,
+    );
+    return _parseSuggestions(envelope['data']);
+  }
+
+  @override
+  Future<RewriteRequestSummary> requestRewrite(
+    String evaluationId,
+    RewriteOptions options,
+  ) async {
+    final id = evaluationId.trim();
+    if (id.isEmpty) {
+      throw ArgumentError('evaluationId is required');
+    }
+    final session = await _requireSession();
+    var body = options.toJson();
+    if (options.studentProfileId == null ||
+        options.studentProfileId!.isEmpty) {
+      final profileId = await _loadStudentProfileId(session);
+      if (profileId != null) {
+        body = {
+          ...body,
+          'student_profile_id': profileId,
+        };
+      }
+    }
+    final envelope = await _api.post(
+      '/evaluations/$id/rewrite',
+      body: body,
+      accessToken: session.accessToken,
+      organizationId: session.organizationId,
+    );
+    final request = RewriteRequestSummary.fromJson(_asMap(envelope['data']));
+    if (request.id.isEmpty) {
+      throw ApiException(
+        message: 'Rewrite request did not return an id.',
+        statusCode: 0,
+      );
+    }
+    return request;
+  }
+
+  @override
+  Future<RewriteRequestSummary?> getLatestRewrite(String evaluationId) async {
+    final id = evaluationId.trim();
+    if (id.isEmpty) return null;
+    try {
+      final session = await _requireSession();
+      final envelope = await _api.get(
+        '/evaluations/$id/rewrite',
+        accessToken: session.accessToken,
+        organizationId: session.organizationId,
+      );
+      final data = envelope['data'];
+      if (data == null) return null;
+      final request = RewriteRequestSummary.fromJson(_asMap(data));
+      return request.id.isEmpty ? null : request;
+    } on ApiException {
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  Future<RewriteRequestSummary> getRewriteRequest(
+    String rewriteRequestId,
+  ) async {
+    final id = rewriteRequestId.trim();
+    if (id.isEmpty) {
+      throw ArgumentError('rewriteRequestId is required');
+    }
+    final session = await _requireSession();
+    final envelope = await _api.get(
+      '/rewrite-requests/$id',
+      accessToken: session.accessToken,
+      organizationId: session.organizationId,
+    );
+    return RewriteRequestSummary.fromJson(_asMap(envelope['data']));
+  }
+
+  @override
+  Future<RewriteResultPayload?> getRewriteResult(
+    String rewriteRequestId,
+  ) async {
+    final id = rewriteRequestId.trim();
+    if (id.isEmpty) return null;
+    try {
+      final session = await _requireSession();
+      final envelope = await _api.get(
+        '/rewrite-requests/$id/result',
+        accessToken: session.accessToken,
+        organizationId: session.organizationId,
+      );
+      final data = envelope['data'];
+      if (data == null) return null;
+      final result = RewriteResultPayload.fromJson(_asMap(data));
+      return result.hasRewrittenText || result.id.isNotEmpty ? result : null;
+    } on ApiException {
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  Future<RewriteRequestSummary> processRewrite(
+    String rewriteRequestId,
+  ) async {
+    final id = rewriteRequestId.trim();
+    if (id.isEmpty) {
+      throw ArgumentError('rewriteRequestId is required');
+    }
+    final session = await _requireSession();
+    final envelope = await _api.post(
+      '/rewrite-requests/$id/process',
+      accessToken: session.accessToken,
+      organizationId: session.organizationId,
+    );
+    return RewriteRequestSummary.fromJson(_asMap(envelope['data']));
+  }
+
+  List<FeedbackSuggestionItem> _parseSuggestions(Object? data) {
+    List<dynamic>? rows;
+    if (data is List) {
+      rows = data;
+    } else if (data is Map) {
+      final map = data.map((k, v) => MapEntry(k.toString(), v));
+      final items = map['items'] ?? map['suggestions'] ?? map['data'];
+      if (items is List) rows = items;
+    }
+    if (rows == null) return const [];
+
+    final items = rows
+        .whereType<Map>()
+        .map(
+          (item) => FeedbackSuggestionItem.fromJson(
+            item.map((k, v) => MapEntry(k.toString(), v)),
+          ),
+        )
+        .where((item) => item.id.isNotEmpty || item.headline.isNotEmpty)
+        .toList(growable: false);
+    items.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    return items;
   }
 
   Future<List<EvaluationScoreItem>> _loadEvaluationScores(

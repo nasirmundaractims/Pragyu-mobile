@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:student_mobile/app/router/app_router.dart';
 import 'package:student_mobile/app/theme/app_colors.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/features/tests/data/tests_repository.dart';
+import 'package:student_mobile/features/tests/domain/deep_feedback_models.dart';
 import 'package:student_mobile/features/tests/domain/result_feedback_models.dart';
 
 /// S-46 Result / feedback — score, breakdown, AI feedback.
@@ -193,6 +195,31 @@ class _ResultFeedbackScreenState extends State<ResultFeedbackScreen> {
             accent: AppColors.brand,
           ),
         ],
+      ],
+      if (snapshot.evaluation != null &&
+          snapshot.evaluation!.id.isNotEmpty) ...[
+        const SizedBox(height: 20),
+        OutlinedButton(
+          onPressed: () {
+            Navigator.of(context).pushNamed(
+              AppRoutes.deepFeedback,
+              arguments: DeepFeedbackArgs(
+                submissionId: widget.args.submissionId,
+                evaluationId: snapshot.evaluation!.id,
+                feedbackId: snapshot.feedback?.id,
+                assessmentId:
+                    widget.args.assessmentId ?? snapshot.evaluation?.assessmentId,
+                title: widget.args.title,
+              ),
+            );
+          },
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppColors.brand,
+            side: const BorderSide(color: AppColors.brand),
+            minimumSize: const Size.fromHeight(48),
+          ),
+          child: const Text('Improve answer with AI'),
+        ),
       ],
     ];
   }

@@ -224,41 +224,62 @@ class HomeRepository implements HomeGateway {
 
   Future<List<_CourseBrief>> _loadCourses(SessionContext session) async {
     try {
-      final envelope = await _api.get(
+      final account = await _api.get(
         '/students/me/account/courses',
         query: const {'status': 'all'},
         accessToken: session.accessToken,
         organizationId: session.organizationId,
       );
-      final data = envelope['data'];
-      if (data is! List) return const [];
-      return data
-          .whereType<Map>()
-          .map((item) {
-            final map = item.map((k, v) => MapEntry(k.toString(), v));
-            final id = map['course_id']?.toString() ??
-                map['id']?.toString() ??
-                '';
-            if (id.isEmpty) return null;
-            final progressRaw = map['progress_percent'] ??
-                map['completion_percent'] ??
-                (map['progress'] is Map
-                    ? (map['progress'] as Map)['percent']
-                    : null);
-            return _CourseBrief(
-              courseId: id,
-              title: map['course_name']?.toString() ??
-                  map['title']?.toString() ??
-                  'Course',
-              programName: map['program_name']?.toString(),
-              progressPercent: int.tryParse(progressRaw?.toString() ?? '') ?? 0,
-            );
-          })
-          .whereType<_CourseBrief>()
-          .toList(growable: false);
+      var courses = _parseCourseBriefs(account['data']);
+      if (courses.isEmpty) {
+        final identity = await _api.get(
+          '/students/me/my-learning',
+          accessToken: session.accessToken,
+          organizationId: session.organizationId,
+        );
+        courses = _parseCourseBriefs(identity['data']);
+      }
+      return courses;
     } catch (_) {
       return const [];
     }
+  }
+
+  static List<_CourseBrief> _parseCourseBriefs(Object? data) {
+    final rows = <Map>[];
+    if (data is List) {
+      rows.addAll(data.whereType<Map>());
+    } else if (data is Map) {
+      final map = data.map((k, v) => MapEntry(k.toString(), v));
+      final nested = map['courses'] ?? map['items'] ?? map['enrollments'];
+      if (nested is List) {
+        rows.addAll(nested.whereType<Map>());
+      }
+    }
+
+    final seen = <String>{};
+    final out = <_CourseBrief>[];
+    for (final item in rows) {
+      final map = item.map((k, v) => MapEntry(k.toString(), v));
+      final id = map['course_id']?.toString() ?? map['id']?.toString() ?? '';
+      if (id.isEmpty || !seen.add(id)) continue;
+      final progressRaw = map['progress_percent'] ??
+          map['completion_percent'] ??
+          (map['progress'] is Map
+              ? (map['progress'] as Map)['percent']
+              : map['progress']);
+      out.add(
+        _CourseBrief(
+          courseId: id,
+          title: map['course_name']?.toString() ??
+              map['title']?.toString() ??
+              'Course',
+          programName: map['program_name']?.toString(),
+          progressPercent: int.tryParse(progressRaw?.toString() ?? '') ?? 0,
+        ),
+      );
+    }
+    return out;
   }
 
   Future<HomeContinueItem?> _loadContinue(

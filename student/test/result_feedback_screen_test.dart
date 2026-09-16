@@ -6,6 +6,7 @@ import 'package:student_mobile/features/tests/domain/assessment_detail_models.da
 import 'package:student_mobile/features/tests/domain/attempt_flow_models.dart';
 import 'package:student_mobile/features/tests/domain/cbt_player_models.dart';
 import 'package:student_mobile/features/tests/domain/result_feedback_models.dart';
+import 'package:student_mobile/features/tests/domain/deep_feedback_models.dart';
 import 'package:student_mobile/features/tests/domain/submission_status_models.dart';
 import 'package:student_mobile/features/tests/domain/tests_models.dart';
 import 'package:student_mobile/features/tests/presentation/screens/result_feedback_screen.dart';
@@ -61,6 +62,50 @@ class _FakeTests implements TestsGateway {
   ) async {
     return snapshot;
   }
+
+  @override
+  Future<DeepFeedbackSnapshot> loadDeepFeedback(DeepFeedbackArgs args) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<FeedbackSuggestionItem>> listSuggestions(String evaluationId) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<FeedbackSuggestionItem>> generateSuggestions(String feedbackId) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<RewriteRequestSummary> requestRewrite(
+    String evaluationId,
+    RewriteOptions options,
+  ) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<RewriteRequestSummary?> getLatestRewrite(String evaluationId) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<RewriteRequestSummary> getRewriteRequest(String rewriteRequestId) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<RewriteResultPayload?> getRewriteResult(String rewriteRequestId) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<RewriteRequestSummary> processRewrite(String rewriteRequestId) async {
+    throw UnimplementedError();
+  }
+
 }
 
 void main() {
@@ -165,6 +210,7 @@ void main() {
       find.text('Define terms before arguing', skipOffstage: false),
       findsOneWidget,
     );
+    await reveal('Improve answer with AI');
     expect(find.text('Done', skipOffstage: false), findsOneWidget);
   });
 

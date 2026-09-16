@@ -124,7 +124,8 @@ class AlertsRepository implements AlertsGateway {
           .where((item) => item.id.isNotEmpty)
           .toList(growable: false);
     } on ApiException {
-      rethrow;
+      // Keep Alerts usable if notification module is down / empty.
+      return const [];
     } catch (_) {
       return const [];
     }

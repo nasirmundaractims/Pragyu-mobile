@@ -75,7 +75,7 @@ class _MyLearningScreenState extends State<MyLearningScreen> {
         backgroundColor: AppColors.background,
         appBar: AppBar(
           backgroundColor: AppColors.background,
-          title: const Text('My learning'),
+          title: const Text('Learn'),
           actions: [
             IconButton(
               tooltip: 'Quick search',
@@ -120,34 +120,165 @@ class _MyLearningScreenState extends State<MyLearningScreen> {
     }
 
     final snapshot = _snapshot!;
+    final activeCount =
+        snapshot.courses.where((course) => course.isActive).length;
+
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
       children: [
+        if (_error != null) ...[
+          Text(
+            _error!,
+            style: const TextStyle(color: AppColors.danger, height: 1.4),
+          ),
+          const SizedBox(height: 12),
+        ],
         const Text(
-          'Enrolled courses and programs in this institute.',
-          style: TextStyle(fontSize: 15, color: AppColors.muted, height: 1.4),
+          'Your enrolled courses and programs in this institute.',
+          style: TextStyle(fontSize: 16, color: AppColors.muted, height: 1.4),
+        ),
+        const SizedBox(height: 14),
+        _SummaryCard(
+          total: snapshot.courses.length,
+          active: activeCount,
         ),
         const SizedBox(height: 18),
         if (snapshot.isEmpty)
-          const Padding(
-            padding: EdgeInsets.only(top: 48),
-            child: Text(
-              'No enrolled courses yet.',
-              style: TextStyle(color: AppColors.muted, height: 1.45),
-            ),
+          _EmptyState(
+            onBrowse: () =>
+                Navigator.of(context).pushNamed(AppRoutes.catalog),
+            onLectures: () =>
+                Navigator.of(context).pushNamed(AppRoutes.lecturesList),
           )
-        else
+        else ...[
+          const Text(
+            'Courses',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.7,
+              color: AppColors.muted,
+            ),
+          ),
+          const SizedBox(height: 10),
           ...snapshot.courses.map(
             (course) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.only(bottom: 12),
               child: _CourseTile(
                 course: course,
                 onTap: () => _openCourse(course),
               ),
             ),
           ),
+        ],
       ],
+    );
+  }
+}
+
+class _SummaryCard extends StatelessWidget {
+  const _SummaryCard({
+    required this.total,
+    required this.active,
+  });
+
+  final int total;
+  final int active;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.brandSoft),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              total == 0
+                  ? 'No courses enrolled yet'
+                  : '$total course${total == 1 ? '' : 's'} · $active active',
+              style: const TextStyle(
+                color: AppColors.ink,
+                fontWeight: FontWeight.w600,
+                fontSize: 15,
+              ),
+            ),
+          ),
+          const Icon(
+            Icons.menu_book_rounded,
+            color: AppColors.brand,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  const _EmptyState({
+    required this.onBrowse,
+    required this.onLectures,
+  });
+
+  final VoidCallback onBrowse;
+  final VoidCallback onLectures;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(20, 28, 20, 24),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.brandSoft),
+      ),
+      child: Column(
+        children: [
+          const Icon(
+            Icons.school_outlined,
+            size: 40,
+            color: AppColors.brand,
+          ),
+          const SizedBox(height: 14),
+          const Text(
+            'No enrolled courses yet',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: AppColors.ink,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Live lectures can still appear on Home when your institute schedules them. Enroll in a course to unlock modules and lessons here.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: AppColors.muted, height: 1.45, fontSize: 15),
+          ),
+          const SizedBox(height: 18),
+          FilledButton(
+            onPressed: onBrowse,
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.brand,
+              foregroundColor: Colors.white,
+              minimumSize: const Size.fromHeight(48),
+            ),
+            child: const Text('Browse catalog'),
+          ),
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: onLectures,
+            child: const Text('Open lectures'),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -164,81 +295,94 @@ class _CourseTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final subtitle = course.subtitle;
+    final progress = (course.progressPercent ?? 0).clamp(0, 100);
 
     return Material(
       color: AppColors.surface,
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(16),
       child: InkWell(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(color: AppColors.brandSoft),
           ),
-          child: Row(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: AppColors.brandSoft,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.menu_book_outlined,
-                  color: AppColors.brand,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      course.title,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.ink,
-                        fontSize: 15,
-                      ),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 46,
+                    height: 46,
+                    decoration: BoxDecoration(
+                      color: AppColors.brandSoft,
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    if (subtitle.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        subtitle,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: AppColors.muted,
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 8),
-                    Row(
+                    child: const Icon(
+                      Icons.menu_book_outlined,
+                      color: AppColors.brand,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _StatusChip(
-                          label: course.statusLabel,
-                          active: course.isActive,
+                        Text(
+                          course.title,
+                          style: const TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.ink,
+                          ),
                         ),
-                        if (course.progressPercent != null) ...[
-                          const SizedBox(width: 8),
+                        if (subtitle.isNotEmpty) ...[
+                          const SizedBox(height: 4),
                           Text(
-                            '${course.progressPercent}%',
+                            subtitle,
                             style: const TextStyle(
-                              fontSize: 12,
                               color: AppColors.muted,
-                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                              height: 1.35,
                             ),
                           ),
                         ],
                       ],
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: 8),
+                  _StatusChip(label: course.statusLabel, active: course.isActive),
+                ],
               ),
-              const Icon(Icons.chevron_right_rounded, color: AppColors.muted),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(999),
+                      child: LinearProgressIndicator(
+                        value: progress / 100,
+                        minHeight: 8,
+                        backgroundColor: AppColors.brandSoft,
+                        color: AppColors.brand,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    '$progress%',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.brand,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
         ),
@@ -259,7 +403,7 @@ class _StatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: active ? const Color(0xFFE6F5EE) : AppColors.brandSoft,
         borderRadius: BorderRadius.circular(8),
@@ -267,7 +411,7 @@ class _StatusChip extends StatelessWidget {
       child: Text(
         label,
         style: TextStyle(
-          fontSize: 11,
+          fontSize: 12,
           fontWeight: FontWeight.w700,
           color: active ? AppColors.success : AppColors.muted,
         ),

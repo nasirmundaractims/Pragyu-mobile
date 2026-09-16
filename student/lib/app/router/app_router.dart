@@ -23,10 +23,12 @@ import '../../features/organization/presentation/screens/org_picker_screen.dart'
 import '../../features/splash/presentation/screens/splash_screen.dart';
 import '../../features/tests/domain/assessment_detail_models.dart';
 import '../../features/tests/domain/attempt_flow_models.dart';
+import '../../features/tests/domain/deep_feedback_models.dart';
 import '../../features/tests/domain/submission_status_models.dart';
 import '../../features/tests/presentation/screens/assessment_detail_screen.dart';
 import '../../features/tests/presentation/screens/attempt_instructions_screen.dart';
 import '../../features/tests/presentation/screens/attempt_player_screen.dart';
+import '../../features/tests/presentation/screens/deep_feedback_screen.dart';
 import '../../features/tests/presentation/screens/result_feedback_screen.dart';
 import '../../features/tests/presentation/screens/submission_status_screen.dart';
 import '../../features/welcome/presentation/screens/auth_flow_stub_screen.dart';
@@ -58,6 +60,7 @@ abstract final class AppRoutes {
   static const attemptPlayer = '/attempt-player';
   static const submissionStatus = '/submission-status';
   static const resultFeedback = '/result-feedback';
+  static const deepFeedback = '/deep-feedback';
   static const createAccountStub = '/create-account-stub';
 }
 
@@ -211,6 +214,13 @@ Route<dynamic> onGenerateRoute(RouteSettings settings) {
         settings: settings,
         builder: (_) => ResultFeedbackScreen(
           args: ResultFeedbackArgs.fromObject(settings.arguments),
+        ),
+      );
+    case AppRoutes.deepFeedback:
+      return MaterialPageRoute<void>(
+        settings: settings,
+        builder: (_) => DeepFeedbackScreen(
+          args: DeepFeedbackArgs.fromObject(settings.arguments),
         ),
       );
     case AppRoutes.createAccountStub:

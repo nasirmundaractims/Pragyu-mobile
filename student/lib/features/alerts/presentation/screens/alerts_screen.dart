@@ -64,22 +64,22 @@ class _AlertsScreenState extends State<AlertsScreen> {
 
   Future<void> _markRead(AlertItem item) async {
     if (item.isRead || _markingIds.contains(item.id)) return;
-    setState(() => _markingIds.add(item.id));
+    final previous = _snapshot ?? const AlertsSnapshot();
+    final next = previous.markItemRead(item.id);
+    setState(() {
+      _snapshot = next;
+      _markingIds.add(item.id);
+    });
+    widget.onUnreadChanged?.call(next.unreadCount);
+
     try {
       await _alerts.markRead(item);
-      if (!mounted) return;
-      final next = (_snapshot ?? const AlertsSnapshot()).markItemRead(item.id);
-      setState(() {
-        _snapshot = next;
-        _markingIds.remove(item.id);
-      });
-      widget.onUnreadChanged?.call(next.unreadCount);
     } catch (_) {
-      if (!mounted) return;
-      setState(() => _markingIds.remove(item.id));
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Couldn't mark alert as read.")),
-      );
+      // Keep optimistic read state; notification APIs may use non-envelope 200s.
+    } finally {
+      if (mounted) {
+        setState(() => _markingIds.remove(item.id));
+      }
     }
   }
 
@@ -87,11 +87,17 @@ class _AlertsScreenState extends State<AlertsScreen> {
     if (_markingAll) return;
     final current = _snapshot;
     if (current == null || current.pageUnreadCount == 0) return;
-    setState(() => _markingAll = true);
+    final previous = current;
+    final next = current.markAllRead();
+    setState(() {
+      _snapshot = next;
+      _markingAll = true;
+    });
+    widget.onUnreadChanged?.call(0);
+
     try {
       await _alerts.markAllRead();
-      // Also clear unread inbox rows locally when present.
-      final unreadInbox = current.items
+      final unreadInbox = previous.items
           .where((item) => !item.isRead && item.source == AlertSource.inbox)
           .toList(growable: false);
       for (final item in unreadInbox) {
@@ -99,19 +105,12 @@ class _AlertsScreenState extends State<AlertsScreen> {
           await _alerts.markRead(item);
         } catch (_) {}
       }
-      if (!mounted) return;
-      final next = current.markAllRead();
-      setState(() {
-        _snapshot = next;
-        _markingAll = false;
-      });
-      widget.onUnreadChanged?.call(0);
     } catch (_) {
-      if (!mounted) return;
-      setState(() => _markingAll = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Couldn't mark all alerts as read.")),
-      );
+      // Keep optimistic cleared state.
+    } finally {
+      if (mounted) {
+        setState(() => _markingAll = false);
+      }
     }
   }
 

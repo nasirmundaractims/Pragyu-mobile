@@ -140,6 +140,7 @@ class ApiClient {
 
   JsonMap _decodeEnvelope(http.Response response) {
     JsonMap? decoded;
+    Object? bareList;
     if (response.body.isNotEmpty) {
       try {
         final dynamic raw = jsonDecode(response.body);
@@ -147,6 +148,8 @@ class ApiClient {
           decoded = raw;
         } else if (raw is Map) {
           decoded = raw.map((key, value) => MapEntry(key.toString(), value));
+        } else if (raw is List) {
+          bareList = raw;
         }
       } catch (_) {
         decoded = null;
@@ -154,21 +157,51 @@ class ApiClient {
     }
 
     final status = response.statusCode;
-    final success = decoded?['success'] == true;
+    final hasSuccessFlag = decoded != null && decoded.containsKey('success');
+    final successFlag = decoded?['success'] == true;
     final message = (decoded?['message'] as String?)?.trim();
     final code = decoded?['code'] as String?;
     final data = decoded?['data'];
 
-    // Login MFA challenge is 202 with success:true.
-    if (status >= 200 && status < 300 && success) {
+    // Accept any HTTP 2xx unless the Pragyu envelope explicitly says success:false.
+    // Covers:
+    // - { success: true, data: ... }
+    // - Laravel JsonResource { data: ... } (no success flag)
+    // - empty 200/204 bodies
+    // - bare JSON arrays
+    if (status >= 200 && status < 300) {
+      if (hasSuccessFlag && !successFlag) {
+        throw ApiException(
+          message: (message != null && message.isNotEmpty)
+              ? message
+              : 'Request failed ($status).',
+          statusCode: status,
+          code: code,
+          fieldErrors: _fieldErrors(decoded),
+          data: _asDataMap(data),
+        );
+      }
+
       return {
         'statusCode': status,
         'message': message ?? '',
-        'data': data,
+        'data': bareList ?? data ?? decoded?['items'] ?? decoded,
         'code': code,
       };
     }
 
+    throw ApiException(
+      message: (message != null && message.isNotEmpty)
+          ? message
+          : 'Request failed ($status).',
+      statusCode: status,
+      code: code,
+      fieldErrors: _fieldErrors(decoded),
+      data: _asDataMap(data),
+    );
+  }
+
+  static Map<String, String> _fieldErrors(JsonMap? decoded) {
     final fieldErrors = <String, String>{};
     final errors = decoded?['errors'];
     if (errors is List) {
@@ -185,20 +218,15 @@ class ApiClient {
         }
       }
     }
+    return fieldErrors;
+  }
 
-    throw ApiException(
-      message: (message != null && message.isNotEmpty)
-          ? message
-          : 'Request failed ($status).',
-      statusCode: status,
-      code: code,
-      fieldErrors: fieldErrors,
-      data: data is Map<String, dynamic>
-          ? data
-          : (data is Map
-              ? data.map((k, v) => MapEntry(k.toString(), v))
-              : null),
-    );
+  static JsonMap? _asDataMap(Object? data) {
+    if (data is Map<String, dynamic>) return data;
+    if (data is Map) {
+      return data.map((k, v) => MapEntry(k.toString(), v));
+    }
+    return null;
   }
 
   static String _join(String base, String path) {

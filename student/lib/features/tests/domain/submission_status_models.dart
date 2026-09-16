@@ -80,7 +80,7 @@ class SubmissionStatusPayload {
   }
 }
 
-/// Route args for S-46 Result / feedback (stub until full feedback ships).
+/// Route args for S-46 Result / feedback.
 class ResultFeedbackArgs {
   const ResultFeedbackArgs({
     required this.submissionId,

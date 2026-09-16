@@ -438,7 +438,7 @@ class _ProfileHero extends StatelessWidget {
             radius: 28,
             backgroundColor: AppColors.brandSoft,
             child: Text(
-              name.isNotEmpty ? name.characters.first.toUpperCase() : '?',
+              _initialLetter(name),
               style: const TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.w700,
@@ -523,4 +523,10 @@ class _Card extends StatelessWidget {
       ),
     );
   }
+}
+
+String _initialLetter(String name) {
+  final trimmed = name.trim();
+  if (trimmed.isEmpty) return '?';
+  return String.fromCharCode(trimmed.runes.first).toUpperCase();
 }

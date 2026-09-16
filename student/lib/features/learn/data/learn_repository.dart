@@ -23,23 +23,10 @@ class LearnRepository implements LearnGateway {
   Future<MyLearningSnapshot> loadMyLearning() async {
     final session = await _requireSession();
 
-    final envelope = await _api.get(
-      '/students/me/account/courses',
-      query: const {'status': 'all'},
-      accessToken: session.accessToken,
-      organizationId: session.organizationId,
-    );
-
-    final data = envelope['data'];
-    if (data is! List) {
-      return const MyLearningSnapshot();
+    var courses = await _loadAccountCourses(session);
+    if (courses.isEmpty) {
+      courses = await _loadIdentityMyLearning(session);
     }
-
-    final courses = data
-        .whereType<Map>()
-        .map(_parseCourse)
-        .whereType<LearningCourse>()
-        .toList(growable: false);
 
     final sorted = [...courses]..sort((a, b) {
         if (a.isActive != b.isActive) {
@@ -49,6 +36,60 @@ class LearnRepository implements LearnGateway {
       });
 
     return MyLearningSnapshot(courses: sorted);
+  }
+
+  Future<List<LearningCourse>> _loadAccountCourses(
+    SessionContext session,
+  ) async {
+    try {
+      final envelope = await _api.get(
+        '/students/me/account/courses',
+        query: const {'status': 'all'},
+        accessToken: session.accessToken,
+        organizationId: session.organizationId,
+      );
+      return _parseCourseList(envelope['data']);
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  Future<List<LearningCourse>> _loadIdentityMyLearning(
+    SessionContext session,
+  ) async {
+    try {
+      final envelope = await _api.get(
+        '/students/me/my-learning',
+        accessToken: session.accessToken,
+        organizationId: session.organizationId,
+      );
+      return _parseCourseList(envelope['data']);
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  List<LearningCourse> _parseCourseList(Object? data) {
+    final rows = <Map>[];
+    if (data is List) {
+      rows.addAll(data.whereType<Map>());
+    } else if (data is Map) {
+      final map = data.map((k, v) => MapEntry(k.toString(), v));
+      final nested = map['courses'] ?? map['items'] ?? map['enrollments'];
+      if (nested is List) {
+        rows.addAll(nested.whereType<Map>());
+      }
+    }
+
+    final seen = <String>{};
+    final courses = <LearningCourse>[];
+    for (final row in rows) {
+      final course = _parseCourse(row);
+      if (course == null) continue;
+      if (!seen.add(course.courseId)) continue;
+      courses.add(course);
+    }
+    return courses;
   }
 
   @override
@@ -201,13 +242,22 @@ class LearnRepository implements LearnGateway {
 
   LearningCourse? _parseCourse(Map raw) {
     final map = raw.map((k, v) => MapEntry(k.toString(), v));
-    final courseId = map['course_id']?.toString() ?? '';
+    final courseId = map['course_id']?.toString() ??
+        map['id']?.toString() ??
+        '';
     if (courseId.isEmpty) return null;
 
-    final title = (map['course_name'] ?? map['program_name'] ?? 'Course')
+    final title = (map['course_name'] ??
+            map['title'] ??
+            map['program_name'] ??
+            'Course')
         .toString()
         .trim();
-    final progress = _progressPercent(map['progress']);
+    final progress = _progressPercent(
+          map['progress'] ??
+              map['progress_percent'] ??
+              map['completion_percent'],
+        );
 
     return LearningCourse(
       courseId: courseId,
@@ -217,7 +267,8 @@ class LearnRepository implements LearnGateway {
       programName: map['program_name']?.toString(),
       batchName: map['batch_name']?.toString(),
       status: map['status']?.toString(),
-      isActive: map['is_active'] == true,
+      isActive: map['is_active'] == true ||
+          map['status']?.toString().toLowerCase() == 'active',
       progressPercent: progress,
     );
   }

@@ -79,25 +79,23 @@ class HomeSnapshot {
     this.unreadCount = 0,
     this.continueLearning,
     this.progress,
-    this.upcomingLectures,
+    this.upcomingLectures = const [],
   });
 
   final AuthUser user;
   final HomeLecture? nextLecture;
-  final List<HomeAssessment>? dueAssessments;
+  final List<HomeAssessment> dueAssessments;
   final int unreadCount;
   final HomeContinueItem? continueLearning;
   final HomeProgressSummary? progress;
-  final List<HomeLecture>? upcomingLectures;
+  final List<HomeLecture> upcomingLectures;
 
   HomeProgressSummary get progressOrEmpty =>
       progress ?? const HomeProgressSummary();
 
-  List<HomeAssessment> get dueAssessmentsOrEmpty =>
-      dueAssessments ?? const [];
+  List<HomeAssessment> get dueAssessmentsOrEmpty => dueAssessments;
 
-  List<HomeLecture> get upcomingLecturesOrEmpty =>
-      upcomingLectures ?? const [];
+  List<HomeLecture> get upcomingLecturesOrEmpty => upcomingLectures;
 }
 
 class HomeContinueItem {

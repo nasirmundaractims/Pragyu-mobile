@@ -72,6 +72,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _openTab(int index) => StudentShell.of(context)?.goToTab(index);
 
+  static List<HomeLecture> _scheduleLectures(HomeSnapshot snapshot) {
+    final upcoming = snapshot.upcomingLectures;
+    if (upcoming.isNotEmpty) return upcoming;
+    final next = snapshot.nextLecture;
+    if (next == null) return const <HomeLecture>[];
+    return <HomeLecture>[next];
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -191,11 +199,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         const SizedBox(height: 14),
         _UpcomingScheduleCard(
-          lectures: snapshot.upcomingLecturesOrEmpty.isNotEmpty
-              ? snapshot.upcomingLecturesOrEmpty
-              : [
-                  if (snapshot.nextLecture != null) snapshot.nextLecture!,
-                ],
+          lectures: _scheduleLectures(snapshot),
           assessments: snapshot.dueAssessmentsOrEmpty,
           onViewAll: () {
             Navigator.of(context).pushNamed(AppRoutes.todayDetail);
@@ -240,6 +244,8 @@ class _TopBar extends StatelessWidget {
             children: [
               Text(
                 appName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w800,
@@ -248,6 +254,8 @@ class _TopBar extends StatelessWidget {
               ),
               const Text(
                 'Learn Practice Improve Succeed',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 10,
                   letterSpacing: 0.4,
@@ -261,6 +269,7 @@ class _TopBar extends StatelessWidget {
         IconButton(
           tooltip: 'Quick search',
           onPressed: onSearch,
+          visualDensity: VisualDensity.compact,
           icon: const Icon(Icons.search_rounded, color: _HomeScreenState._ink),
         ),
         Stack(
@@ -269,6 +278,7 @@ class _TopBar extends StatelessWidget {
             IconButton(
               tooltip: 'Alerts',
               onPressed: onAlerts,
+              visualDensity: VisualDensity.compact,
               icon: const Icon(
                 Icons.notifications_none_rounded,
                 color: _HomeScreenState._ink,
@@ -302,29 +312,18 @@ class _TopBar extends StatelessWidget {
           child: Container(
             width: 36,
             height: 36,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: const LinearGradient(
-                colors: [
-                  _HomeScreenState._blue,
-                  _HomeScreenState._purple,
-                ],
-              ),
-              border: Border.all(color: Colors.white, width: 2),
-              boxShadow: [
-                BoxShadow(
-                  color: _HomeScreenState._ink.withValues(alpha: 0.12),
-                  blurRadius: 8,
-                ),
-              ],
-            ),
             alignment: Alignment.center,
-            child: Text(
-              appName.isNotEmpty ? appName[0].toUpperCase() : 'P',
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w800,
+            decoration: BoxDecoration(
+              color: const Color(0xFFE8F0FF),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: _HomeScreenState._ink.withValues(alpha: 0.12),
               ),
+            ),
+            child: const Icon(
+              Icons.person_outline_rounded,
+              size: 20,
+              color: _HomeScreenState._ink,
             ),
           ),
         ),
@@ -357,7 +356,7 @@ class _GreetingRow extends StatelessWidget {
               Text(
                 greeting,
                 style: const TextStyle(
-                  fontSize: 22,
+                  fontSize: 24,
                   fontWeight: FontWeight.w800,
                   color: _HomeScreenState._ink,
                   letterSpacing: -0.3,
@@ -367,7 +366,7 @@ class _GreetingRow extends StatelessWidget {
               Text(
                 quote,
                 style: const TextStyle(
-                  fontSize: 12,
+                  fontSize: 13,
                   fontStyle: FontStyle.italic,
                   color: _HomeScreenState._muted,
                   height: 1.35,
@@ -445,151 +444,122 @@ class _HeroBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 168,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
-        gradient: const LinearGradient(
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-          colors: [
-            Color(0xFFE8EEFF),
-            Color(0xFFF0EBFF),
-            Color(0xFFEAF4FF),
-          ],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: _HomeScreenState._ink.withValues(alpha: 0.06),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            right: -8,
-            top: 0,
-            bottom: 0,
-            child: Image.asset(
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(22),
+      child: SizedBox(
+        height: 220,
+        width: double.infinity,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.asset(
               'assets/images/home_hero.jpg',
-              width: 150,
-              fit: BoxFit.contain,
-              errorBuilder: (_, error, stackTrace) => const SizedBox.shrink(),
-            ),
-          ),
-          const Positioned(
-            right: 12,
-            top: 14,
-            child: Text(
-              'Dream\nPrepare\nAchieve',
-              textAlign: TextAlign.right,
-              style: TextStyle(
-                fontSize: 10,
-                height: 1.2,
-                fontStyle: FontStyle.italic,
-                color: Color(0xFF9AA3B5),
-                fontWeight: FontWeight.w600,
+              fit: BoxFit.cover,
+              alignment: const Alignment(0.35, 0),
+              errorBuilder: (_, error, stackTrace) => Container(
+                color: const Color(0xFFE8EEFF),
               ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 120, 14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'KEEP GOING',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.8,
-                    color: _HomeScreenState._purple,
-                  ),
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  colors: [
+                    Color(0xE6142033),
+                    Color(0x99142033),
+                    Color(0x33142033),
+                    Color(0x00142033),
+                  ],
+                  stops: [0, 0.38, 0.72, 1],
                 ),
-                const SizedBox(height: 6),
-                const Text.rich(
-                  TextSpan(
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'KEEP GOING',
                     style: TextStyle(
-                      fontSize: 16,
+                      fontSize: 12,
                       fontWeight: FontWeight.w800,
-                      height: 1.2,
-                      color: _HomeScreenState._ink,
+                      letterSpacing: 1.1,
+                      color: Color(0xFFB8C7FF),
                     ),
-                    children: [
-                      TextSpan(text: 'A Brighter Future\nStarts '),
-                      TextSpan(
-                        text: 'With You',
-                        style: TextStyle(color: _HomeScreenState._blue),
-                      ),
-                    ],
                   ),
-                ),
-                const Spacer(),
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: onContinue,
-                      borderRadius: BorderRadius.circular(22),
-                      child: Ink(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 10,
+                  const SizedBox(height: 8),
+                  const Text.rich(
+                    TextSpan(
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        height: 1.2,
+                        color: Colors.white,
+                      ),
+                      children: [
+                        TextSpan(text: 'A brighter future\nstarts '),
+                        TextSpan(
+                          text: 'with you',
+                          style: TextStyle(color: Color(0xFF9EC0FF)),
                         ),
-                        decoration: BoxDecoration(
-                          color: _HomeScreenState._blue,
-                          borderRadius: BorderRadius.circular(22),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              'Continue Learning',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 13,
+                      ],
+                    ),
+                  ),
+                  const Spacer(),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: onContinue,
+                        borderRadius: BorderRadius.circular(24),
+                        child: Ink(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 11,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _HomeScreenState._blue,
+                            borderRadius: BorderRadius.circular(24),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.22),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
                               ),
-                            ),
-                            SizedBox(width: 6),
-                            Icon(
-                              Icons.arrow_forward_rounded,
-                              color: Colors.white,
-                              size: 16,
-                            ),
-                          ],
+                            ],
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Continue Learning',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              SizedBox(width: 8),
+                              Icon(
+                                Icons.arrow_forward_rounded,
+                                color: Colors.white,
+                                size: 18,
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          Positioned(
-            right: 16,
-            bottom: 12,
-            child: Row(
-              children: List.generate(4, (i) {
-                return Container(
-                  width: i == 0 ? 14 : 6,
-                  height: 6,
-                  margin: const EdgeInsets.only(left: 3),
-                  decoration: BoxDecoration(
-                    color: i == 0
-                        ? _HomeScreenState._blue
-                        : const Color(0xFFD5DBE8),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                );
-              }),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1462,7 +1432,9 @@ class StudentShellState extends State<StudentShell> {
   @override
   Widget build(BuildContext context) {
     final pages = List<Widget>.generate(5, _tab);
-    final unread = _alertsUnread;
+    // Guard against hot-reload leaving badge state uninitialized on web.
+    final unread = _alertsUnread < 0 ? 0 : _alertsUnread;
+    final badgeLabel = unread > 99 ? '99+' : '$unread';
 
     return Scaffold(
       body: IndexedStack(index: _index, children: pages),
@@ -1491,12 +1463,12 @@ class StudentShellState extends State<StudentShell> {
           NavigationDestination(
             icon: Badge(
               isLabelVisible: unread > 0,
-              label: Text('$unread'),
+              label: Text(badgeLabel),
               child: const Icon(Icons.notifications_none_rounded),
             ),
             selectedIcon: Badge(
               isLabelVisible: unread > 0,
-              label: Text('$unread'),
+              label: Text(badgeLabel),
               child: const Icon(Icons.notifications_rounded),
             ),
             label: 'Alerts',

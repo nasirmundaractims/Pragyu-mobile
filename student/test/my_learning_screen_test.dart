@@ -119,7 +119,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('My learning'), findsOneWidget);
+    expect(find.text('Learn'), findsOneWidget);
     expect(find.text('UPSC GS Foundation'), findsOneWidget);
     expect(find.text('UPSC CSE · Batch A'), findsOneWidget);
     expect(find.text('Active'), findsOneWidget);
@@ -139,7 +139,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('No enrolled courses yet.'), findsOneWidget);
+    expect(find.text('No enrolled courses yet'), findsOneWidget);
   });
 
   testWidgets('S-20 Learn tab shows my learning', (tester) async {
@@ -165,7 +165,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('My learning'), findsOneWidget);
+    expect(find.text('Learn'), findsWidgets);
     expect(find.text('GPSC Foundation'), findsOneWidget);
   });
 
