@@ -164,6 +164,7 @@ lib/
     recommendations/ # S-63
     notes_bookmarks/ # S-64
     analytics/   # S-65
+    exam_workspace/ # S-66
     me/          # S-70
 ```
 
@@ -202,6 +203,7 @@ lib/
 - **S-63 Recommendations** — AI next actions, filters, save/dismiss, refresh generate, Me entry
 - **S-64 Notes & Bookmarks** — notes CRUD, content bookmarks, AI feedback library, Me entry
 - **S-65 My Performance** — analytics KPIs, AI insights, subject analysis, score trend, Me entry
+- **S-66 Exam Workspace** — practice hub, readiness, pattern-aware assessments, Me entry
 - **S-70 Me** — profile summary, email/study prefs, switch institute, sign out
 
 ## Troubleshooting
