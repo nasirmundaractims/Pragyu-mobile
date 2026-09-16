@@ -17,7 +17,9 @@ import '../../features/study_planner/presentation/screens/study_planner_screen.d
 import '../../features/weak_topics/presentation/screens/weak_topics_screen.dart';
 import '../../features/auth/presentation/screens/sign_in_screen.dart';
 import '../../features/calendar/presentation/screens/calendar_screen.dart';
+import '../../features/catalog/domain/catalog_checkout_models.dart';
 import '../../features/catalog/presentation/screens/catalog_browse_screen.dart';
+import '../../features/catalog/presentation/screens/catalog_checkout_screen.dart';
 import '../../features/catalog/presentation/screens/catalog_detail_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
 import '../../features/home/presentation/screens/today_detail_screen.dart';
@@ -70,6 +72,7 @@ abstract final class AppRoutes {
   static const calendar = '/calendar';
   static const catalog = '/catalog';
   static const catalogDetail = '/catalog-detail';
+  static const catalogCheckout = '/catalog-checkout';
   static const assessmentDetail = '/assessment-detail';
   static const attemptInstructions = '/attempt-instructions';
   static const attemptPlayer = '/attempt-player';
@@ -207,6 +210,13 @@ Route<dynamic> onGenerateRoute(RouteSettings settings) {
           slug: settings.arguments is String
               ? settings.arguments as String
               : settings.arguments?.toString() ?? '',
+        ),
+      );
+    case AppRoutes.catalogCheckout:
+      return MaterialPageRoute<void>(
+        settings: settings,
+        builder: (_) => CatalogCheckoutScreen(
+          args: CatalogCheckoutArgs.fromObject(settings.arguments),
         ),
       );
     case AppRoutes.assessmentDetail:

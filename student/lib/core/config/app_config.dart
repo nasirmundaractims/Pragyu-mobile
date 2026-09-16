@@ -12,11 +12,14 @@ class AppConfig {
     required this.environment,
     required this.apiBaseUrl,
     required this.appName,
+    this.studentWebBaseUrl,
   });
 
   final AppEnvironment environment;
   final String apiBaseUrl;
   final String appName;
+  /// Optional student-web origin for hosted Razorpay checkout handoff.
+  final String? studentWebBaseUrl;
 
   static AppConfig? _instance;
 
@@ -32,12 +35,17 @@ class AppConfig {
     const envFromDefine = String.fromEnvironment('APP_ENV', defaultValue: '');
     const apiFromDefine = String.fromEnvironment('API_BASE_URL', defaultValue: '');
     const nameFromDefine = String.fromEnvironment('APP_NAME', defaultValue: '');
+    const webFromDefine =
+        String.fromEnvironment('STUDENT_WEB_BASE_URL', defaultValue: '');
 
     final environment = AppEnvironment.fromString(
       envFromDefine.isEmpty ? null : envFromDefine,
     );
 
     final fileValues = await _loadEnvAsset(environment.envFileName);
+    final webBase = webFromDefine.isNotEmpty
+        ? webFromDefine
+        : fileValues['STUDENT_WEB_BASE_URL'];
 
     final config = AppConfig._(
       environment: environment,
@@ -47,6 +55,9 @@ class AppConfig {
       appName: nameFromDefine.isNotEmpty
           ? nameFromDefine
           : (fileValues['APP_NAME'] ?? 'Pragyu'),
+      studentWebBaseUrl: (webBase != null && webBase.trim().isNotEmpty)
+          ? webBase.trim().replaceAll(RegExp(r'/+$'), '')
+          : null,
     );
 
     _instance = config;

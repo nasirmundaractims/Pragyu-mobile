@@ -154,7 +154,7 @@ lib/
     learn/       # S-20 / S-21 / S-22
     lectures/    # S-23 … S-26
     materials/   # S-27 / S-28
-    catalog/     # S-29
+    catalog/     # S-29 + S-73 checkout
     calendar/    # S-30
     tests/       # S-40 … S-49
     alerts/      # S-50 / S-51
@@ -188,6 +188,7 @@ lib/
 - **S-27 Study materials list** — implemented (course PDFs/notes)
 - **S-28 Material viewer** — in-app PDF/video preview + open/copy
 - **S-29 Catalog / browse** — marketplace catalog list + detail
+- **S-73 Catalog checkout** — Buy/Enroll from detail, order summary, pay/confirm
 - **S-30 Calendar** — implemented (14-day agenda: live classes + test deadlines)
 - **S-40 Tests hub** — implemented (Tests tab: published assessments list + filters)
 - **S-41 Assessment detail** — overview, results, entry to instructions
@@ -213,6 +214,7 @@ lib/
 - **S-70 Me** — profile summary, email/study prefs, switch institute, sign out
 - **S-71 Settings** — password, sessions, language/timezone, trusted devices, Me entry
 - **S-72 Payments** — fees, billing history, AI credit balance/packs, Me entry
+- **S-73 Catalog checkout** — create order, pay/confirm, enrollment unlock from catalog detail
 
 ## Troubleshooting
 

@@ -17,6 +17,8 @@ class CatalogListing {
     this.averageRating = 0,
     this.ratingCount = 0,
     this.sellerName,
+    this.programId,
+    this.courseId,
   });
 
   final String id;
@@ -36,6 +38,12 @@ class CatalogListing {
   final double averageRating;
   final int ratingCount;
   final String? sellerName;
+  final String? programId;
+  final String? courseId;
+
+  bool get canCheckout =>
+      (programId?.trim().isNotEmpty == true) &&
+      (courseId?.trim().isNotEmpty == true);
 
   String get priceLabel {
     if (price == null) return 'Free / Contact';
@@ -85,6 +93,10 @@ class CatalogListing {
           : double.tryParse(json['average_rating']?.toString() ?? '') ?? 0,
       ratingCount: int.tryParse(json['rating_count']?.toString() ?? '') ?? 0,
       sellerName: sellerName,
+      programId: json['program_id']?.toString() ??
+          json['programId']?.toString(),
+      courseId: json['course_id']?.toString() ??
+          json['courseId']?.toString(),
     );
   }
 }
