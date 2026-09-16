@@ -169,6 +169,7 @@ lib/
     attendance/  # S-68
     payments/    # S-72
     settings/    # S-71
+    tutorials/   # S-74
     me/          # S-70
 ```
 
@@ -215,6 +216,7 @@ lib/
 - **S-71 Settings** — password, sessions, language/timezone, trusted devices, Me entry
 - **S-72 Payments** — fees, billing history, AI credit balance/packs, Me entry
 - **S-73 Catalog checkout** — create order, pay/confirm, enrollment unlock from catalog detail
+- **S-74 Tutorials** — public exam/class guides hub, browse hierarchy, article reader, Me entry
 
 ## Troubleshooting
 
