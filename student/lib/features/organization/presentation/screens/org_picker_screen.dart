@@ -14,10 +14,16 @@ class OrgPickerScreen extends StatefulWidget {
     super.key,
     this.organizationRepository,
     this.autoSelectSingle = true,
+    this.allowBack = false,
+    this.afterSelectRoute = AppRoutes.onboarding,
+    this.clearStackOnSelect = false,
   });
 
   final OrganizationGateway? organizationRepository;
   final bool autoSelectSingle;
+  final bool allowBack;
+  final String afterSelectRoute;
+  final bool clearStackOnSelect;
 
   @override
   State<OrgPickerScreen> createState() => _OrgPickerScreenState();
@@ -88,11 +94,17 @@ class _OrgPickerScreenState extends State<OrgPickerScreen> {
     try {
       await _orgs.selectOrganization(organization);
       if (!mounted) return;
-      if (replace) {
-        Navigator.of(context).pushReplacementNamed(AppRoutes.onboarding);
+      final route = widget.afterSelectRoute;
+      if (widget.clearStackOnSelect) {
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          route,
+          (route) => false,
+        );
+      } else if (replace) {
+        Navigator.of(context).pushReplacementNamed(route);
       } else {
         Navigator.of(context).pushNamedAndRemoveUntil(
-          AppRoutes.onboarding,
+          route,
           (route) => false,
         );
       }
@@ -115,7 +127,7 @@ class _OrgPickerScreenState extends State<OrgPickerScreen> {
         appBar: AppBar(
           backgroundColor: AppColors.background,
           title: const Text('Choose institute'),
-          automaticallyImplyLeading: false,
+          automaticallyImplyLeading: widget.allowBack,
         ),
         body: SafeArea(
           child: _buildBody(),

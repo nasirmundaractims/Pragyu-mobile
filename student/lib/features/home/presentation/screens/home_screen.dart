@@ -2,14 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:student_mobile/app/router/app_router.dart';
-import 'package:student_mobile/app/shell/feature_placeholder_screen.dart';
 import 'package:student_mobile/core/config/app_config.dart';
+import 'package:student_mobile/features/alerts/data/alerts_repository.dart';
+import 'package:student_mobile/features/alerts/presentation/screens/alerts_screen.dart';
 import 'package:student_mobile/features/home/data/home_repository.dart';
 import 'package:student_mobile/features/home/domain/greeting.dart';
 import 'package:student_mobile/features/home/domain/home_models.dart';
 import 'package:student_mobile/features/learn/data/learn_repository.dart';
 import 'package:student_mobile/features/learn/domain/learn_models.dart';
 import 'package:student_mobile/features/learn/presentation/screens/my_learning_screen.dart';
+import 'package:student_mobile/features/me/data/me_repository.dart';
+import 'package:student_mobile/features/me/presentation/screens/me_screen.dart';
 import 'package:student_mobile/features/search/presentation/widgets/quick_search_sheet.dart';
 import 'package:student_mobile/features/tests/data/tests_repository.dart';
 import 'package:student_mobile/features/tests/presentation/screens/tests_hub_screen.dart';
@@ -1376,12 +1379,16 @@ class StudentShell extends StatefulWidget {
     this.homeRepository,
     this.learnRepository,
     this.testsRepository,
+    this.alertsRepository,
+    this.meRepository,
   });
 
   final int initialIndex;
   final HomeGateway? homeRepository;
   final LearnGateway? learnRepository;
   final TestsGateway? testsRepository;
+  final AlertsGateway? alertsRepository;
+  final MeGateway? meRepository;
 
   static StudentShellState? of(BuildContext context) {
     return context.findAncestorStateOfType<StudentShellState>();
@@ -1394,11 +1401,15 @@ class StudentShell extends StatefulWidget {
 class StudentShellState extends State<StudentShell> {
   late int _index = widget.initialIndex;
   final Set<int> _mountedTabs = <int>{};
+  late final AlertsGateway _alerts =
+      widget.alertsRepository ?? AlertsRepository();
+  int _alertsUnread = 0;
 
   @override
   void initState() {
     super.initState();
     _mountedTabs.add(_index);
+    _refreshAlertsBadge();
   }
 
   void goToTab(int index) {
@@ -1407,6 +1418,22 @@ class StudentShellState extends State<StudentShell> {
       _index = index;
       _mountedTabs.add(index);
     });
+    if (index == 3) {
+      _refreshAlertsBadge();
+    }
+  }
+
+  void setAlertsUnread(int count) {
+    if (_alertsUnread == count) return;
+    setState(() => _alertsUnread = count < 0 ? 0 : count);
+  }
+
+  Future<void> _refreshAlertsBadge() async {
+    try {
+      final count = await _alerts.unreadCount();
+      if (!mounted) return;
+      setAlertsUnread(count);
+    } catch (_) {}
   }
 
   Widget _tab(int index) {
@@ -1421,17 +1448,12 @@ class StudentShellState extends State<StudentShell> {
       case 2:
         return TestsHubScreen(testsRepository: widget.testsRepository);
       case 3:
-        return const FeaturePlaceholderScreen(
-          title: 'Alerts',
-          nextScreenId: 'S-50',
-          message: 'Your notification inbox will live here.',
+        return AlertsScreen(
+          alertsRepository: widget.alertsRepository ?? _alerts,
+          onUnreadChanged: setAlertsUnread,
         );
       case 4:
-        return const FeaturePlaceholderScreen(
-          title: 'Me',
-          nextScreenId: 'S-70',
-          message: 'Profile and settings will live here.',
-        );
+        return MeScreen(meRepository: widget.meRepository);
       default:
         return const SizedBox.shrink();
     }
@@ -1440,7 +1462,7 @@ class StudentShellState extends State<StudentShell> {
   @override
   Widget build(BuildContext context) {
     final pages = List<Widget>.generate(5, _tab);
-    final unread = 0;
+    final unread = _alertsUnread;
 
     return Scaffold(
       body: IndexedStack(index: _index, children: pages),
@@ -1472,7 +1494,11 @@ class StudentShellState extends State<StudentShell> {
               label: Text('$unread'),
               child: const Icon(Icons.notifications_none_rounded),
             ),
-            selectedIcon: const Icon(Icons.notifications_rounded),
+            selectedIcon: Badge(
+              isLabelVisible: unread > 0,
+              label: Text('$unread'),
+              child: const Icon(Icons.notifications_rounded),
+            ),
             label: 'Alerts',
           ),
           const NavigationDestination(

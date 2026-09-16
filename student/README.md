@@ -157,6 +157,8 @@ lib/
     catalog/     # S-29
     calendar/    # S-30
     tests/       # S-40 … S-46
+    alerts/      # S-50
+    me/          # S-70
 ```
 
 ## Screens status
@@ -183,7 +185,8 @@ lib/
 - **S-44 Submit confirm** — sheet: unanswered/marked review → finalize
 - **S-45 Submission status** — poll processing / AI evaluating / ready → S-46
 - **S-46 Result / feedback** — score, per-question breakdown, AI feedback
-- **S-50 / S-70** — tab placeholders only
+- **S-50 Alerts** — notification + engagement inbox, mark read / mark all, tab badge
+- **S-70 Me** — profile summary, email/study prefs, switch institute, sign out
 
 ## Troubleshooting
 

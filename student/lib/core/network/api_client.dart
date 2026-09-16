@@ -63,6 +63,21 @@ class ApiClient {
     );
   }
 
+  Future<JsonMap> put(
+    String path, {
+    JsonMap? body,
+    String? accessToken,
+    String? organizationId,
+  }) {
+    return _send(
+      'PUT',
+      path,
+      body: body,
+      accessToken: accessToken,
+      organizationId: organizationId,
+    );
+  }
+
   Future<JsonMap> _send(
     String method,
     String path, {
@@ -96,6 +111,12 @@ class ApiClient {
           response = await _http.get(uri, headers: headers);
         case 'PATCH':
           response = await _http.patch(
+            uri,
+            headers: headers,
+            body: body == null ? null : jsonEncode(body),
+          );
+        case 'PUT':
+          response = await _http.put(
             uri,
             headers: headers,
             body: body == null ? null : jsonEncode(body),
