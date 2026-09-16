@@ -29,6 +29,7 @@ import '../../features/tests/presentation/screens/assessment_detail_screen.dart'
 import '../../features/tests/presentation/screens/attempt_instructions_screen.dart';
 import '../../features/tests/presentation/screens/attempt_player_screen.dart';
 import '../../features/tests/presentation/screens/deep_feedback_screen.dart';
+import '../../features/tests/presentation/screens/past_results_screen.dart';
 import '../../features/tests/presentation/screens/result_feedback_screen.dart';
 import '../../features/tests/presentation/screens/submission_status_screen.dart';
 import '../../features/welcome/presentation/screens/auth_flow_stub_screen.dart';
@@ -61,6 +62,7 @@ abstract final class AppRoutes {
   static const submissionStatus = '/submission-status';
   static const resultFeedback = '/result-feedback';
   static const deepFeedback = '/deep-feedback';
+  static const pastResults = '/past-results';
   static const createAccountStub = '/create-account-stub';
 }
 
@@ -222,6 +224,11 @@ Route<dynamic> onGenerateRoute(RouteSettings settings) {
         builder: (_) => DeepFeedbackScreen(
           args: DeepFeedbackArgs.fromObject(settings.arguments),
         ),
+      );
+    case AppRoutes.pastResults:
+      return MaterialPageRoute<void>(
+        settings: settings,
+        builder: (_) => const PastResultsScreen(),
       );
     case AppRoutes.createAccountStub:
       return MaterialPageRoute<void>(

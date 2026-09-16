@@ -10,12 +10,15 @@ import 'package:student_mobile/features/tests/domain/past_results_models.dart';
 import 'package:student_mobile/features/tests/domain/result_feedback_models.dart';
 import 'package:student_mobile/features/tests/domain/submission_status_models.dart';
 import 'package:student_mobile/features/tests/domain/tests_models.dart';
-import 'package:student_mobile/features/tests/presentation/screens/submission_status_screen.dart';
+import 'package:student_mobile/features/tests/presentation/screens/past_results_screen.dart';
 
 class _FakeTests implements TestsGateway {
-  _FakeTests(this.payload);
+  _FakeTests(this.snapshot);
 
-  final SubmissionStatusPayload payload;
+  final PastResultsSnapshot snapshot;
+
+  @override
+  Future<PastResultsSnapshot> loadPastResults() async => snapshot;
 
   @override
   Future<TestsSnapshot> loadTests() async => const TestsSnapshot();
@@ -54,7 +57,7 @@ class _FakeTests implements TestsGateway {
   Future<SubmissionStatusPayload> getSubmissionStatus(
     String submissionId,
   ) async {
-    return payload;
+    throw UnimplementedError();
   }
 
   @override
@@ -125,44 +128,54 @@ class _FakeTests implements TestsGateway {
   }) async {
     throw UnimplementedError();
   }
-
-  @override
-  Future<PastResultsSnapshot> loadPastResults() async {
-    throw UnimplementedError();
-  }
 }
 
 void main() {
-  testWidgets('S-45 shows OCR pipeline for media submissions', (tester) async {
+  testWidgets('S-49 shows attempts and score reports', (tester) async {
+    final fake = _FakeTests(
+      PastResultsSnapshot(
+        submissions: [
+          SubmissionSummary(
+            id: 'sub1',
+            assessmentId: 'a1',
+            attemptNumber: 1,
+            status: 'evaluating',
+            submittedAt: DateTime(2026, 9, 15),
+          ),
+          const SubmissionSummary(
+            id: 'sub2',
+            assessmentId: 'a2',
+            attemptNumber: 2,
+            status: 'evaluated',
+            totalScore: 16,
+            maxScore: 20,
+            percentage: 80,
+          ),
+        ],
+        assessmentTitles: const {
+          'a1': 'Polity Weekly Quiz',
+          'a2': 'History Mock',
+        },
+      ),
+    );
+
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light(),
-        home: SubmissionStatusScreen(
-          args: const SubmissionStatusArgs(
-            submissionId: 'sub1',
-            title: 'Essay test',
-            initialStatus: 'ocr_processing',
-            includesMedia: true,
-          ),
-          testsRepository: _FakeTests(
-            const SubmissionStatusPayload(
-              id: 'sub1',
-              status: 'ocr_processing',
-            ),
-          ),
-          pollInterval: const Duration(days: 1),
-        ),
+        home: PastResultsScreen(testsRepository: fake),
       ),
     );
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pumpAndSettle();
 
-    expect(
-      find.text(
-        'Your handwritten pages are being read with OCR before AI scoring.',
-      ),
-      findsOneWidget,
-    );
-    expect(find.text('OCR reading pages'), findsOneWidget);
+    expect(find.text('My attempts'), findsOneWidget);
+    expect(find.text('Polity Weekly Quiz'), findsOneWidget);
+    expect(find.text('Processing'), findsWidgets);
+
+    await tester.tap(find.text('Scores'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('History Mock'), findsOneWidget);
+    expect(find.text('Grade B'), findsOneWidget);
+    expect(find.text('16 / 20'), findsOneWidget);
   });
 }

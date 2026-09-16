@@ -79,6 +79,12 @@ class _TestsHubScreenState extends State<TestsHubScreen> {
           title: const Text('Tests'),
           actions: [
             IconButton(
+              tooltip: 'My attempts',
+              onPressed: () =>
+                  Navigator.of(context).pushNamed(AppRoutes.pastResults),
+              icon: const Icon(Icons.history_rounded, color: AppColors.ink),
+            ),
+            IconButton(
               tooltip: 'Quick search',
               onPressed: () => showQuickSearchSheet(context),
               icon: const Icon(Icons.search_rounded, color: AppColors.ink),

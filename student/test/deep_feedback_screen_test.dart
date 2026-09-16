@@ -6,6 +6,7 @@ import 'package:student_mobile/features/tests/domain/assessment_detail_models.da
 import 'package:student_mobile/features/tests/domain/attempt_flow_models.dart';
 import 'package:student_mobile/features/tests/domain/cbt_player_models.dart';
 import 'package:student_mobile/features/tests/domain/deep_feedback_models.dart';
+import 'package:student_mobile/features/tests/domain/past_results_models.dart';
 import 'package:student_mobile/features/tests/domain/result_feedback_models.dart';
 import 'package:student_mobile/features/tests/domain/submission_status_models.dart';
 import 'package:student_mobile/features/tests/domain/tests_models.dart';
@@ -141,6 +142,22 @@ class _FakeTests implements TestsGateway {
       status: 'processing',
     );
   }
+
+  @override
+  Future<AnswerImageAttachment> uploadAnswerImage({
+    required String submissionId,
+    required List<int> bytes,
+    required String fileName,
+    required String mimeType,
+    required int pageNumber,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<PastResultsSnapshot> loadPastResults() async {
+    throw UnimplementedError();
+  }
 }
 
 void main() {
@@ -266,15 +283,4 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Generated tip'), findsOneWidget);
   });
-  @override
-  Future<AnswerImageAttachment> uploadAnswerImage({
-    required String submissionId,
-    required List<int> bytes,
-    required String fileName,
-    required String mimeType,
-    required int pageNumber,
-  }) async {
-    throw UnimplementedError();
-  }
-
 }

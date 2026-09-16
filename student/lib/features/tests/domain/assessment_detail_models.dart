@@ -459,6 +459,9 @@ class SubmissionSummary {
     this.maxScore,
     this.percentage,
     this.submittedAt,
+    this.evaluatedAt,
+    this.failureReason,
+    this.updatedAt,
     this.metadata = const {},
   });
 
@@ -471,6 +474,9 @@ class SubmissionSummary {
   final double? maxScore;
   final double? percentage;
   final DateTime? submittedAt;
+  final DateTime? evaluatedAt;
+  final String? failureReason;
+  final DateTime? updatedAt;
   final Map<String, dynamic> metadata;
 
   bool get isDraft => status.toLowerCase() == 'draft';
@@ -509,8 +515,21 @@ class SubmissionSummary {
       submittedAt: AssessmentAttemptSummary._parseDate(
         json['submitted_at']?.toString(),
       ),
+      evaluatedAt: AssessmentAttemptSummary._parseDate(
+        json['evaluated_at']?.toString(),
+      ),
+      failureReason: _nullableTrim(json['failure_reason']?.toString()),
+      updatedAt: AssessmentAttemptSummary._parseDate(
+        json['updated_at']?.toString(),
+      ),
       metadata: metadata,
     );
+  }
+
+  static String? _nullableTrim(String? raw) {
+    final value = raw?.trim();
+    if (value == null || value.isEmpty) return null;
+    return value;
   }
 }
 

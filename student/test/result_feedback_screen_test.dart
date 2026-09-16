@@ -7,6 +7,7 @@ import 'package:student_mobile/features/tests/domain/attempt_flow_models.dart';
 import 'package:student_mobile/features/tests/domain/cbt_player_models.dart';
 import 'package:student_mobile/features/tests/domain/result_feedback_models.dart';
 import 'package:student_mobile/features/tests/domain/deep_feedback_models.dart';
+import 'package:student_mobile/features/tests/domain/past_results_models.dart';
 import 'package:student_mobile/features/tests/domain/submission_status_models.dart';
 import 'package:student_mobile/features/tests/domain/tests_models.dart';
 import 'package:student_mobile/features/tests/presentation/screens/result_feedback_screen.dart';
@@ -106,6 +107,21 @@ class _FakeTests implements TestsGateway {
     throw UnimplementedError();
   }
 
+  @override
+  Future<AnswerImageAttachment> uploadAnswerImage({
+    required String submissionId,
+    required List<int> bytes,
+    required String fileName,
+    required String mimeType,
+    required int pageNumber,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<PastResultsSnapshot> loadPastResults() async {
+    throw UnimplementedError();
+  }
 }
 
 void main() {
@@ -247,15 +263,4 @@ void main() {
       findsOneWidget,
     );
   });
-  @override
-  Future<AnswerImageAttachment> uploadAnswerImage({
-    required String submissionId,
-    required List<int> bytes,
-    required String fileName,
-    required String mimeType,
-    required int pageNumber,
-  }) async {
-    throw UnimplementedError();
-  }
-
 }

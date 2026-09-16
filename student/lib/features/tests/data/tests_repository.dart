@@ -7,6 +7,7 @@ import 'package:student_mobile/features/tests/domain/assessment_detail_models.da
 import 'package:student_mobile/features/tests/domain/attempt_flow_models.dart';
 import 'package:student_mobile/features/tests/domain/cbt_player_models.dart';
 import 'package:student_mobile/features/tests/domain/deep_feedback_models.dart';
+import 'package:student_mobile/features/tests/domain/past_results_models.dart';
 import 'package:student_mobile/features/tests/domain/result_feedback_models.dart';
 import 'package:student_mobile/features/tests/domain/submission_status_models.dart';
 import 'package:student_mobile/features/tests/domain/tests_models.dart';
@@ -59,6 +60,8 @@ abstract class TestsGateway {
     required String mimeType,
     required int pageNumber,
   });
+
+  Future<PastResultsSnapshot> loadPastResults();
 }
 
 class TestsRepository implements TestsGateway {
@@ -577,6 +580,64 @@ class TestsRepository implements TestsGateway {
       organizationId: session.organizationId,
     );
     return RewriteRequestSummary.fromJson(_asMap(envelope['data']));
+  }
+
+  @override
+  Future<PastResultsSnapshot> loadPastResults() async {
+    final session = await _requireSession();
+    final profileId = await _loadStudentProfileId(session);
+    if (profileId == null || profileId.isEmpty) {
+      return const PastResultsSnapshot();
+    }
+
+    final submissionsFuture = _loadAllSubmissions(
+      session,
+      studentProfileId: profileId,
+    );
+    final testsFuture = loadTests();
+    final submissions = await submissionsFuture;
+    final tests = await testsFuture;
+
+    final titles = <String, String>{
+      for (final test in tests.items) test.id: test.title,
+    };
+
+    return PastResultsSnapshot(
+      submissions: submissions,
+      assessmentTitles: titles,
+    );
+  }
+
+  Future<List<SubmissionSummary>> _loadAllSubmissions(
+    SessionContext session, {
+    required String studentProfileId,
+  }) async {
+    try {
+      final envelope = await _api.get(
+        '/submissions',
+        query: {
+          'page': '1',
+          'per_page': '50',
+          'student_profile_id': studentProfileId,
+          'sort': '-submitted_at',
+        },
+        accessToken: session.accessToken,
+        organizationId: session.organizationId,
+      );
+      final data = envelope['data'];
+      if (data is! List) return const [];
+      return data
+          .whereType<Map>()
+          .map(
+            (item) => SubmissionSummary.fromJson(
+              item.map((k, v) => MapEntry(k.toString(), v)),
+            ),
+          )
+          .where((item) => item.id.isNotEmpty && !item.isDraft)
+          .toList(growable: false);
+    } catch (_) {
+      return const [];
+    }
   }
 
   @override
