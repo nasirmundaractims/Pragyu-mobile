@@ -167,6 +167,7 @@ lib/
     exam_workspace/ # S-66
     exam_series/ # S-67
     attendance/  # S-68
+    settings/    # S-71
     me/          # S-70
 ```
 
@@ -209,6 +210,7 @@ lib/
 - **S-67 Question Bank** — exam series packs hub + detail (rank, Take test), Me entry
 - **S-68 My Attendance** — rate, present/absent/late/excused, recent marks, Me entry
 - **S-70 Me** — profile summary, email/study prefs, switch institute, sign out
+- **S-71 Settings** — password, sessions, language/timezone, trusted devices, Me entry
 
 ## Troubleshooting
 

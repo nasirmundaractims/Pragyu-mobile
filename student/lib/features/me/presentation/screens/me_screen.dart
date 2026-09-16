@@ -556,6 +556,28 @@ class _MeScreenState extends State<MeScreen> {
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(
+                  Icons.settings_outlined,
+                  color: AppColors.brand,
+                ),
+                title: const Text(
+                  'Settings',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.ink,
+                  ),
+                ),
+                subtitle: const Text(
+                  'Password, sessions, language, and devices',
+                  style: TextStyle(color: AppColors.muted, fontSize: 13),
+                ),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () =>
+                    Navigator.of(context).pushNamed(AppRoutes.settings),
+              ),
+              const Divider(height: 8),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(
                   Icons.apartment_outlined,
                   color: AppColors.brand,
                 ),
