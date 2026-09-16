@@ -424,6 +424,28 @@ class _MeScreenState extends State<MeScreen> {
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(
+                  Icons.lightbulb_outline,
+                  color: AppColors.brand,
+                ),
+                title: const Text(
+                  'Recommendations',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.ink,
+                  ),
+                ),
+                subtitle: const Text(
+                  'AI next actions from your learning signals',
+                  style: TextStyle(color: AppColors.muted, fontSize: 13),
+                ),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => Navigator.of(context)
+                    .pushNamed(AppRoutes.recommendations),
+              ),
+              const Divider(height: 8),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(
                   Icons.apartment_outlined,
                   color: AppColors.brand,
                 ),
