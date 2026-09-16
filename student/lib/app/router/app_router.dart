@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import '../../features/ai_mentor/presentation/screens/ai_mentor_screen.dart';
 import '../../features/analytics/presentation/screens/performance_analytics_screen.dart';
 import '../../features/auth/presentation/screens/forgot_password_screen.dart';
+import '../../features/exam_series/domain/exam_series_models.dart';
+import '../../features/exam_series/presentation/screens/exam_series_detail_screen.dart';
+import '../../features/exam_series/presentation/screens/exam_series_screen.dart';
 import '../../features/exam_workspace/presentation/screens/exam_workspace_screen.dart';
 import '../../features/notes_bookmarks/presentation/screens/notes_bookmarks_screen.dart';
 import '../../features/recommendations/presentation/screens/recommendations_screen.dart';
@@ -77,6 +80,8 @@ abstract final class AppRoutes {
   static const notesBookmarks = '/notes-bookmarks';
   static const performance = '/performance';
   static const examWorkspace = '/exam-workspace';
+  static const examSeries = '/exam-series';
+  static const examSeriesDetail = '/exam-series-detail';
   static const createAccountStub = '/create-account-stub';
 }
 
@@ -278,6 +283,18 @@ Route<dynamic> onGenerateRoute(RouteSettings settings) {
       return MaterialPageRoute<void>(
         settings: settings,
         builder: (_) => const ExamWorkspaceScreen(),
+      );
+    case AppRoutes.examSeries:
+      return MaterialPageRoute<void>(
+        settings: settings,
+        builder: (_) => const ExamSeriesScreen(),
+      );
+    case AppRoutes.examSeriesDetail:
+      return MaterialPageRoute<void>(
+        settings: settings,
+        builder: (_) => ExamSeriesDetailScreen(
+          args: ExamSeriesDetailArgs.fromObject(settings.arguments),
+        ),
       );
     case AppRoutes.createAccountStub:
       return MaterialPageRoute<void>(
