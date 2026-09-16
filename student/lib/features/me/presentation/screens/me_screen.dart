@@ -380,6 +380,28 @@ class _MeScreenState extends State<MeScreen> {
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(
+                  Icons.track_changes_outlined,
+                  color: AppColors.brand,
+                ),
+                title: const Text(
+                  'Weak Topics',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.ink,
+                  ),
+                ),
+                subtitle: const Text(
+                  'Focus areas from your mastery map',
+                  style: TextStyle(color: AppColors.muted, fontSize: 13),
+                ),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () =>
+                    Navigator.of(context).pushNamed(AppRoutes.weakTopics),
+              ),
+              const Divider(height: 8),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(
                   Icons.apartment_outlined,
                   color: AppColors.brand,
                 ),

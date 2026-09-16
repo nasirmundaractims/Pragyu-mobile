@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:student_mobile/app/router/app_router.dart';
 import 'package:student_mobile/app/theme/app_colors.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/features/ai_mentor/data/ai_mentor_repository.dart';
@@ -239,12 +240,23 @@ class _AiMentorScreenState extends State<AiMentorScreen> {
           const _EmptyHero(),
           if (snapshot != null && snapshot.weakTopics.isNotEmpty) ...[
             const SizedBox(height: 20),
-            const Text(
-              'Ask about a weak topic',
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                color: AppColors.ink,
-              ),
+            Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'Ask about a weak topic',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.ink,
+                    ),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () =>
+                      Navigator.of(context).pushNamed(AppRoutes.weakTopics),
+                  child: const Text('See all'),
+                ),
+              ],
             ),
             const SizedBox(height: 10),
             Wrap(
