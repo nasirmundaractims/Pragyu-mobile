@@ -4,10 +4,12 @@ import 'package:flutter/services.dart';
 import 'package:student_mobile/app/theme/app_colors.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/features/alerts/data/alerts_repository.dart';
+import 'package:student_mobile/features/alerts/domain/alert_deep_link_resolver.dart';
 import 'package:student_mobile/features/alerts/domain/alerts_models.dart';
 import 'package:student_mobile/features/search/presentation/widgets/quick_search_sheet.dart';
 
 /// S-50 Alerts — notification + academy inbox for the Alerts tab.
+/// S-51 — tap opens the linked screen when the payload resolves.
 class AlertsScreen extends StatefulWidget {
   const AlertsScreen({
     super.key,
@@ -81,6 +83,29 @@ class _AlertsScreenState extends State<AlertsScreen> {
         setState(() => _markingIds.remove(item.id));
       }
     }
+  }
+
+  Future<void> _openAlert(AlertItem item) async {
+    if (!item.isRead) {
+      await _markRead(item);
+    }
+    if (!mounted) return;
+
+    final target = AlertDeepLinkResolver.resolve(item);
+    if (target == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No linked screen for this alert yet.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    await Navigator.of(context).pushNamed(
+      target.route,
+      arguments: target.arguments,
+    );
   }
 
   Future<void> _markAllRead() async {
@@ -215,6 +240,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
                 child: _AlertTile(
                   item: item,
                   marking: _markingIds.contains(item.id),
+                  onOpen: () => _openAlert(item),
                   onMarkRead: () => _markRead(item),
                 ),
               ),
@@ -322,30 +348,36 @@ class _AlertTile extends StatelessWidget {
   const _AlertTile({
     required this.item,
     required this.marking,
+    required this.onOpen,
     required this.onMarkRead,
   });
 
   final AlertItem item;
   final bool marking;
+  final VoidCallback onOpen;
   final VoidCallback onMarkRead;
 
   @override
   Widget build(BuildContext context) {
     final unread = !item.isRead;
+    final target = AlertDeepLinkResolver.resolve(item);
+    final canOpen = target != null;
 
     return Material(
       color: unread ? AppColors.brandSoft.withValues(alpha: 0.55) : AppColors.surface,
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
-        onTap: unread ? onMarkRead : null,
+        onTap: onOpen,
         child: Container(
           width: double.infinity,
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: unread ? AppColors.brand.withValues(alpha: 0.2) : AppColors.brandSoft,
+              color: unread
+                  ? AppColors.brand.withValues(alpha: 0.2)
+                  : AppColors.brandSoft,
             ),
           ),
           child: Column(
@@ -395,16 +427,38 @@ class _AlertTile extends StatelessWidget {
                   ),
                 ),
               ],
-              if (item.createdAt != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  _formatAlertTime(item.createdAt!),
-                  style: const TextStyle(
-                    color: AppColors.muted,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  if (item.createdAt != null)
+                    Expanded(
+                      child: Text(
+                        _formatAlertTime(item.createdAt!),
+                        style: const TextStyle(
+                          color: AppColors.muted,
+                          fontSize: 12,
+                        ),
+                      ),
+                    )
+                  else
+                    const Spacer(),
+                  if (canOpen) ...[
+                    Text(
+                      target.label ?? 'Open',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.brand,
+                      ),
+                    ),
+                    const Icon(
+                      Icons.chevron_right_rounded,
+                      size: 18,
+                      color: AppColors.brand,
+                    ),
+                  ],
+                ],
+              ),
             ],
           ),
         ),

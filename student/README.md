@@ -157,7 +157,7 @@ lib/
     catalog/     # S-29
     calendar/    # S-30
     tests/       # S-40 … S-49
-    alerts/      # S-50
+    alerts/      # S-50 / S-51
     me/          # S-70
 ```
 
@@ -189,6 +189,7 @@ lib/
 - **S-48 Essay / media answers** — long subjective text, handwritten page upload, OCR-aware submit status
 - **S-49 Past results hub** — attempts tracker + score reports (opens S-45 / S-46)
 - **S-50 Alerts** — notification + engagement inbox, mark read / mark all, tab badge
+- **S-51 Alert deep links** — tap alert → assessment / result / lesson / course / calendar / materials
 - **S-70 Me** — profile summary, email/study prefs, switch institute, sign out
 
 ## Troubleshooting

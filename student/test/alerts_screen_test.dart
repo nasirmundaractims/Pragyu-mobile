@@ -8,6 +8,7 @@ import 'package:student_mobile/features/home/data/home_repository.dart';
 import 'package:student_mobile/features/home/domain/home_models.dart';
 import 'package:student_mobile/features/home/presentation/screens/home_screen.dart';
 import 'package:student_mobile/features/auth/domain/auth_models.dart';
+import 'package:student_mobile/features/tests/domain/submission_status_models.dart';
 
 class _FakeAlerts implements AlertsGateway {
   _FakeAlerts(this.snapshot);
@@ -64,6 +65,9 @@ void main() {
           title: 'Evaluation complete',
           body: 'Your Polity quiz feedback is ready.',
           category: AlertCategory.evaluation,
+          eventType: 'evaluation.completed',
+          submissionId: 'sub1',
+          assessmentId: 'a1',
           isRead: false,
           createdAt: clock,
         ),
@@ -82,6 +86,9 @@ void main() {
           title: 'Lesson published',
           body: 'Module 3 notes are live.',
           category: AlertCategory.learning,
+          eventType: 'learning.lesson_published',
+          lessonId: 'lesson1',
+          courseId: 'course1',
           isRead: true,
           createdAt: clock.subtract(const Duration(days: 3)),
         ),
@@ -112,6 +119,7 @@ void main() {
     expect(find.text('Evaluation complete'), findsOneWidget);
     expect(find.text('Evaluation'), findsWidgets);
     expect(find.text('Academy announcement'), findsOneWidget);
+    expect(find.text('Open result'), findsOneWidget);
 
     await tester.tap(find.text('Mark read').first);
     await tester.pumpAndSettle();
@@ -172,5 +180,38 @@ void main() {
     expect(find.text('Alerts'), findsWidgets);
     expect(find.text('Evaluation complete'), findsOneWidget);
     expect(find.text('S-50 is next'), findsNothing);
+  });
+
+  testWidgets('S-51 tap opens linked result screen', (tester) async {
+    Object? pushedArgs;
+    String? pushedRoute;
+    final fake = _FakeAlerts(sampleSnapshot());
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: AlertsScreen(alertsRepository: fake),
+        onGenerateRoute: (settings) {
+          pushedRoute = settings.name;
+          pushedArgs = settings.arguments;
+          return MaterialPageRoute<void>(
+            settings: settings,
+            builder: (_) => const Scaffold(
+              body: Text('Result destination'),
+            ),
+          );
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Evaluation complete'));
+    await tester.pumpAndSettle();
+
+    expect(fake.markedIds, contains('n1'));
+    expect(pushedRoute, '/result-feedback');
+    expect(pushedArgs, isA<ResultFeedbackArgs>());
+    expect((pushedArgs! as ResultFeedbackArgs).submissionId, 'sub1');
+    expect(find.text('Result destination'), findsOneWidget);
   });
 }
