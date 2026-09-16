@@ -97,7 +97,8 @@ void main() {
     expect(find.text('Live Polity Doubt Session'), findsOneWidget);
     expect(find.text('Weekly Quiz 3'), findsOneWidget);
     expect(find.text('Catalog'), findsOneWidget);
-    expect(find.text('My Progress'), findsWidgets);
+    expect(find.text('AI Mentor'), findsOneWidget);
+    expect(find.text('My Progress'), findsOneWidget);
     expect(find.textContaining('3'), findsWidgets);
   });
 

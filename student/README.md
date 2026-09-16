@@ -158,6 +158,7 @@ lib/
     calendar/    # S-30
     tests/       # S-40 … S-49
     alerts/      # S-50 / S-51
+    ai_mentor/   # S-60
     me/          # S-70
 ```
 
@@ -190,6 +191,7 @@ lib/
 - **S-49 Past results hub** — attempts tracker + score reports (opens S-45 / S-46)
 - **S-50 Alerts** — notification + engagement inbox, mark read / mark all, tab badge
 - **S-51 Alert deep links** — tap alert → assessment / result / lesson / course / calendar / materials
+- **S-60 AI Mentor** — coach chat (sessions + messages), weak-topic chips, Me + Home entry
 - **S-70 Me** — profile summary, email/study prefs, switch institute, sign out
 
 ## Troubleshooting

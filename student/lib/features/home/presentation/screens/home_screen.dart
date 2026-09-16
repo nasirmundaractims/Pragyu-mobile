@@ -169,7 +169,8 @@ class _HomeScreenState extends State<HomeScreen> {
           onTests: () => _openTab(2),
           onCalendar: () =>
               Navigator.of(context).pushNamed(AppRoutes.calendar),
-          onProgress: () => _openTab(1),
+          onProgress: () =>
+              Navigator.of(context).pushNamed(AppRoutes.aiMentor),
           onSaved: () =>
               Navigator.of(context).pushNamed(AppRoutes.catalog),
         ),
@@ -620,8 +621,8 @@ class _QuickActions extends StatelessWidget {
         onTap: onCalendar,
       ),
       (
-        label: 'My Progress',
-        icon: Icons.bar_chart_rounded,
+        label: 'AI Mentor',
+        icon: Icons.auto_awesome,
         bg: const Color(0xFFFFEAF2),
         fg: const Color(0xFFD94F8B),
         onTap: onProgress,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../features/ai_mentor/presentation/screens/ai_mentor_screen.dart';
 import '../../features/auth/presentation/screens/forgot_password_screen.dart';
 import '../../features/auth/presentation/screens/sign_in_screen.dart';
 import '../../features/calendar/presentation/screens/calendar_screen.dart';
@@ -63,6 +64,7 @@ abstract final class AppRoutes {
   static const resultFeedback = '/result-feedback';
   static const deepFeedback = '/deep-feedback';
   static const pastResults = '/past-results';
+  static const aiMentor = '/ai-mentor';
   static const createAccountStub = '/create-account-stub';
 }
 
@@ -229,6 +231,11 @@ Route<dynamic> onGenerateRoute(RouteSettings settings) {
       return MaterialPageRoute<void>(
         settings: settings,
         builder: (_) => const PastResultsScreen(),
+      );
+    case AppRoutes.aiMentor:
+      return MaterialPageRoute<void>(
+        settings: settings,
+        builder: (_) => const AiMentorScreen(),
       );
     case AppRoutes.createAccountStub:
       return MaterialPageRoute<void>(
