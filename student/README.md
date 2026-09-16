@@ -166,6 +166,7 @@ lib/
     analytics/   # S-65
     exam_workspace/ # S-66
     exam_series/ # S-67
+    attendance/  # S-68
     me/          # S-70
 ```
 
@@ -206,6 +207,7 @@ lib/
 - **S-65 My Performance** — analytics KPIs, AI insights, subject analysis, score trend, Me entry
 - **S-66 Exam Workspace** — practice hub, readiness, pattern-aware assessments, Me entry
 - **S-67 Question Bank** — exam series packs hub + detail (rank, Take test), Me entry
+- **S-68 My Attendance** — rate, present/absent/late/excused, recent marks, Me entry
 - **S-70 Me** — profile summary, email/study prefs, switch institute, sign out
 
 ## Troubleshooting
