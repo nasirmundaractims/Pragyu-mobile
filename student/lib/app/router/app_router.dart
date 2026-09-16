@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../features/auth/presentation/screens/forgot_password_screen.dart';
 import '../../features/auth/presentation/screens/sign_in_screen.dart';
 import '../../features/calendar/presentation/screens/calendar_screen.dart';
+import '../../features/catalog/presentation/screens/catalog_browse_screen.dart';
+import '../../features/catalog/presentation/screens/catalog_detail_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
 import '../../features/home/presentation/screens/today_detail_screen.dart';
 import '../../features/learn/domain/learn_models.dart';
@@ -19,10 +21,18 @@ import '../../features/materials/presentation/screens/study_materials_list_scree
 import '../../features/onboarding/presentation/screens/onboarding_screen.dart';
 import '../../features/organization/presentation/screens/org_picker_screen.dart';
 import '../../features/splash/presentation/screens/splash_screen.dart';
+import '../../features/tests/domain/assessment_detail_models.dart';
+import '../../features/tests/domain/attempt_flow_models.dart';
+import '../../features/tests/domain/submission_status_models.dart';
+import '../../features/tests/presentation/screens/assessment_detail_screen.dart';
+import '../../features/tests/presentation/screens/attempt_instructions_screen.dart';
+import '../../features/tests/presentation/screens/attempt_player_screen.dart';
+import '../../features/tests/presentation/screens/result_feedback_screen.dart';
+import '../../features/tests/presentation/screens/submission_status_screen.dart';
 import '../../features/welcome/presentation/screens/auth_flow_stub_screen.dart';
 import '../../features/welcome/presentation/screens/welcome_screen.dart';
 
-/// Central route names. Remaining tab roots after Learn are placeholders (S-40+).
+/// Central route names.
 abstract final class AppRoutes {
   static const splash = '/';
   static const welcome = '/welcome';
@@ -41,6 +51,13 @@ abstract final class AppRoutes {
   static const studyMaterials = '/study-materials';
   static const materialViewer = '/material-viewer';
   static const calendar = '/calendar';
+  static const catalog = '/catalog';
+  static const catalogDetail = '/catalog-detail';
+  static const assessmentDetail = '/assessment-detail';
+  static const attemptInstructions = '/attempt-instructions';
+  static const attemptPlayer = '/attempt-player';
+  static const submissionStatus = '/submission-status';
+  static const resultFeedback = '/result-feedback';
   static const createAccountStub = '/create-account-stub';
 }
 
@@ -146,6 +163,55 @@ Route<dynamic> onGenerateRoute(RouteSettings settings) {
       return MaterialPageRoute<void>(
         settings: settings,
         builder: (_) => const CalendarScreen(),
+      );
+    case AppRoutes.catalog:
+      return MaterialPageRoute<void>(
+        settings: settings,
+        builder: (_) => const CatalogBrowseScreen(),
+      );
+    case AppRoutes.catalogDetail:
+      return MaterialPageRoute<void>(
+        settings: settings,
+        builder: (_) => CatalogDetailScreen(
+          slug: settings.arguments is String
+              ? settings.arguments as String
+              : settings.arguments?.toString() ?? '',
+        ),
+      );
+    case AppRoutes.assessmentDetail:
+      return MaterialPageRoute<void>(
+        settings: settings,
+        builder: (_) => AssessmentDetailScreen(
+          args: AssessmentDetailArgs.fromObject(settings.arguments),
+        ),
+      );
+    case AppRoutes.attemptInstructions:
+      return MaterialPageRoute<void>(
+        settings: settings,
+        builder: (_) => AttemptInstructionsScreen(
+          args: AttemptInstructionsArgs.fromObject(settings.arguments),
+        ),
+      );
+    case AppRoutes.attemptPlayer:
+      return MaterialPageRoute<void>(
+        settings: settings,
+        builder: (_) => AttemptPlayerScreen(
+          args: AttemptPlayerArgs.fromObject(settings.arguments),
+        ),
+      );
+    case AppRoutes.submissionStatus:
+      return MaterialPageRoute<void>(
+        settings: settings,
+        builder: (_) => SubmissionStatusScreen(
+          args: SubmissionStatusArgs.fromObject(settings.arguments),
+        ),
+      );
+    case AppRoutes.resultFeedback:
+      return MaterialPageRoute<void>(
+        settings: settings,
+        builder: (_) => ResultFeedbackScreen(
+          args: ResultFeedbackArgs.fromObject(settings.arguments),
+        ),
       );
     case AppRoutes.createAccountStub:
       return MaterialPageRoute<void>(

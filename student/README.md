@@ -154,7 +154,9 @@ lib/
     learn/       # S-20 / S-21 / S-22
     lectures/    # S-23 … S-26
     materials/   # S-27 / S-28
+    catalog/     # S-29
     calendar/    # S-30
+    tests/       # S-40 … S-46
 ```
 
 ## Screens status
@@ -165,15 +167,23 @@ lib/
 - **S-12 Quick search** — implemented (sheet: courses / tests / materials)
 - **S-20 My learning** — implemented (Learn tab: enrolled courses)
 - **S-21 Course detail** — implemented (modules, progress, Continue, Lectures, Materials)
-- **S-22 Lesson player** — implemented (text/HTML, resources, mark complete)
+- **S-22 Lesson player** — text + in-app media resources + mark complete
 - **S-23 Lectures list** — implemented (live / upcoming / recorded)
 - **S-24 Live lobby** — implemented (countdown, check-in / join)
-- **S-25 Live room** — implemented (stub media, chat, heartbeat, leave)
-- **S-26 Recorded player** — implemented (progress, playback link, mark complete)
+- **S-25 Live room** — LiveKit media + chat + heartbeat
+- **S-26 Recorded player** — in-app video player + progress posts
 - **S-27 Study materials list** — implemented (course PDFs/notes)
-- **S-28 Material viewer** — implemented (open/copy link; library + lesson resource)
+- **S-28 Material viewer** — in-app PDF/video preview + open/copy
+- **S-29 Catalog / browse** — marketplace catalog list + detail
 - **S-30 Calendar** — implemented (14-day agenda: live classes + test deadlines)
-- **S-40 / S-50 / S-70** — tab placeholders only
+- **S-40 Tests hub** — implemented (Tests tab: published assessments list + filters)
+- **S-41 Assessment detail** — overview, results, entry to instructions
+- **S-42 Attempt instructions** — timer/rules accept → starts attempt → S-43
+- **S-43 Attempt player** — MCQ / T-F / short text, palette, autosave, timer
+- **S-44 Submit confirm** — sheet: unanswered/marked review → finalize
+- **S-45 Submission status** — poll processing / AI evaluating / ready → S-46
+- **S-46 Result / feedback** — score, per-question breakdown, AI feedback
+- **S-50 / S-70** — tab placeholders only
 
 ## Troubleshooting
 

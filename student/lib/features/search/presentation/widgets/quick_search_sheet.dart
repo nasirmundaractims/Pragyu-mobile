@@ -9,6 +9,7 @@ import 'package:student_mobile/features/learn/domain/learn_models.dart';
 import 'package:student_mobile/features/materials/domain/material_models.dart';
 import 'package:student_mobile/features/search/data/search_repository.dart';
 import 'package:student_mobile/features/search/domain/search_models.dart';
+import 'package:student_mobile/features/tests/domain/assessment_detail_models.dart';
 
 /// S-12 Quick search sheet — jump to course, test, or material.
 Future<void> showQuickSearchSheet(
@@ -134,7 +135,6 @@ class _QuickSearchSheetState extends State<QuickSearchSheet> {
   void _select(SearchHit hit) {
     final shell = StudentShell.of(context);
     final navigator = Navigator.of(context);
-    final messenger = ScaffoldMessenger.of(context);
     navigator.pop();
 
     if (hit.kind == SearchHitKind.course) {
@@ -175,12 +175,11 @@ class _QuickSearchSheetState extends State<QuickSearchSheet> {
     }
 
     shell?.goToTab(hit.tabIndex);
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(
-          '${hit.title} — opens ${hit.nextScreenId} when that screen ships.',
-        ),
-        behavior: SnackBarBehavior.floating,
+    navigator.pushNamed(
+      AppRoutes.assessmentDetail,
+      arguments: AssessmentDetailArgs(
+        assessmentId: hit.id,
+        title: hit.title,
       ),
     );
   }

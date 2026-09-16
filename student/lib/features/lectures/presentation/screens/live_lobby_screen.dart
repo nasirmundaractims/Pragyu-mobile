@@ -126,6 +126,8 @@ class _LiveLobbyScreenState extends State<LiveLobbyScreen> {
             lectureId: snapshot.lectureId,
             title: snapshot.title,
             mediaUrl: result.mediaUrl,
+            livekitToken: result.livekitToken,
+            canPublish: result.canPublish,
           ),
         );
         await _load(silent: true);

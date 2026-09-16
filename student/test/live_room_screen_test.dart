@@ -86,6 +86,15 @@ class _FakeLectures implements LecturesGateway {
       progressPercent: 100,
     );
   }
+
+  @override
+  Future<void> reportPlaybackProgress({
+    required String lectureId,
+    required int positionSeconds,
+    int? deltaSeconds,
+    int? progressPercent,
+  }) async {}
+
 }
 
 void main() {
@@ -118,7 +127,7 @@ void main() {
 
     expect(find.text('Live room'), findsOneWidget);
     expect(find.text('Evening Class'), findsOneWidget);
-    expect(find.textContaining('Media connected'), findsOneWidget);
+    expect(find.textContaining('Waiting for media credentials'), findsOneWidget);
     expect(find.text('Hello class'), findsOneWidget);
     expect(find.text('Teacher'), findsOneWidget);
     expect(fake.heartbeatCalled, isTrue);

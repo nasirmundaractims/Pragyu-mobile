@@ -7,6 +7,7 @@ import 'package:student_mobile/features/calendar/data/calendar_repository.dart';
 import 'package:student_mobile/features/calendar/domain/calendar_models.dart';
 import 'package:student_mobile/features/calendar/presentation/screens/calendar_screen.dart';
 import 'package:student_mobile/features/lectures/domain/lecture_models.dart';
+import 'package:student_mobile/features/tests/domain/assessment_detail_models.dart';
 
 class _FakeCalendar implements CalendarGateway {
   _FakeCalendar(this.snapshot);
@@ -135,7 +136,8 @@ void main() {
     expect((pushedArgs! as LiveLobbyArgs).lectureId, 'lec-1');
   });
 
-  testWidgets('S-30 test tap stubs S-41', (tester) async {
+  testWidgets('S-30 test tap opens assessment detail', (tester) async {
+    Object? pushedArgs;
     final now = DateTime(2026, 9, 16, 9);
     await tester.pumpWidget(
       MaterialApp(
@@ -154,14 +156,26 @@ void main() {
             ]),
           ),
         ),
+        onGenerateRoute: (settings) {
+          if (settings.name == AppRoutes.assessmentDetail) {
+            pushedArgs = settings.arguments;
+            return MaterialPageRoute<void>(
+              settings: settings,
+              builder: (_) => const Scaffold(body: Text('Assessment detail')),
+            );
+          }
+          return null;
+        },
       ),
     );
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('GS Mock'));
-    await tester.pump();
+    await tester.pumpAndSettle();
 
-    expect(find.textContaining('S-41'), findsOneWidget);
+    expect(find.text('Assessment detail'), findsOneWidget);
+    expect(pushedArgs, isA<AssessmentDetailArgs>());
+    expect((pushedArgs! as AssessmentDetailArgs).assessmentId, 'a1');
   });
 
   test('CalendarSnapshot.fromEvents groups by day', () {

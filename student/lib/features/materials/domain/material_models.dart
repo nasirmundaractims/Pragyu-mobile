@@ -258,6 +258,25 @@ class MaterialViewerSnapshot {
     return url != null && url.isNotEmpty;
   }
 
+  bool get isPdf {
+    final label = typeLabel.toLowerCase();
+    final url = (openUrl ?? '').toLowerCase();
+    return label.contains('pdf') || url.contains('.pdf');
+  }
+
+  bool get isStreamableMedia {
+    final label = typeLabel.toLowerCase();
+    final url = (openUrl ?? '').toLowerCase();
+    if (isPdf) return false;
+    return label.contains('video') ||
+        label.contains('audio') ||
+        label.contains('lecture') ||
+        url.contains('.mp4') ||
+        url.contains('.m3u8') ||
+        url.contains('.mp3') ||
+        url.contains('.webm');
+  }
+
   String get accessLabel {
     if (isLocked) return 'Locked';
     if (isFree) return 'Free preview';

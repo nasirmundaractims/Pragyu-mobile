@@ -380,12 +380,22 @@ class LiveJoinResult {
     this.hasMediaToken = false,
     this.sessionStatus,
     this.mediaUrl,
+    this.livekitToken,
+    this.canPublish = false,
+    this.expiresAt,
   });
 
   final bool inWaitingRoom;
   final bool hasMediaToken;
   final LiveSessionStatus? sessionStatus;
+
+  /// LiveKit WebSocket URL (`wss://…`).
   final String? mediaUrl;
+
+  /// LiveKit participant JWT.
+  final String? livekitToken;
+  final bool canPublish;
+  final DateTime? expiresAt;
 }
 
 /// Route args for S-25 Live class room.
@@ -394,11 +404,18 @@ class LiveRoomArgs {
     required this.lectureId,
     this.title,
     this.mediaUrl,
+    this.livekitToken,
+    this.canPublish = false,
   });
 
   final String lectureId;
   final String? title;
   final String? mediaUrl;
+  final String? livekitToken;
+  final bool canPublish;
+
+  bool get hasLiveKitCredentials =>
+      (livekitToken?.isNotEmpty ?? false) && (mediaUrl?.isNotEmpty ?? false);
 
   factory LiveRoomArgs.fromObject(Object? raw) {
     if (raw is LiveRoomArgs) return raw;
@@ -410,6 +427,9 @@ class LiveRoomArgs {
             '',
         title: map['title']?.toString(),
         mediaUrl: map['mediaUrl']?.toString() ?? map['media_url']?.toString(),
+        livekitToken: map['livekitToken']?.toString() ??
+            map['livekit_token']?.toString(),
+        canPublish: map['canPublish'] == true || map['can_publish'] == true,
       );
     }
     if (raw is String) {

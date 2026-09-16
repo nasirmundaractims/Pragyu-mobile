@@ -4,17 +4,20 @@ import 'package:flutter/services.dart';
 import 'package:student_mobile/app/theme/app_colors.dart';
 import 'package:student_mobile/features/lectures/data/lectures_repository.dart';
 import 'package:student_mobile/features/lectures/domain/lecture_models.dart';
+import 'package:student_mobile/features/media/presentation/widgets/network_media_player.dart';
 
-/// S-26 Recorded lecture player — metadata, playback link, mark complete.
+/// S-26 Recorded lecture player — in-app playback, progress, mark complete.
 class RecordedLectureScreen extends StatefulWidget {
   const RecordedLectureScreen({
     super.key,
     required this.args,
     this.lecturesRepository,
+    this.embedInAppMedia = true,
   });
 
   final RecordedLectureArgs args;
   final LecturesGateway? lecturesRepository;
+  final bool embedInAppMedia;
 
   @override
   State<RecordedLectureScreen> createState() => _RecordedLectureScreenState();
@@ -30,6 +33,7 @@ class _RecordedLectureScreenState extends State<RecordedLectureScreen> {
   String? _error;
   RecordedLectureSnapshot? _snapshot;
   LecturePlaybackInfo? _playback;
+  DateTime? _lastProgressSent;
 
   @override
   void initState() {
@@ -49,6 +53,9 @@ class _RecordedLectureScreenState extends State<RecordedLectureScreen> {
         _snapshot = snapshot;
         _loading = false;
       });
+      if (widget.embedInAppMedia && !snapshot.isLocked && snapshot.hasVideo) {
+        await _loadPlayback();
+      }
     } catch (_) {
       if (!mounted) return;
       setState(() {
@@ -247,11 +254,36 @@ class _RecordedLectureScreenState extends State<RecordedLectureScreen> {
           ),
         ],
         const SizedBox(height: 16),
-        _PlayerStub(
-          locked: snapshot.isLocked,
-          hasVideo: snapshot.hasVideo,
-          urlLoaded: url != null,
-        ),
+        if (widget.embedInAppMedia && !snapshot.isLocked && url != null)
+          NetworkMediaPlayer(
+            url: url,
+            onPosition: (position) {
+              final now = DateTime.now();
+              if (_lastProgressSent != null &&
+                  now.difference(_lastProgressSent!) <
+                      const Duration(seconds: 15)) {
+                return;
+              }
+              _lastProgressSent = now;
+              final total = snapshot.durationSeconds ??
+                  _playback?.durationSeconds ??
+                  0;
+              final percent = total > 0
+                  ? ((position.inSeconds / total) * 100).round().clamp(0, 100)
+                  : null;
+              _lectures.reportPlaybackProgress(
+                lectureId: snapshot.lectureId,
+                positionSeconds: position.inSeconds,
+                progressPercent: percent,
+              );
+            },
+          )
+        else
+          _PlayerStub(
+            locked: snapshot.isLocked,
+            hasVideo: snapshot.hasVideo,
+            urlLoaded: url != null,
+          ),
         const SizedBox(height: 14),
         _ProgressCard(snapshot: snapshot),
         const SizedBox(height: 14),
@@ -424,7 +456,7 @@ class _PlayerStub extends StatelessWidget {
           Text(
             locked
                 ? 'Enrollment access required.'
-                : 'In-app player ships with the media SDK.',
+                : 'Tap Get playback link to start watching.',
             textAlign: TextAlign.center,
             style: const TextStyle(color: Colors.white70, fontSize: 13),
           ),

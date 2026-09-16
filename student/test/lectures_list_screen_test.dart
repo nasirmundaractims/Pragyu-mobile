@@ -69,6 +69,15 @@ class _FakeLectures implements LecturesGateway {
       hasVideo: true,
     );
   }
+
+  @override
+  Future<void> reportPlaybackProgress({
+    required String lectureId,
+    required int positionSeconds,
+    int? deltaSeconds,
+    int? progressPercent,
+  }) async {}
+
 }
 
 void main() {

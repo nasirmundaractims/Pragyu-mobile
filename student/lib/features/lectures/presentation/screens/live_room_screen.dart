@@ -6,8 +6,9 @@ import 'package:flutter/services.dart';
 import 'package:student_mobile/app/theme/app_colors.dart';
 import 'package:student_mobile/features/lectures/data/lectures_repository.dart';
 import 'package:student_mobile/features/lectures/domain/lecture_models.dart';
+import 'package:student_mobile/features/lectures/presentation/widgets/livekit_stage.dart';
 
-/// S-25 Live class room — stub media, chat, heartbeat, leave.
+/// S-25 Live class room — LiveKit media, chat, heartbeat, leave.
 class LiveRoomScreen extends StatefulWidget {
   const LiveRoomScreen({
     super.key,
@@ -187,7 +188,13 @@ class _LiveRoomScreenState extends State<LiveRoomScreen> {
               const SizedBox(height: 12),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: _MediaStub(mediaUrl: widget.args.mediaUrl),
+                child: widget.args.hasLiveKitCredentials
+                    ? LiveKitStage(
+                        url: widget.args.mediaUrl!,
+                        token: widget.args.livekitToken!,
+                        canPublish: widget.args.canPublish,
+                      )
+                    : _MediaFallback(mediaUrl: widget.args.mediaUrl),
               ),
               const SizedBox(height: 16),
               const Padding(
@@ -261,8 +268,8 @@ class _LiveRoomScreenState extends State<LiveRoomScreen> {
   }
 }
 
-class _MediaStub extends StatelessWidget {
-  const _MediaStub({this.mediaUrl});
+class _MediaFallback extends StatelessWidget {
+  const _MediaFallback({this.mediaUrl});
 
   final String? mediaUrl;
 
@@ -295,8 +302,8 @@ class _MediaStub extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             mediaUrl != null && mediaUrl!.isNotEmpty
-                ? 'Media connected — player SDK coming soon.'
-                : 'Video surface ships with the media SDK.',
+                ? 'Waiting for media credentials…'
+                : 'Join again when the class goes live.',
             textAlign: TextAlign.center,
             style: const TextStyle(
               color: Colors.white70,

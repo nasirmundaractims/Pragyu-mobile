@@ -43,6 +43,7 @@ void main() {
       MaterialApp(
         theme: AppTheme.light(),
         home: MaterialViewerScreen(
+          embedInAppMedia: false,
           args: const MaterialViewerArgs(
             materialId: 'm1',
             title: 'Polity Handout',
@@ -81,6 +82,7 @@ void main() {
       MaterialApp(
         theme: AppTheme.light(),
         home: MaterialViewerScreen(
+          embedInAppMedia: false,
           args: const MaterialViewerArgs(materialId: 'm3'),
           materialsRepository: _FakeMaterials(
             const MaterialViewerSnapshot(
@@ -116,6 +118,7 @@ void main() {
       MaterialApp(
         theme: AppTheme.light(),
         home: MaterialViewerScreen(
+          embedInAppMedia: false,
           args: const MaterialViewerArgs(resourceId: 'r1', title: 'Notes'),
           materialsRepository: _FakeMaterials(
             const MaterialViewerSnapshot(

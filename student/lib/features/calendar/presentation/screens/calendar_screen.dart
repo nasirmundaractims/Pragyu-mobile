@@ -6,6 +6,7 @@ import 'package:student_mobile/app/theme/app_colors.dart';
 import 'package:student_mobile/features/calendar/data/calendar_repository.dart';
 import 'package:student_mobile/features/calendar/domain/calendar_models.dart';
 import 'package:student_mobile/features/lectures/domain/lecture_models.dart';
+import 'package:student_mobile/features/tests/domain/assessment_detail_models.dart';
 
 /// S-30 Calendar — upcoming live classes and test deadlines (agenda list).
 class CalendarScreen extends StatefulWidget {
@@ -68,12 +69,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          '${event.title} — opens ${event.nextScreenId} when that screen ships.',
-        ),
-        behavior: SnackBarBehavior.floating,
+    Navigator.of(context).pushNamed(
+      AppRoutes.assessmentDetail,
+      arguments: AssessmentDetailArgs(
+        assessmentId: event.sourceId,
+        title: event.title,
       ),
     );
   }

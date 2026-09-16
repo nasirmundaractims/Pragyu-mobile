@@ -13,6 +13,12 @@ abstract class LecturesGateway {
   Future<RecordedLectureSnapshot> loadRecordedLecture(String lectureId);
   Future<LecturePlaybackInfo> loadPlayback(String lectureId);
   Future<RecordedLectureSnapshot> completeRecordedLecture(String lectureId);
+  Future<void> reportPlaybackProgress({
+    required String lectureId,
+    required int positionSeconds,
+    int? deltaSeconds,
+    int? progressPercent,
+  });
 }
 
 class LecturesRepository implements LecturesGateway {
@@ -130,6 +136,9 @@ class LecturesRepository implements LecturesGateway {
       hasMediaToken: hasMedia,
       sessionStatus: status,
       mediaUrl: token['url']?.toString(),
+      livekitToken: mediaToken,
+      canPublish: map['can_publish'] == true || token['can_publish'] == true,
+      expiresAt: DateTime.tryParse(token['expires_at']?.toString() ?? ''),
     );
   }
 
@@ -265,6 +274,31 @@ class LecturesRepository implements LecturesGateway {
     );
 
     return loadRecordedLecture(id);
+  }
+
+  @override
+  Future<void> reportPlaybackProgress({
+    required String lectureId,
+    required int positionSeconds,
+    int? deltaSeconds,
+    int? progressPercent,
+  }) async {
+    final id = lectureId.trim();
+    if (id.isEmpty) {
+      throw ArgumentError('lectureId is required');
+    }
+
+    final session = await _requireSession();
+    await _api.post(
+      '/lectures/$id/progress',
+      body: {
+        'position_seconds': positionSeconds,
+        if (deltaSeconds != null) 'delta_seconds': deltaSeconds,
+        if (progressPercent != null) 'progress_percent': progressPercent,
+      },
+      accessToken: session.accessToken,
+      organizationId: session.organizationId,
+    );
   }
 
   RecordedLectureSnapshot _parseRecorded(

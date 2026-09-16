@@ -11,6 +11,8 @@ import 'package:student_mobile/features/learn/data/learn_repository.dart';
 import 'package:student_mobile/features/learn/domain/learn_models.dart';
 import 'package:student_mobile/features/learn/presentation/screens/my_learning_screen.dart';
 import 'package:student_mobile/features/search/presentation/widgets/quick_search_sheet.dart';
+import 'package:student_mobile/features/tests/data/tests_repository.dart';
+import 'package:student_mobile/features/tests/presentation/screens/tests_hub_screen.dart';
 
 /// S-10 Home — dashboard matching Pragyu home design.
 class HomeScreen extends StatefulWidget {
@@ -157,8 +159,8 @@ class _HomeScreenState extends State<HomeScreen> {
           onCalendar: () =>
               Navigator.of(context).pushNamed(AppRoutes.calendar),
           onProgress: () => _openTab(1),
-          onSaved: () => Navigator.of(context)
-              .pushNamed(AppRoutes.studyMaterials),
+          onSaved: () =>
+              Navigator.of(context).pushNamed(AppRoutes.catalog),
         ),
         const SizedBox(height: 18),
         _ContinueLearningCard(
@@ -652,8 +654,8 @@ class _QuickActions extends StatelessWidget {
         onTap: onProgress,
       ),
       (
-        label: 'Saved',
-        icon: Icons.bookmark_rounded,
+        label: 'Catalog',
+        icon: Icons.explore_rounded,
         bg: const Color(0xFFEAF4FF),
         fg: const Color(0xFF3D8BDB),
         onTap: onSaved,
@@ -1373,11 +1375,13 @@ class StudentShell extends StatefulWidget {
     this.initialIndex = 0,
     this.homeRepository,
     this.learnRepository,
+    this.testsRepository,
   });
 
   final int initialIndex;
   final HomeGateway? homeRepository;
   final LearnGateway? learnRepository;
+  final TestsGateway? testsRepository;
 
   static StudentShellState? of(BuildContext context) {
     return context.findAncestorStateOfType<StudentShellState>();
@@ -1415,11 +1419,7 @@ class StudentShellState extends State<StudentShell> {
       case 1:
         return MyLearningScreen(learnRepository: widget.learnRepository);
       case 2:
-        return const FeaturePlaceholderScreen(
-          title: 'Tests',
-          nextScreenId: 'S-40',
-          message: 'Assessments and practice will live here.',
-        );
+        return TestsHubScreen(testsRepository: widget.testsRepository);
       case 3:
         return const FeaturePlaceholderScreen(
           title: 'Alerts',

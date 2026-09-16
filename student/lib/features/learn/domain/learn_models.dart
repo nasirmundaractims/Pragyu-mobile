@@ -319,6 +319,23 @@ class LessonResource {
     if (raw.isEmpty) return 'Resource';
     return raw[0].toUpperCase() + raw.substring(1);
   }
+
+  bool get isStreamableMedia {
+    final type = resourceType.toLowerCase();
+    final url = (externalUrl ?? '').toLowerCase();
+    return type.contains('video') ||
+        type.contains('audio') ||
+        type.contains('recording') ||
+        url.contains('.mp4') ||
+        url.contains('.m3u8') ||
+        url.contains('.mp3') ||
+        url.contains('.webm');
+  }
+
+  bool get hasPlayableUrl {
+    final url = externalUrl?.trim();
+    return url != null && url.isNotEmpty;
+  }
 }
 
 class LessonDetailSnapshot {

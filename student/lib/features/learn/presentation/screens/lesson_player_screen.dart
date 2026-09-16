@@ -6,8 +6,9 @@ import 'package:student_mobile/app/theme/app_colors.dart';
 import 'package:student_mobile/features/learn/data/learn_repository.dart';
 import 'package:student_mobile/features/learn/domain/learn_models.dart';
 import 'package:student_mobile/features/materials/domain/material_models.dart';
+import 'package:student_mobile/features/media/presentation/widgets/network_media_player.dart';
 
-/// S-22 Lesson / content player — text lesson, resources, mark complete.
+/// S-22 Lesson / content player — text, in-app media resources, mark complete.
 class LessonPlayerScreen extends StatefulWidget {
   const LessonPlayerScreen({
     super.key,
@@ -90,6 +91,39 @@ class _LessonPlayerScreenState extends State<LessonPlayerScreen> {
   }
 
   void _openResource(LessonResource resource) {
+    if (resource.isStreamableMedia && resource.hasPlayableUrl) {
+      showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: AppColors.background,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (context) {
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  resource.title,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.ink,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                NetworkMediaPlayer(url: resource.externalUrl!),
+              ],
+            ),
+          );
+        },
+      );
+      return;
+    }
+
     final text = resource.contentText?.trim();
     if (text != null && text.isNotEmpty) {
       showModalBottomSheet<void>(
@@ -279,6 +313,29 @@ class _LessonPlayerScreenState extends State<LessonPlayerScreen> {
           ],
         ),
         const SizedBox(height: 16),
+        ...snapshot.resources
+            .where((r) => r.isStreamableMedia && r.hasPlayableUrl)
+            .take(2)
+            .map(
+              (resource) => Padding(
+                padding: const EdgeInsets.only(bottom: 14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      resource.title,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.ink,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    NetworkMediaPlayer(url: resource.externalUrl!),
+                  ],
+                ),
+              ),
+            ),
         if (content.isNotEmpty)
           Container(
             width: double.infinity,

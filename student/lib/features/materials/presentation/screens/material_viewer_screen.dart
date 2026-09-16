@@ -5,21 +5,25 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:student_mobile/app/theme/app_colors.dart';
 import 'package:student_mobile/features/materials/data/materials_repository.dart';
 import 'package:student_mobile/features/materials/domain/material_models.dart';
+import 'package:student_mobile/features/materials/presentation/widgets/pdf_document_viewer.dart';
+import 'package:student_mobile/features/media/presentation/widgets/network_media_player.dart';
 
 typedef ExternalLinkOpener = Future<bool> Function(String url);
 
-/// S-28 Material viewer — open file / external link (no in-app PDF engine yet).
+/// S-28 Material viewer — in-app PDF/video preview with open/copy fallback.
 class MaterialViewerScreen extends StatefulWidget {
   const MaterialViewerScreen({
     super.key,
     required this.args,
     this.materialsRepository,
     this.openExternalUrl,
+    this.embedInAppMedia = true,
   });
 
   final MaterialViewerArgs args;
   final MaterialsGateway? materialsRepository;
   final ExternalLinkOpener? openExternalUrl;
+  final bool embedInAppMedia;
 
   @override
   State<MaterialViewerScreen> createState() => _MaterialViewerScreenState();
@@ -171,7 +175,22 @@ class _MaterialViewerScreenState extends State<MaterialViewerScreen> {
           ),
         ),
         const SizedBox(height: 18),
-        _ViewerStub(locked: snapshot.isLocked, hasLink: snapshot.hasOpenableLink),
+        if (widget.embedInAppMedia &&
+            !snapshot.isLocked &&
+            snapshot.hasOpenableLink &&
+            snapshot.isPdf)
+          PdfDocumentViewer(url: snapshot.openUrl!)
+        else if (widget.embedInAppMedia &&
+            !snapshot.isLocked &&
+            snapshot.hasOpenableLink &&
+            snapshot.isStreamableMedia)
+          NetworkMediaPlayer(url: snapshot.openUrl!)
+        else
+          _ViewerStub(
+            locked: snapshot.isLocked,
+            hasLink: snapshot.hasOpenableLink,
+            typeLabel: snapshot.typeLabel,
+          ),
         const SizedBox(height: 16),
         if (snapshot.isLocked)
           Text(
@@ -237,10 +256,12 @@ class _ViewerStub extends StatelessWidget {
   const _ViewerStub({
     required this.locked,
     required this.hasLink,
+    this.typeLabel = 'Material',
   });
 
   final bool locked;
   final bool hasLink;
+  final String typeLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -269,7 +290,7 @@ class _ViewerStub extends StatelessWidget {
               locked
                   ? 'Locked material'
                   : hasLink
-                      ? 'Open externally for Phase A'
+                      ? 'Preview unavailable — use Open below'
                       : 'No file attached',
               style: const TextStyle(
                 color: AppColors.muted,

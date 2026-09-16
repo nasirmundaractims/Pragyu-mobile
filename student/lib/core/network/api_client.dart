@@ -48,6 +48,21 @@ class ApiClient {
     );
   }
 
+  Future<JsonMap> patch(
+    String path, {
+    JsonMap? body,
+    String? accessToken,
+    String? organizationId,
+  }) {
+    return _send(
+      'PATCH',
+      path,
+      body: body,
+      accessToken: accessToken,
+      organizationId: organizationId,
+    );
+  }
+
   Future<JsonMap> _send(
     String method,
     String path, {
@@ -79,6 +94,12 @@ class ApiClient {
           );
         case 'GET':
           response = await _http.get(uri, headers: headers);
+        case 'PATCH':
+          response = await _http.patch(
+            uri,
+            headers: headers,
+            body: body == null ? null : jsonEncode(body),
+          );
         default:
           throw ApiException(
             message: 'Unsupported HTTP method: $method',
