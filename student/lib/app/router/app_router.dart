@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../features/ai_mentor/presentation/screens/ai_mentor_screen.dart';
 import '../../features/auth/presentation/screens/forgot_password_screen.dart';
+import '../../features/notes_bookmarks/presentation/screens/notes_bookmarks_screen.dart';
 import '../../features/recommendations/presentation/screens/recommendations_screen.dart';
 import '../../features/study_planner/presentation/screens/study_planner_screen.dart';
 import '../../features/weak_topics/presentation/screens/weak_topics_screen.dart';
@@ -71,6 +72,7 @@ abstract final class AppRoutes {
   static const weakTopics = '/weak-topics';
   static const studyPlanner = '/study-planner';
   static const recommendations = '/recommendations';
+  static const notesBookmarks = '/notes-bookmarks';
   static const createAccountStub = '/create-account-stub';
 }
 
@@ -257,6 +259,11 @@ Route<dynamic> onGenerateRoute(RouteSettings settings) {
       return MaterialPageRoute<void>(
         settings: settings,
         builder: (_) => const RecommendationsScreen(),
+      );
+    case AppRoutes.notesBookmarks:
+      return MaterialPageRoute<void>(
+        settings: settings,
+        builder: (_) => const NotesBookmarksScreen(),
       );
     case AppRoutes.createAccountStub:
       return MaterialPageRoute<void>(

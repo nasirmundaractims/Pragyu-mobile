@@ -78,6 +78,19 @@ class ApiClient {
     );
   }
 
+  Future<JsonMap> delete(
+    String path, {
+    String? accessToken,
+    String? organizationId,
+  }) {
+    return _send(
+      'DELETE',
+      path,
+      accessToken: accessToken,
+      organizationId: organizationId,
+    );
+  }
+
   Future<JsonMap> _send(
     String method,
     String path, {
@@ -121,6 +134,8 @@ class ApiClient {
             headers: headers,
             body: body == null ? null : jsonEncode(body),
           );
+        case 'DELETE':
+          response = await _http.delete(uri, headers: headers);
         default:
           throw ApiException(
             message: 'Unsupported HTTP method: $method',

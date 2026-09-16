@@ -162,6 +162,7 @@ lib/
     weak_topics/ # S-61
     study_planner/ # S-62
     recommendations/ # S-63
+    notes_bookmarks/ # S-64
     me/          # S-70
 ```
 
@@ -198,6 +199,7 @@ lib/
 - **S-61 Weak Topics** — mastery focus list (needs work / improving), Ask Mentor CTA, Me entry
 - **S-62 Study Planner** — weekly plans, day sessions, goals, generate week, Me entry
 - **S-63 Recommendations** — AI next actions, filters, save/dismiss, refresh generate, Me entry
+- **S-64 Notes & Bookmarks** — notes CRUD, content bookmarks, AI feedback library, Me entry
 - **S-70 Me** — profile summary, email/study prefs, switch institute, sign out
 
 ## Troubleshooting

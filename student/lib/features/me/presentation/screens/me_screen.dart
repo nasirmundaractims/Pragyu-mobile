@@ -446,6 +446,28 @@ class _MeScreenState extends State<MeScreen> {
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(
+                  Icons.collections_bookmark_outlined,
+                  color: AppColors.brand,
+                ),
+                title: const Text(
+                  'Notes & Bookmarks',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.ink,
+                  ),
+                ),
+                subtitle: const Text(
+                  'Notes, saved content, and AI feedback',
+                  style: TextStyle(color: AppColors.muted, fontSize: 13),
+                ),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => Navigator.of(context)
+                    .pushNamed(AppRoutes.notesBookmarks),
+              ),
+              const Divider(height: 8),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(
                   Icons.apartment_outlined,
                   color: AppColors.brand,
                 ),
