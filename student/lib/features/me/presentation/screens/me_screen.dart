@@ -402,6 +402,28 @@ class _MeScreenState extends State<MeScreen> {
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(
+                  Icons.calendar_month_outlined,
+                  color: AppColors.brand,
+                ),
+                title: const Text(
+                  'Study Planner',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.ink,
+                  ),
+                ),
+                subtitle: const Text(
+                  'Weekly plans, sessions, and goals',
+                  style: TextStyle(color: AppColors.muted, fontSize: 13),
+                ),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () =>
+                    Navigator.of(context).pushNamed(AppRoutes.studyPlanner),
+              ),
+              const Divider(height: 8),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(
                   Icons.apartment_outlined,
                   color: AppColors.brand,
                 ),
