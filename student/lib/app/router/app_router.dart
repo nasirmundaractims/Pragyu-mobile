@@ -4,6 +4,8 @@ import '../../features/ai_mentor/presentation/screens/ai_mentor_screen.dart';
 import '../../features/analytics/presentation/screens/performance_analytics_screen.dart';
 import '../../features/attendance/presentation/screens/attendance_screen.dart';
 import '../../features/auth/presentation/screens/forgot_password_screen.dart';
+import '../../features/payments/domain/payments_models.dart';
+import '../../features/payments/presentation/screens/payments_screen.dart';
 import '../../features/settings/presentation/screens/settings_screen.dart';
 import '../../features/exam_series/domain/exam_series_models.dart';
 import '../../features/exam_series/presentation/screens/exam_series_detail_screen.dart';
@@ -86,6 +88,7 @@ abstract final class AppRoutes {
   static const examSeriesDetail = '/exam-series-detail';
   static const attendance = '/attendance';
   static const settings = '/settings';
+  static const payments = '/payments';
   static const createAccountStub = '/create-account-stub';
 }
 
@@ -304,6 +307,13 @@ Route<dynamic> onGenerateRoute(RouteSettings settings) {
       return MaterialPageRoute<void>(
         settings: settings,
         builder: (_) => const AttendanceScreen(),
+      );
+    case AppRoutes.payments:
+      return MaterialPageRoute<void>(
+        settings: settings,
+        builder: (_) => PaymentsScreen(
+          initialView: PaymentsViewIdX.fromObject(settings.arguments),
+        ),
       );
     case AppRoutes.settings:
       return MaterialPageRoute<void>(

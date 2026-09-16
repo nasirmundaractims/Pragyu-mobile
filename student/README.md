@@ -167,6 +167,7 @@ lib/
     exam_workspace/ # S-66
     exam_series/ # S-67
     attendance/  # S-68
+    payments/    # S-72
     settings/    # S-71
     me/          # S-70
 ```
@@ -211,6 +212,7 @@ lib/
 - **S-68 My Attendance** — rate, present/absent/late/excused, recent marks, Me entry
 - **S-70 Me** — profile summary, email/study prefs, switch institute, sign out
 - **S-71 Settings** — password, sessions, language/timezone, trusted devices, Me entry
+- **S-72 Payments** — fees, billing history, AI credit balance/packs, Me entry
 
 ## Troubleshooting
 
