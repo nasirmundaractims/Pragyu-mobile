@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:student_mobile/app/router/app_router.dart';
 import 'package:student_mobile/app/theme/app_colors.dart';
 import 'package:student_mobile/app/widgets/primary_button.dart';
+import 'package:student_mobile/core/session/auth_navigation.dart';
 import 'package:student_mobile/features/onboarding/data/onboarding_store.dart';
 import 'package:student_mobile/features/onboarding/data/prefs_onboarding_store.dart';
 import 'package:student_mobile/features/onboarding/presentation/widgets/onboarding_slide_view.dart';
@@ -46,7 +47,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       final done = await _store.hasCompleted();
       if (!mounted) return;
       if (done) {
-        _goHome(replace: true);
+        _goHome();
         return;
       }
     }
@@ -56,18 +57,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Future<void> _finish() async {
     await _store.markCompleted();
     if (!mounted) return;
-    _goHome(replace: true);
+    _goHome();
   }
 
-  void _goHome({required bool replace}) {
-    if (replace) {
-      Navigator.of(context).pushReplacementNamed(AppRoutes.home);
-    } else {
-      Navigator.of(context).pushNamedAndRemoveUntil(
-        AppRoutes.home,
-        (route) => false,
-      );
-    }
+  void _goHome() {
+    AuthNavigation.goAndClear(context, AppRoutes.home);
   }
 
   void _next() {

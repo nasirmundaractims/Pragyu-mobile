@@ -58,4 +58,10 @@ class SessionService {
       cachedUser: user,
     );
   }
+
+  /// True when an access token exists (org may still be unselected).
+  Future<bool> hasAccessToken() async {
+    final access = await _tokens.readAccessToken();
+    return access != null && access.isNotEmpty;
+  }
 }

@@ -4,10 +4,13 @@ import 'package:flutter/services.dart';
 import 'app_colors.dart';
 
 abstract final class AppTheme {
+  static const fontFamily = 'Inter';
+
   static ThemeData light() {
     final base = ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
+      fontFamily: fontFamily,
       colorScheme: ColorScheme.fromSeed(
         seedColor: AppColors.brand,
         primary: AppColors.brand,
@@ -15,18 +18,18 @@ abstract final class AppTheme {
         surface: AppColors.surface,
       ),
       scaffoldBackgroundColor: AppColors.background,
-      fontFamily: 'Roboto',
     );
 
     final colored = base.textTheme.apply(
+      fontFamily: fontFamily,
       bodyColor: AppColors.ink,
       displayColor: AppColors.ink,
     );
-    final scaled = _scaleTextTheme(colored, 1.12);
+    final scaled = _scaleTextTheme(colored, 1.08);
 
     return base.copyWith(
       textTheme: scaled,
-      primaryTextTheme: scaled,
+      primaryTextTheme: scaled.apply(fontFamily: fontFamily),
       appBarTheme: AppBarTheme(
         backgroundColor: AppColors.surface,
         foregroundColor: AppColors.ink,
@@ -34,6 +37,7 @@ abstract final class AppTheme {
         centerTitle: false,
         systemOverlayStyle: SystemUiOverlayStyle.dark,
         titleTextStyle: (scaled.titleLarge ?? const TextStyle()).copyWith(
+          fontFamily: fontFamily,
           fontWeight: FontWeight.w700,
           color: AppColors.ink,
           fontSize: (scaled.titleLarge?.fontSize ?? 22),
@@ -46,8 +50,13 @@ abstract final class AppTheme {
     TextStyle? scale(TextStyle? style) {
       if (style == null) return null;
       final size = style.fontSize;
-      if (size == null) return style;
-      return style.copyWith(fontSize: size * factor);
+      if (size == null) {
+        return style.copyWith(fontFamily: fontFamily);
+      }
+      return style.copyWith(
+        fontFamily: fontFamily,
+        fontSize: size * factor,
+      );
     }
 
     return theme.copyWith(

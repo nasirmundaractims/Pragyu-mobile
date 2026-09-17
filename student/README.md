@@ -176,6 +176,8 @@ lib/
 ## Screens status
 
 - **S-01…S-06** — auth entry complete
+- **S-03 Sign in** — email/password (+ MFA), org picker next
+- **S-04 Create account** — register with phone OTP, terms, org picker / email verify
 - **S-10 Home** — implemented
 - **S-11 Today detail** — implemented
 - **S-12 Quick search** — implemented (sheet: courses / tests / materials)

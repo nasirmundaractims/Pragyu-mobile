@@ -3,10 +3,11 @@ import 'package:flutter/services.dart';
 
 import 'package:student_mobile/app/router/app_router.dart';
 import 'package:student_mobile/app/theme/app_colors.dart';
-import 'package:student_mobile/core/config/app_config.dart';
+import 'package:student_mobile/app/widgets/pragyu_logo.dart';
 import 'package:student_mobile/core/constants/app_constants.dart';
+import 'package:student_mobile/core/session/auth_navigation.dart';
 
-/// S-01 Splash Screen — brand mark only; hands off to S-02 Welcome.
+/// S-01 Splash Screen — brand mark only; hands off to session-aware entry.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -36,20 +37,20 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _bootstrap() async {
-    final started = DateTime.now();
+    await Future<void>.delayed(AppConstants.splashMinDuration);
 
-    // Foundation hook: future session restore / remote config will live here.
-    await Future<void>.delayed(const Duration(milliseconds: 200));
-
-    final elapsed = DateTime.now().difference(started);
-    final remaining = AppConstants.splashMinDuration - elapsed;
-    if (remaining > Duration.zero) {
-      await Future<void>.delayed(remaining);
+    var nextRoute = AppRoutes.welcome;
+    try {
+      nextRoute = await AuthNavigation.resolveEntryRoute().timeout(
+        const Duration(milliseconds: 400),
+        onTimeout: () => AppRoutes.welcome,
+      );
+    } catch (_) {
+      nextRoute = AppRoutes.welcome;
     }
 
     if (!mounted) return;
-
-    Navigator.of(context).pushReplacementNamed(AppRoutes.welcome);
+    Navigator.of(context).pushReplacementNamed(nextRoute);
   }
 
   @override
@@ -60,8 +61,6 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
-    final appName = AppConfig.instance.appName;
-
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
       child: Scaffold(
@@ -75,38 +74,12 @@ class _SplashScreenState extends State<SplashScreen>
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Container(
-                      width: 88,
-                      height: 88,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.28),
-                        ),
-                      ),
+                    const PragyuLogo(
+                      height: 56,
+                      light: true,
                       alignment: Alignment.center,
-                      child: Text(
-                        appName.isNotEmpty ? appName[0].toUpperCase() : 'P',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 40,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
                     ),
-                    const SizedBox(height: 24),
-                    Text(
-                      appName,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 32,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.4,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 16),
                     Text(
                       'Learn with clarity',
                       style: TextStyle(

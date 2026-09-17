@@ -71,7 +71,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(store.completed, isTrue);
-    expect(find.textContaining('Here’s what’s next today.'), findsOneWidget);
+    expect(find.text('KEEP GOING'), findsOneWidget);
   });
 
   testWidgets('S-06 skip marks complete and opens home', (tester) async {
@@ -92,7 +92,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(store.completed, isTrue);
-    expect(find.textContaining('Here’s what’s next today.'), findsOneWidget);
+    expect(find.text('KEEP GOING'), findsOneWidget);
   });
 
   testWidgets('S-06 skips slides when already completed', (tester) async {
@@ -107,6 +107,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Skip'), findsNothing);
-    expect(find.textContaining('Here’s what’s next today.'), findsOneWidget);
+    expect(find.text('KEEP GOING'), findsOneWidget);
   });
 }

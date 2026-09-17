@@ -104,7 +104,7 @@ void main() {
     expect(find.textContaining('STU-101'), findsOneWidget);
     expect(find.text('Email notifications'), findsOneWidget);
     expect(find.text('Switch institute'), findsOneWidget);
-    expect(find.text('Sign out'), findsOneWidget);
+    expect(find.text('Logout'), findsWidgets);
 
     await tester.tap(find.byType(Switch));
     await tester.pumpAndSettle();
@@ -112,20 +112,20 @@ void main() {
     expect(fake.lastEmailEnabled, isFalse);
   });
 
-  testWidgets('S-70 sign out confirms and navigates to sign-in', (tester) async {
+  testWidgets('S-70 logout confirms and navigates to welcome', (tester) async {
     final fake = _FakeMe(sample());
-    Object? signedInRoute;
+    Object? loggedOutRoute;
 
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light(),
         home: MeScreen(meRepository: fake),
         onGenerateRoute: (settings) {
-          signedInRoute = settings.name;
-          if (settings.name == AppRoutes.signIn) {
+          loggedOutRoute = settings.name;
+          if (settings.name == AppRoutes.welcome) {
             return MaterialPageRoute<void>(
               settings: settings,
-              builder: (_) => const Scaffold(body: Text('Sign in screen')),
+              builder: (_) => const Scaffold(body: Text('Welcome screen')),
             );
           }
           return null;
@@ -134,19 +134,19 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final signOut = find.text('Sign out');
-    await tester.scrollUntilVisible(signOut, 120);
+    final logout = find.widgetWithText(OutlinedButton, 'Logout');
+    await tester.scrollUntilVisible(logout, 120);
     await tester.pumpAndSettle();
-    await tester.tap(signOut);
+    await tester.tap(logout);
     await tester.pumpAndSettle();
 
-    expect(find.text('Sign out?'), findsOneWidget);
-    await tester.tap(find.widgetWithText(FilledButton, 'Sign out'));
+    expect(find.text('Logout?'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, 'Logout'));
     await tester.pumpAndSettle();
 
     expect(fake.signOutCalls, 1);
-    expect(find.text('Sign in screen'), findsOneWidget);
-    expect(signedInRoute, AppRoutes.signIn);
+    expect(find.text('Welcome screen'), findsOneWidget);
+    expect(loggedOutRoute, AppRoutes.welcome);
   });
 
   testWidgets('S-70 Me tab shows profile in shell', (tester) async {

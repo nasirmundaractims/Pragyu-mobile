@@ -5,6 +5,7 @@ import 'package:student_mobile/app/router/app_router.dart';
 import 'package:student_mobile/app/theme/app_colors.dart';
 import 'package:student_mobile/app/widgets/primary_button.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
+import 'package:student_mobile/core/session/auth_navigation.dart';
 import 'package:student_mobile/features/organization/data/organization_repository.dart';
 import 'package:student_mobile/features/organization/domain/organization_summary.dart';
 
@@ -95,19 +96,7 @@ class _OrgPickerScreenState extends State<OrgPickerScreen> {
       await _orgs.selectOrganization(organization);
       if (!mounted) return;
       final route = widget.afterSelectRoute;
-      if (widget.clearStackOnSelect) {
-        Navigator.of(context).pushNamedAndRemoveUntil(
-          route,
-          (route) => false,
-        );
-      } else if (replace) {
-        Navigator.of(context).pushReplacementNamed(route);
-      } else {
-        Navigator.of(context).pushNamedAndRemoveUntil(
-          route,
-          (route) => false,
-        );
-      }
+      AuthNavigation.goAndClear(context, route);
     } catch (_) {
       if (!mounted) return;
       setState(() {

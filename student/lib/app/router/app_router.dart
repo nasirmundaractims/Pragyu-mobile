@@ -4,6 +4,7 @@ import '../../features/ai_mentor/presentation/screens/ai_mentor_screen.dart';
 import '../../features/analytics/presentation/screens/performance_analytics_screen.dart';
 import '../../features/attendance/presentation/screens/attendance_screen.dart';
 import '../../features/auth/presentation/screens/forgot_password_screen.dart';
+import '../../features/auth/presentation/screens/register_screen.dart';
 import '../../features/payments/domain/payments_models.dart';
 import '../../features/payments/presentation/screens/payments_screen.dart';
 import '../../features/settings/presentation/screens/settings_screen.dart';
@@ -52,7 +53,6 @@ import '../../features/tests/presentation/screens/deep_feedback_screen.dart';
 import '../../features/tests/presentation/screens/past_results_screen.dart';
 import '../../features/tests/presentation/screens/result_feedback_screen.dart';
 import '../../features/tests/presentation/screens/submission_status_screen.dart';
-import '../../features/welcome/presentation/screens/auth_flow_stub_screen.dart';
 import '../../features/welcome/presentation/screens/welcome_screen.dart';
 
 /// Central route names.
@@ -359,10 +359,7 @@ Route<dynamic> onGenerateRoute(RouteSettings settings) {
     case AppRoutes.createAccountStub:
       return MaterialPageRoute<void>(
         settings: settings,
-        builder: (_) => const AuthFlowStubScreen(
-          title: 'Create account',
-          nextScreenId: 'Create account',
-        ),
+        builder: (_) => const RegisterScreen(),
       );
     default:
       return MaterialPageRoute<void>(

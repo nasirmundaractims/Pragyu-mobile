@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:student_mobile/app/router/app_router.dart';
 import 'package:student_mobile/app/theme/app_colors.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
+import 'package:student_mobile/features/me/data/me_repository.dart';
 import 'package:student_mobile/features/settings/data/settings_repository.dart';
 import 'package:student_mobile/features/settings/domain/settings_models.dart';
 
@@ -11,9 +13,11 @@ class SettingsScreen extends StatefulWidget {
   const SettingsScreen({
     super.key,
     this.settingsRepository,
+    this.meRepository,
   });
 
   final SettingsGateway? settingsRepository;
+  final MeGateway? meRepository;
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -22,6 +26,7 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   late final SettingsGateway _repo =
       widget.settingsRepository ?? SettingsRepository();
+  late final MeGateway _me = widget.meRepository ?? MeRepository();
 
   final _currentPassword = TextEditingController();
   final _newPassword = TextEditingController();
@@ -31,6 +36,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _savingPassword = false;
   bool _savingLocale = false;
   bool _revokingOthers = false;
+  bool _loggingOut = false;
   bool _ready = false;
   String? _busySessionId;
   String? _busyDeviceId;
@@ -213,6 +219,48 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Future<void> _logout() async {
+    if (_loggingOut) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logout?'),
+        content: const Text(
+          "You'll need to sign in again to access your courses and tests.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.danger,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _loggingOut = true);
+    try {
+      await _me.signOut();
+      if (!mounted) return;
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        AppRoutes.welcome,
+        (route) => false,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loggingOut = false);
+      _toast("Couldn't log out. Try again.");
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -280,6 +328,42 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               unavailable: _snapshot.devicesUnavailable,
                               busyDeviceId: _busyDeviceId,
                               onRevoke: _revokeDevice,
+                            ),
+                            const SizedBox(height: 20),
+                            SizedBox(
+                              height: 52,
+                              child: OutlinedButton.icon(
+                                onPressed: _loggingOut ? null : _logout,
+                                icon: Icon(
+                                  Icons.logout_rounded,
+                                  color: _loggingOut
+                                      ? AppColors.muted
+                                      : AppColors.danger,
+                                ),
+                                label: Text(
+                                  _loggingOut ? 'Logging out…' : 'Logout',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 15,
+                                    color: _loggingOut
+                                        ? AppColors.muted
+                                        : AppColors.danger,
+                                  ),
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  side: BorderSide(
+                                    color: _loggingOut
+                                        ? AppColors.muted
+                                            .withValues(alpha: 0.4)
+                                        : AppColors.danger
+                                            .withValues(alpha: 0.55),
+                                    width: 1.4,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                ),
+                              ),
                             ),
                           ],
                         ),

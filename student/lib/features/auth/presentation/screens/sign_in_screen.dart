@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:student_mobile/app/router/app_router.dart';
+import 'package:student_mobile/app/widgets/pragyu_logo.dart';
 import 'package:student_mobile/core/config/app_config.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
+import 'package:student_mobile/core/session/auth_navigation.dart';
 import 'package:student_mobile/features/auth/data/auth_repository.dart';
 import 'package:student_mobile/features/auth/domain/auth_models.dart';
 
@@ -45,6 +47,12 @@ class _SignInScreenState extends State<SignInScreen> {
   String? _mfaChallengeToken;
 
   bool get _mfaStep => _mfaChallengeToken != null;
+
+  @override
+  void initState() {
+    super.initState();
+    AuthNavigation.redirectIfAuthenticated(context);
+  }
 
   @override
   void dispose() {
@@ -89,7 +97,7 @@ class _SignInScreenState extends State<SignInScreen> {
 
       switch (result) {
         case LoginSuccess():
-          Navigator.of(context).pushReplacementNamed(AppRoutes.orgPicker);
+          AuthNavigation.goAndClear(context, AppRoutes.orgPicker);
         case LoginMfaRequired(:final challengeToken):
           setState(() {
             _mfaChallengeToken = challengeToken;
@@ -131,7 +139,7 @@ class _SignInScreenState extends State<SignInScreen> {
         code: code,
       );
       if (!mounted) return;
-      Navigator.of(context).pushReplacementNamed(AppRoutes.orgPicker);
+      AuthNavigation.goAndClear(context, AppRoutes.orgPicker);
     } on ApiException catch (error) {
       if (!mounted) return;
       setState(() {
@@ -349,28 +357,38 @@ class _SignInScreenState extends State<SignInScreen> {
                                     ),
                                   ),
                                   const SizedBox(height: 10),
-                                  Row(
+                                  Wrap(
+                                    crossAxisAlignment:
+                                        WrapCrossAlignment.center,
+                                    spacing: 4,
+                                    runSpacing: 4,
+                                    alignment: WrapAlignment.spaceBetween,
                                     children: [
-                                      Switch.adaptive(
-                                        value: _rememberMe,
-                                        activeThumbColor: _blue,
-                                        activeTrackColor:
-                                            _blue.withValues(alpha: 0.45),
-                                        onChanged: _submitting
-                                            ? null
-                                            : (value) => setState(
-                                                  () => _rememberMe = value,
-                                                ),
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Switch.adaptive(
+                                            value: _rememberMe,
+                                            activeThumbColor: _blue,
+                                            activeTrackColor:
+                                                _blue.withValues(alpha: 0.45),
+                                            onChanged: _submitting
+                                                ? null
+                                                : (value) => setState(
+                                                      () =>
+                                                          _rememberMe = value,
+                                                    ),
+                                          ),
+                                          const Text(
+                                            'Keep me signed in',
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w600,
+                                              color: _ink,
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                      const Text(
-                                        'Keep me signed in',
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w600,
-                                          color: _ink,
-                                        ),
-                                      ),
-                                      const Spacer(),
                                       TextButton(
                                         onPressed: _submitting
                                             ? null
@@ -516,122 +534,146 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const _PragyuMark(size: 30),
-                  const SizedBox(width: 8),
-                  Text(
-                    appName,
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                      color: _SignInScreenState._ink,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              const Text(
-                'Learn  Practice  Improve  Succeed',
-                style: TextStyle(
-                  fontSize: 10,
-                  letterSpacing: 0.8,
-                  color: _SignInScreenState._muted,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 16),
-              if (mfaStep)
-                const Text(
-                  'Verify sign-in',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w800,
-                    color: _SignInScreenState._ink,
-                    height: 1.15,
-                  ),
-                )
-              else
-                const Text.rich(
-                  TextSpan(
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w800,
-                      height: 1.15,
-                      color: _SignInScreenState._ink,
-                    ),
-                    children: [
-                      TextSpan(text: 'Welcome '),
-                      TextSpan(
-                        text: 'Back!',
-                        style: TextStyle(
-                          color: _SignInScreenState._purple,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              const SizedBox(height: 8),
-              Text(
-                mfaStep
-                    ? 'Enter the code from your authenticator app.'
-                    : 'Sign in to continue your learning journey with $appName.',
-                style: const TextStyle(
-                  fontSize: 13,
-                  height: 1.4,
-                  color: _SignInScreenState._muted,
-                ),
-              ),
-            ],
+        const PragyuLogo(height: 40),
+        const SizedBox(height: 8),
+        const Text(
+          'LEARN  ·  PRACTICE  ·  IMPROVE  ·  SUCCEED',
+          style: TextStyle(
+            fontSize: 10.5,
+            letterSpacing: 1.0,
+            color: _SignInScreenState._muted,
+            fontWeight: FontWeight.w500,
           ),
         ),
-        if (!mfaStep)
-          SizedBox(
-            width: 120,
-            height: 130,
-            child: Stack(
-              clipBehavior: Clip.none,
+        if (!mfaStep) ...[
+          const SizedBox(height: 16),
+          const _SignInHeroBanner(),
+        ],
+        const SizedBox(height: 16),
+        if (mfaStep)
+          const Text(
+            'Verify sign-in',
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.w800,
+              color: _SignInScreenState._ink,
+              height: 1.15,
+            ),
+          )
+        else
+          const Text.rich(
+            TextSpan(
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.w800,
+                height: 1.15,
+                color: _SignInScreenState._ink,
+              ),
               children: [
-                Positioned(
-                  right: 0,
-                  top: 0,
-                  bottom: 0,
-                  child: Image.asset(
-                    'assets/images/sign_in_hero.jpg',
-                    fit: BoxFit.contain,
-                    errorBuilder: (_, error, stackTrace) => const Icon(
-                      Icons.school_rounded,
-                      size: 64,
-                      color: _SignInScreenState._purple,
-                    ),
-                  ),
-                ),
-                const Positioned(
-                  right: -4,
-                  top: 18,
-                  child: Text(
-                    'Better Students\nBrighter Future',
-                    textAlign: TextAlign.right,
-                    style: TextStyle(
-                      fontSize: 9,
-                      height: 1.2,
-                      fontStyle: FontStyle.italic,
-                      color: Color(0xFF9AA3B5),
-                      fontWeight: FontWeight.w600,
-                    ),
+                TextSpan(text: 'Welcome '),
+                TextSpan(
+                  text: 'Back!',
+                  style: TextStyle(
+                    color: _SignInScreenState._purple,
                   ),
                 ),
               ],
             ),
           ),
+        const SizedBox(height: 8),
+        Text(
+          mfaStep
+              ? 'Enter the code from your authenticator app.'
+              : 'Sign in to continue your learning journey with $appName.',
+          style: const TextStyle(
+            fontSize: 13,
+            height: 1.4,
+            color: _SignInScreenState._muted,
+          ),
+        ),
       ],
+    );
+  }
+}
+
+class _SignInHeroBanner extends StatelessWidget {
+  const _SignInHeroBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(22),
+      child: SizedBox(
+        height: 220,
+        width: double.infinity,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.asset(
+              'assets/images/home_hero.jpg',
+              fit: BoxFit.cover,
+              alignment: const Alignment(0.35, 0),
+              filterQuality: FilterQuality.high,
+              errorBuilder: (_, error, stackTrace) => Container(
+                color: const Color(0xFFE8EEFF),
+              ),
+            ),
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  colors: [
+                    Color(0xE6142033),
+                    Color(0x99142033),
+                    Color(0x33142033),
+                    Color(0x00142033),
+                  ],
+                  stops: [0, 0.38, 0.72, 1],
+                ),
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(18, 18, 18, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'KEEP LEARNING',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.1,
+                      color: Color(0xFFB8C7FF),
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  Text.rich(
+                    TextSpan(
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        height: 1.2,
+                        color: Colors.white,
+                      ),
+                      children: [
+                        TextSpan(text: 'A brighter future\nstarts '),
+                        TextSpan(
+                          text: 'with you',
+                          style: TextStyle(color: Color(0xFF9EC0FF)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -798,11 +840,14 @@ class _GoogleButton extends StatelessWidget {
           children: [
             _GoogleG(),
             SizedBox(width: 10),
-            Text(
-              'Continue with Google',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
+            Flexible(
+              child: Text(
+                'Continue with Google',
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
           ],
@@ -958,55 +1003,6 @@ class _FooterMotto extends StatelessWidget {
         ),
         Expanded(child: Divider(color: Color(0xFFD8DEEA))),
       ],
-    );
-  }
-}
-
-class _PragyuMark extends StatelessWidget {
-  const _PragyuMark({required this.size});
-
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: size,
-      height: size,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Positioned(
-            left: 2,
-            top: 5,
-            child: ShaderMask(
-              shaderCallback: (bounds) => const LinearGradient(
-                colors: [
-                  _SignInScreenState._blue,
-                  _SignInScreenState._purple,
-                ],
-              ).createShader(bounds),
-              child: Text(
-                'P',
-                style: TextStyle(
-                  fontSize: size * 0.78,
-                  fontWeight: FontWeight.w900,
-                  color: Colors.white,
-                  height: 1,
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            left: 0,
-            top: -2,
-            child: Icon(
-              Icons.school_rounded,
-              size: size * 0.38,
-              color: _SignInScreenState._ink,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

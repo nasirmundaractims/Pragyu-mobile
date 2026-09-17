@@ -142,7 +142,7 @@ class _MeScreenState extends State<MeScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Sign out?'),
+        title: const Text('Logout?'),
           content: const Text(
             "You'll need to sign in again to access your courses and tests.",
           ),
@@ -154,10 +154,10 @@ class _MeScreenState extends State<MeScreen> {
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
             style: FilledButton.styleFrom(
-              backgroundColor: AppColors.brand,
+              backgroundColor: AppColors.danger,
               foregroundColor: Colors.white,
             ),
-            child: const Text('Sign out'),
+            child: const Text('Logout'),
           ),
         ],
       ),
@@ -169,14 +169,14 @@ class _MeScreenState extends State<MeScreen> {
       await _me.signOut();
       if (!mounted) return;
       Navigator.of(context).pushNamedAndRemoveUntil(
-        AppRoutes.signIn,
+        AppRoutes.welcome,
         (route) => false,
       );
     } catch (_) {
       if (!mounted) return;
       setState(() => _signingOut = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Couldn't sign out. Try again.")),
+        const SnackBar(content: Text("Couldn't log out. Try again.")),
       );
     }
   }
@@ -196,6 +196,16 @@ class _MeScreenState extends State<MeScreen> {
               onPressed: () => showQuickSearchSheet(context),
               icon: const Icon(Icons.search_rounded, color: AppColors.ink),
             ),
+            TextButton(
+              onPressed: _signingOut ? null : _signOut,
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.danger,
+              ),
+              child: Text(
+                _signingOut ? '…' : 'Logout',
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ),
           ],
         ),
         body: SafeArea(
@@ -213,9 +223,17 @@ class _MeScreenState extends State<MeScreen> {
     if (_loading && _snapshot == null) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        children: const [
-          SizedBox(height: 120),
-          Center(child: CircularProgressIndicator(color: AppColors.brand)),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+        children: [
+          const SizedBox(height: 120),
+          const Center(
+            child: CircularProgressIndicator(color: AppColors.brand),
+          ),
+          const SizedBox(height: 48),
+          _LogoutButton(
+            signingOut: _signingOut,
+            onPressed: _signOut,
+          ),
         ],
       );
     }
@@ -223,11 +241,22 @@ class _MeScreenState extends State<MeScreen> {
     if (_error != null && _snapshot == null) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.fromLTRB(20, 24, 20, 28),
         children: [
           Text(
             _error!,
             style: const TextStyle(color: AppColors.danger, height: 1.4),
+          ),
+          const SizedBox(height: 16),
+          FilledButton(
+            onPressed: _load,
+            style: FilledButton.styleFrom(backgroundColor: AppColors.brand),
+            child: const Text('Retry'),
+          ),
+          const SizedBox(height: 28),
+          _LogoutButton(
+            signingOut: _signingOut,
+            onPressed: _signOut,
           ),
         ],
       );
@@ -641,26 +670,59 @@ class _MeScreenState extends State<MeScreen> {
                 trailing: const Icon(Icons.chevron_right_rounded),
                 onTap: _switchInstitute,
               ),
-              const Divider(height: 8),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(
-                  Icons.logout_rounded,
-                  color: AppColors.danger,
-                ),
-                title: Text(
-                  _signingOut ? 'Signing out…' : 'Sign out',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.danger,
-                  ),
-                ),
-                onTap: _signingOut ? null : _signOut,
-              ),
             ],
           ),
         ),
+        const SizedBox(height: 20),
+        _LogoutButton(
+          signingOut: _signingOut,
+          onPressed: _signOut,
+        ),
       ],
+    );
+  }
+}
+
+class _LogoutButton extends StatelessWidget {
+  const _LogoutButton({
+    required this.signingOut,
+    required this.onPressed,
+  });
+
+  final bool signingOut;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 52,
+      child: OutlinedButton.icon(
+        onPressed: signingOut ? null : onPressed,
+        icon: Icon(
+          Icons.logout_rounded,
+          color: signingOut ? AppColors.muted : AppColors.danger,
+        ),
+        label: Text(
+          signingOut ? 'Logging out…' : 'Logout',
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 15,
+            color: signingOut ? AppColors.muted : AppColors.danger,
+          ),
+        ),
+        style: OutlinedButton.styleFrom(
+          side: BorderSide(
+            color: signingOut
+                ? AppColors.muted.withValues(alpha: 0.4)
+                : AppColors.danger.withValues(alpha: 0.55),
+            width: 1.4,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+      ),
     );
   }
 }

@@ -20,6 +20,15 @@ abstract class AuthGateway {
   /// Requests a reset email. API always succeeds (no account enumeration).
   Future<void> forgotPassword({required String email});
 
+  Future<void> requestRegistrationPhoneOtp({required String phone});
+
+  Future<PhoneOtpConfirmResult> confirmRegistrationPhoneOtp({
+    required String phone,
+    required String code,
+  });
+
+  Future<RegisterResult> register(RegisterRequest request);
+
   Future<void> clearSession();
 }
 
@@ -93,13 +102,78 @@ class AuthRepository implements AuthGateway {
   }
 
   @override
+  Future<void> requestRegistrationPhoneOtp({required String phone}) async {
+    await _api.post(
+      '/auth/register/phone/request-otp',
+      body: {'phone': phone.trim()},
+    );
+  }
+
+  @override
+  Future<PhoneOtpConfirmResult> confirmRegistrationPhoneOtp({
+    required String phone,
+    required String code,
+  }) async {
+    final envelope = await _api.post(
+      '/auth/register/phone/confirm',
+      body: {
+        'phone': phone.trim(),
+        'code': code.trim(),
+      },
+    );
+    final data = _asJsonMap(envelope['data']);
+    final token = data['phone_verification_token']?.toString() ?? '';
+    if (token.isEmpty) {
+      throw StateError('Phone verification token missing.');
+    }
+    return PhoneOtpConfirmResult(
+      phoneVerificationToken: token,
+      phone: data['phone']?.toString() ?? phone.trim(),
+      expiresIn: _asInt(data['expires_in']),
+    );
+  }
+
+  @override
+  Future<RegisterResult> register(RegisterRequest request) async {
+    final envelope = await _api.post(
+      '/auth/register',
+      body: {
+        'first_name': request.firstName.trim(),
+        'last_name': request.lastName.trim(),
+        'email': request.email.trim(),
+        'phone': request.phone.trim(),
+        'phone_verification_token': request.phoneVerificationToken,
+        'password': request.password,
+        'password_confirmation': request.passwordConfirmation,
+        'accept_terms': request.acceptTerms,
+        'registration_context': 'individual_student',
+        'device_name': deviceName,
+      },
+    );
+
+    final data = _asJsonMap(envelope['data']);
+    final email = _asJsonMap(data['user'])['email']?.toString() ??
+        request.email.trim();
+    final verificationRequired =
+        data['email_verification_required'] == true || data['token'] == null;
+
+    if (verificationRequired) {
+      return RegisterEmailVerificationRequired(email: email);
+    }
+
+    final session = _sessionFromData(data);
+    await _persist(session);
+    return RegisterSuccess(session);
+  }
+
+  @override
   Future<void> clearSession() => _tokens.clear();
 
   AuthSession _sessionFromData(Map<String, dynamic> data) {
     final userRaw = data['user'];
     final tokenRaw = data['token'];
     if (userRaw is! Map || tokenRaw is! Map) {
-      throw StateError('Login response missing user/token.');
+      throw StateError('Auth response missing user/token.');
     }
     final user = AuthUser.fromJson(
       userRaw.map((k, v) => MapEntry(k.toString(), v)),
@@ -108,7 +182,7 @@ class AuthRepository implements AuthGateway {
       tokenRaw.map((k, v) => MapEntry(k.toString(), v)),
     );
     if (user.id.isEmpty || tokens.accessToken.isEmpty) {
-      throw StateError('Login response incomplete.');
+      throw StateError('Auth response incomplete.');
     }
     return AuthSession(user: user, tokens: tokens);
   }
@@ -134,5 +208,11 @@ class AuthRepository implements AuthGateway {
       return value.map((key, item) => MapEntry(key.toString(), item));
     }
     return const {};
+  }
+
+  static int? _asInt(Object? value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '');
   }
 }

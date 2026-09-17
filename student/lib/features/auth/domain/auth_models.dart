@@ -92,3 +92,78 @@ class LoginMfaRequired extends LoginResult {
   const LoginMfaRequired(this.challengeToken);
   final String challengeToken;
 }
+
+sealed class RegisterResult {
+  const RegisterResult();
+}
+
+class RegisterSuccess extends RegisterResult {
+  const RegisterSuccess(this.session);
+  final AuthSession session;
+}
+
+class RegisterEmailVerificationRequired extends RegisterResult {
+  const RegisterEmailVerificationRequired({
+    required this.email,
+    this.message =
+        'Check your email to verify your account, then sign in.',
+  });
+
+  final String email;
+  final String message;
+}
+
+class PhoneOtpConfirmResult {
+  const PhoneOtpConfirmResult({
+    required this.phoneVerificationToken,
+    required this.phone,
+    this.expiresIn,
+  });
+
+  final String phoneVerificationToken;
+  final String phone;
+  final int? expiresIn;
+}
+
+class RegisterRequest {
+  const RegisterRequest({
+    required this.firstName,
+    required this.lastName,
+    required this.email,
+    required this.phone,
+    required this.phoneVerificationToken,
+    required this.password,
+    required this.passwordConfirmation,
+    required this.acceptTerms,
+  });
+
+  final String firstName;
+  final String lastName;
+  final String email;
+  final String phone;
+  final String phoneVerificationToken;
+  final String password;
+  final String passwordConfirmation;
+  final bool acceptTerms;
+}
+
+/// Client-side password strength check mirroring backend RegisterRequest.
+String? validateRegisterPassword(String password) {
+  if (password.length < 8) {
+    return 'Use at least 8 characters';
+  }
+  if (!RegExp(r'[A-Z]').hasMatch(password)) {
+    return 'Include at least one uppercase letter';
+  }
+  if (!RegExp(r'[a-z]').hasMatch(password)) {
+    return 'Include at least one lowercase letter';
+  }
+  if (!RegExp(r'[0-9]').hasMatch(password)) {
+    return 'Include at least one number';
+  }
+  if (!RegExp(r'[^A-Za-z0-9]').hasMatch(password)) {
+    return 'Include at least one special character';
+  }
+  return null;
+}
+

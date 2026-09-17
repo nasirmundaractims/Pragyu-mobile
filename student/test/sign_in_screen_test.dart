@@ -49,6 +49,22 @@ class _FakeAuth implements AuthGateway {
   Future<void> forgotPassword({required String email}) async {}
 
   @override
+  Future<void> requestRegistrationPhoneOtp({required String phone}) async {}
+
+  @override
+  Future<PhoneOtpConfirmResult> confirmRegistrationPhoneOtp({
+    required String phone,
+    required String code,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<RegisterResult> register(RegisterRequest request) async {
+    throw UnimplementedError();
+  }
+
+  @override
   Future<void> clearSession() async {}
 }
 
@@ -166,6 +182,9 @@ void main() {
   });
 
   testWidgets('S-03 forgot password opens S-04', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 1600));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light(),
@@ -173,8 +192,16 @@ void main() {
         home: SignInScreen(authRepository: _FakeAuth()),
       ),
     );
+    await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Forgot password?'));
+    final forgot = find.text('Forgot password?');
+    await tester.scrollUntilVisible(
+      forgot,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(forgot);
     await tester.pumpAndSettle();
     expect(find.text('Send reset link'), findsOneWidget);
   });

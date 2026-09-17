@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:student_mobile/app/router/app_router.dart';
+import 'package:student_mobile/app/widgets/pragyu_logo.dart';
 import 'package:student_mobile/core/config/app_config.dart';
 import 'package:student_mobile/features/alerts/data/alerts_repository.dart';
 import 'package:student_mobile/features/alerts/presentation/screens/alerts_screen.dart';
@@ -237,23 +238,13 @@ class _TopBar extends StatelessWidget {
     final badge = unreadCount > 99 ? '99+' : '$unreadCount';
     return Row(
       children: [
-        const _PragyuMark(size: 28),
-        const SizedBox(width: 8),
-        Expanded(
+        const Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              PragyuLogo(height: 32),
+              SizedBox(height: 4),
               Text(
-                appName,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  color: _HomeScreenState._ink,
-                ),
-              ),
-              const Text(
                 'Learn Practice Improve Succeed',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -1293,55 +1284,6 @@ class _StreakCard extends StatelessWidget {
   }
 }
 
-class _PragyuMark extends StatelessWidget {
-  const _PragyuMark({required this.size});
-
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: size,
-      height: size,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Positioned(
-            left: 2,
-            top: 5,
-            child: ShaderMask(
-              shaderCallback: (bounds) => const LinearGradient(
-                colors: [
-                  _HomeScreenState._blue,
-                  _HomeScreenState._purple,
-                ],
-              ).createShader(bounds),
-              child: Text(
-                'P',
-                style: TextStyle(
-                  fontSize: size * 0.78,
-                  fontWeight: FontWeight.w900,
-                  color: Colors.white,
-                  height: 1,
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            left: 0,
-            top: -2,
-            child: Icon(
-              Icons.school_rounded,
-              size: size * 0.38,
-              color: _HomeScreenState._ink,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 /// Inherited access so Home shortcuts can switch bottom tabs.
 class StudentShell extends StatefulWidget {
   const StudentShell({
@@ -1437,7 +1379,18 @@ class StudentShellState extends State<StudentShell> {
     final unread = _alertsUnread < 0 ? 0 : _alertsUnread;
     final badgeLabel = unread > 99 ? '99+' : '$unread';
 
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        final navigator = Navigator.of(context);
+        if (navigator.canPop()) {
+          navigator.pop();
+          return;
+        }
+        // Already at authenticated home root — stay on /home.
+      },
+      child: Scaffold(
       body: IndexedStack(index: _index, children: pages),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
@@ -1481,6 +1434,7 @@ class StudentShellState extends State<StudentShell> {
           ),
         ],
       ),
+    ),
     );
   }
 }

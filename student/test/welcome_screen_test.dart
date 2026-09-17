@@ -21,9 +21,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Pragyu'), findsOneWidget);
+    expect(
+      find.image(const AssetImage('assets/images/brand/pragyu-wordmark.png')),
+      findsOneWidget,
+    );
     expect(find.textContaining('Your Learning'), findsOneWidget);
     expect(find.text('Smarter'), findsOneWidget);
+    expect(find.text('Practice & Tests'), findsOneWidget);
     expect(find.text('Get Started'), findsOneWidget);
     expect(find.text('I already have an account'), findsOneWidget);
     expect(find.text('Skip'), findsOneWidget);
