@@ -1510,7 +1510,10 @@ class StudentShellState extends State<StudentShell> {
       case 0:
         return HomeScreen(homeRepository: widget.homeRepository);
       case 1:
-        return MyLearningScreen(learnRepository: widget.learnRepository);
+        return MyLearningScreen(
+          key: const ValueKey('learn-screen-v3'),
+          learnRepository: widget.learnRepository,
+        );
       case 2:
         return TestsHubScreen(testsRepository: widget.testsRepository);
       case 3:

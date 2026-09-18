@@ -5,6 +5,7 @@ import 'app_colors.dart';
 
 abstract final class AppTheme {
   static const fontFamily = 'Inter';
+  static const scriptFontFamily = 'DancingScript';
 
   static ThemeData light() {
     final base = ThemeData(

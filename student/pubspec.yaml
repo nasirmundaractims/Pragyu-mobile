@@ -51,3 +51,7 @@ flutter:
           weight: 600
         - asset: assets/fonts/Inter-Bold.ttf
           weight: 700
+    - family: DancingScript
+      fonts:
+        - asset: assets/fonts/DancingScript-SemiBold.ttf
+          weight: 600
