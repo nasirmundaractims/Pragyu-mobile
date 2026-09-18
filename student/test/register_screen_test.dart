@@ -161,7 +161,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Create your'), findsOneWidget);
+    expect(find.textContaining('Create Your Account'), findsOneWidget);
     expect(find.text('Create account'), findsWidgets);
 
     await tester.ensureVisible(find.text('Create account').last);
@@ -219,5 +219,39 @@ void main() {
     expect(fake.lastRegister?.email, 'ada@example.com');
     expect(fake.lastRegister?.phoneVerificationToken, 'phone-token');
     expect(find.text('Acme Institute'), findsOneWidget);
+  });
+
+  testWidgets('S-04 create account has no overflow across phone sizes',
+      (tester) async {
+    const sizes = <Size>[
+      Size(320, 568),
+      Size(360, 640),
+      Size(390, 844),
+      Size(430, 932),
+    ];
+
+    for (final size in sizes) {
+      await tester.binding.setSurfaceSize(size);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          home: RegisterScreen(authRepository: _FakeAuth()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull, reason: 'size $size');
+      expect(find.text('Create Your Account'), findsOneWidget);
+      expect(find.text('Create account'), findsWidgets);
+
+      await tester.drag(
+        find.byType(SingleChildScrollView).first,
+        const Offset(0, -800),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull, reason: 'scrolled $size');
+    }
+
+    addTearDown(() => tester.binding.setSurfaceSize(null));
   });
 }

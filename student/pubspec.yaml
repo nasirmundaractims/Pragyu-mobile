@@ -36,6 +36,7 @@ flutter:
     - assets/images/brand/
     - assets/images/splash/
     - assets/images/onboarding/
+    - assets/images/auth/
   fonts:
     - family: Inter
       fonts:
