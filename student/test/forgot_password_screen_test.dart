@@ -85,6 +85,8 @@ class _FakeAuth implements AuthGateway {
   Future<void> clearSession() async {}
 }
 
+Finder _sendResetButton() => find.text('Send reset link');
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -100,8 +102,10 @@ void main() {
         home: ForgotPasswordScreen(authRepository: auth),
       ),
     );
+    await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Send reset link'));
+    await tester.ensureVisible(_sendResetButton());
+    await tester.tap(_sendResetButton());
     await tester.pump();
 
     expect(find.text('Enter your email'), findsOneWidget);
@@ -116,9 +120,11 @@ void main() {
         home: ForgotPasswordScreen(authRepository: auth),
       ),
     );
+    await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextField), 'student@example.com');
-    await tester.tap(find.widgetWithText(FilledButton, 'Send reset link'));
+    await tester.ensureVisible(_sendResetButton());
+    await tester.tap(_sendResetButton());
     await tester.pumpAndSettle();
 
     expect(auth.forgotCalls, 1);
@@ -139,14 +145,50 @@ void main() {
         home: ForgotPasswordScreen(authRepository: auth),
       ),
     );
+    await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextField), 'student@example.com');
-    await tester.tap(find.widgetWithText(FilledButton, 'Send reset link'));
+    await tester.ensureVisible(_sendResetButton());
+    await tester.tap(_sendResetButton());
     await tester.pumpAndSettle();
 
     expect(
       find.text('Too many reset attempts. Try again later.'),
       findsOneWidget,
     );
+  });
+
+  testWidgets('S-04 forgot password has no overflow across phone sizes',
+      (tester) async {
+    const sizes = <Size>[
+      Size(320, 568),
+      Size(360, 640),
+      Size(390, 844),
+      Size(430, 932),
+    ];
+
+    for (final size in sizes) {
+      await tester.binding.setSurfaceSize(size);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          home: ForgotPasswordScreen(authRepository: _FakeAuth()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull, reason: 'size $size');
+      expect(find.text('Forgot Password?'), findsOneWidget);
+      expect(find.text('Send reset link'), findsOneWidget);
+
+      await tester.drag(
+        find.byType(SingleChildScrollView).first,
+        const Offset(0, -400),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull, reason: 'scrolled $size');
+    }
+
+    addTearDown(() => tester.binding.setSurfaceSize(null));
   });
 }

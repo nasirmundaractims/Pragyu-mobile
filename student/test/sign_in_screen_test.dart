@@ -229,4 +229,37 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Send reset link'), findsOneWidget);
   });
+
+  testWidgets('S-03 sign in has no overflow across phone sizes', (tester) async {
+    const sizes = <Size>[
+      Size(320, 568),
+      Size(360, 640),
+      Size(390, 844),
+      Size(430, 932),
+    ];
+
+    for (final size in sizes) {
+      await tester.binding.setSurfaceSize(size);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          home: SignInScreen(authRepository: _FakeAuth()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull, reason: 'size $size');
+      expect(find.text('Welcome Back'), findsOneWidget);
+      expect(find.text('Sign in'), findsWidgets);
+
+      await tester.drag(
+        find.byType(SingleChildScrollView).first,
+        const Offset(0, -600),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull, reason: 'scrolled $size');
+    }
+
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+  });
 }
