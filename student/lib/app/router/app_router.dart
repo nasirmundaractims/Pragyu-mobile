@@ -2,9 +2,17 @@ import 'package:flutter/material.dart';
 
 import '../../features/ai_mentor/presentation/screens/ai_mentor_screen.dart';
 import '../../features/analytics/presentation/screens/performance_analytics_screen.dart';
+import '../../features/announcements/domain/announcements_models.dart';
+import '../../features/announcements/presentation/screens/announcement_detail_screen.dart';
+import '../../features/announcements/presentation/screens/announcements_screen.dart';
 import '../../features/attendance/presentation/screens/attendance_screen.dart';
+import '../../features/help/presentation/screens/help_about_screen.dart';
+import '../../features/notification_preferences/presentation/screens/notification_preferences_screen.dart';
 import '../../features/auth/presentation/screens/forgot_password_screen.dart';
 import '../../features/auth/presentation/screens/register_screen.dart';
+import '../../features/auth/presentation/screens/reset_password_screen.dart';
+import '../../features/auth/presentation/screens/sign_in_screen.dart';
+import '../../features/auth/presentation/screens/verify_email_screen.dart';
 import '../../features/payments/domain/payments_models.dart';
 import '../../features/payments/presentation/screens/payments_screen.dart';
 import '../../features/settings/presentation/screens/settings_screen.dart';
@@ -20,7 +28,6 @@ import '../../features/notes_bookmarks/presentation/screens/notes_bookmarks_scre
 import '../../features/recommendations/presentation/screens/recommendations_screen.dart';
 import '../../features/study_planner/presentation/screens/study_planner_screen.dart';
 import '../../features/weak_topics/presentation/screens/weak_topics_screen.dart';
-import '../../features/auth/presentation/screens/sign_in_screen.dart';
 import '../../features/calendar/presentation/screens/calendar_screen.dart';
 import '../../features/catalog/domain/catalog_checkout_models.dart';
 import '../../features/catalog/presentation/screens/catalog_browse_screen.dart';
@@ -61,6 +68,8 @@ abstract final class AppRoutes {
   static const welcome = '/welcome';
   static const signIn = '/sign-in';
   static const forgotPassword = '/forgot-password';
+  static const resetPassword = '/reset-password';
+  static const verifyEmail = '/verify-email';
   static const orgPicker = '/org-picker';
   static const onboarding = '/onboarding';
   static const home = '/home';
@@ -94,6 +103,10 @@ abstract final class AppRoutes {
   static const examSeries = '/exam-series';
   static const examSeriesDetail = '/exam-series-detail';
   static const attendance = '/attendance';
+  static const announcements = '/announcements';
+  static const announcementDetail = '/announcement-detail';
+  static const notificationPreferences = '/notification-preferences';
+  static const helpAbout = '/help-about';
   static const settings = '/settings';
   static const payments = '/payments';
   static const tutorials = '/tutorials';
@@ -123,6 +136,20 @@ Route<dynamic> onGenerateRoute(RouteSettings settings) {
       return MaterialPageRoute<void>(
         settings: settings,
         builder: (_) => const ForgotPasswordScreen(),
+      );
+    case AppRoutes.resetPassword:
+      return MaterialPageRoute<void>(
+        settings: settings,
+        builder: (_) => ResetPasswordScreen(
+          args: ResetPasswordArgs.fromObject(settings.arguments),
+        ),
+      );
+    case AppRoutes.verifyEmail:
+      return MaterialPageRoute<void>(
+        settings: settings,
+        builder: (_) => VerifyEmailScreen(
+          args: VerifyEmailArgs.fromObject(settings.arguments),
+        ),
       );
     case AppRoutes.orgPicker:
       return MaterialPageRoute<void>(
@@ -324,6 +351,28 @@ Route<dynamic> onGenerateRoute(RouteSettings settings) {
       return MaterialPageRoute<void>(
         settings: settings,
         builder: (_) => const AttendanceScreen(),
+      );
+    case AppRoutes.announcements:
+      return MaterialPageRoute<void>(
+        settings: settings,
+        builder: (_) => const AnnouncementsScreen(),
+      );
+    case AppRoutes.announcementDetail:
+      return MaterialPageRoute<void>(
+        settings: settings,
+        builder: (_) => AnnouncementDetailScreen(
+          args: AnnouncementDetailArgs.fromObject(settings.arguments),
+        ),
+      );
+    case AppRoutes.notificationPreferences:
+      return MaterialPageRoute<void>(
+        settings: settings,
+        builder: (_) => const NotificationPreferencesScreen(),
+      );
+    case AppRoutes.helpAbout:
+      return MaterialPageRoute<void>(
+        settings: settings,
+        builder: (_) => const HelpAboutScreen(),
       );
     case AppRoutes.payments:
       return MaterialPageRoute<void>(

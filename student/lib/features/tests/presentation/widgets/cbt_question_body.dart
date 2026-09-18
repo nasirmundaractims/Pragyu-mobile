@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:student_mobile/app/theme/app_colors.dart';
 import 'package:student_mobile/features/tests/domain/assessment_detail_models.dart';
 import 'package:student_mobile/features/tests/domain/cbt_player_models.dart';
+import 'package:student_mobile/features/tests/presentation/widgets/cbt_rich_content.dart';
 import 'package:student_mobile/features/tests/presentation/widgets/cbt_subjective_answer_panel.dart';
 
 class CbtQuestionBody extends StatelessWidget {
@@ -35,6 +36,7 @@ class CbtQuestionBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final kind = question.kind;
     final choices = question.effectiveChoices;
+    final passage = question.passageHtml?.trim();
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
@@ -47,16 +49,59 @@ class CbtQuestionBody extends StatelessWidget {
             color: AppColors.muted,
           ),
         ),
-        const SizedBox(height: 8),
-        Text(
-          question.content ?? 'Question ${index + 1}',
-          style: const TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.w600,
-            color: AppColors.ink,
-            height: 1.4,
+        if (passage != null && passage.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.brandSoft),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Passage',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.muted,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                CbtRichContent(content: null, html: passage, compact: true),
+              ],
+            ),
           ),
+        ],
+        const SizedBox(height: 8),
+        CbtRichContent(
+          content: question.content ?? 'Question ${index + 1}',
+          html: question.contentHtml,
         ),
+        if (question.mediaUrls.isNotEmpty ||
+            extractHtmlImageUrls(question.contentHtml).isNotEmpty) ...[
+          const SizedBox(height: 12),
+          ...{
+            ...question.mediaUrls,
+            ...extractHtmlImageUrls(question.contentHtml),
+            ...extractHtmlImageUrls(question.passageHtml),
+          }.map(
+            (url) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.network(
+                  url,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                ),
+              ),
+            ),
+          ),
+        ],
         if (question.maxMarks != null) ...[
           const SizedBox(height: 8),
           Text(
@@ -68,6 +113,10 @@ class CbtQuestionBody extends StatelessWidget {
         if (kind == CbtQuestionKind.mcq || kind == CbtQuestionKind.trueFalse)
           ...choices.map((choice) {
             final selected = answer?.choiceId == choice.id;
+            final labelLooksHtml = RegExp(
+              r'<\/?[a-z][\s\S]*>',
+              caseSensitive: false,
+            ).hasMatch(choice.label);
             return Padding(
               padding: const EdgeInsets.only(bottom: 10),
               child: Material(
@@ -90,6 +139,7 @@ class CbtQuestionBody extends StatelessWidget {
                       ),
                     ),
                     child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Icon(
                           selected
@@ -101,13 +151,10 @@ class CbtQuestionBody extends StatelessWidget {
                         ),
                         const SizedBox(width: 10),
                         Expanded(
-                          child: Text(
-                            choice.label,
-                            style: const TextStyle(
-                              color: AppColors.ink,
-                              height: 1.4,
-                              fontSize: 15,
-                            ),
+                          child: CbtRichContent(
+                            content: choice.label,
+                            html: labelLooksHtml ? choice.label : null,
+                            compact: true,
                           ),
                         ),
                       ],

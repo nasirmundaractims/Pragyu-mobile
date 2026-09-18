@@ -4,10 +4,9 @@ import 'package:flutter/services.dart';
 import 'package:student_mobile/app/router/app_router.dart';
 import 'package:student_mobile/app/theme/app_theme.dart';
 import 'package:student_mobile/app/widgets/pragyu_logo.dart';
-import 'package:student_mobile/core/config/app_config.dart';
 import 'package:student_mobile/core/session/auth_navigation.dart';
 
-/// S-02 Welcome — marketing entry matching Pragyu welcome design.
+/// S-02 Welcome / onboarding — responsive native UI matching the reference.
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
 
@@ -15,38 +14,36 @@ class WelcomeScreen extends StatefulWidget {
   State<WelcomeScreen> createState() => _WelcomeScreenState();
 }
 
-class _WelcomeScreenState extends State<WelcomeScreen>
-    with SingleTickerProviderStateMixin {
-  static const _ink = Color(0xFF1A2340);
-  static const _muted = Color(0xFF6B7385);
-  static const _blue = Color(0xFF4A6CF7);
-  static const _blueDeep = Color(0xFF7B61FF);
-  static const _softBlue = Color(0xFFE8F0FF);
-  static const _cardBorder = Color(0xFFEEF1F6);
+class _WelcomeScreenState extends State<WelcomeScreen> {
+  static const _ink = Color(0xFF0D2052);
+  static const _muted = Color(0xFF6B7280);
+  static const _blue = Color(0xFF0055FF);
+  static const _blueDeep = Color(0xFF0040CC);
+  static const _dotInactive = Color(0xFFD4DFF5);
+  static const _skip = Color(0xFF9AA3B5);
+  static const _bg = Color(0xFFF7F9FC);
 
-  late final AnimationController _controller;
-  late final Animation<double> _fade;
-  late final Animation<Offset> _slide;
+  static const _pageCount = 3;
+
+  PageController? _pageController;
+  int _pageIndex = 0;
+
+  PageController get _pages => _pageController ??= PageController();
+
+  bool get _isFirst => _pageIndex == 0;
+  bool get _isLast => _pageIndex >= _pageCount - 1;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 780),
-    );
-    _fade = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
-    _slide = Tween<Offset>(
-      begin: const Offset(0, 0.035),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
-    _controller.forward();
+    _pageController = PageController();
     AuthNavigation.redirectIfAuthenticated(context);
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _pageController?.dispose();
+    _pageController = null;
     super.dispose();
   }
 
@@ -58,70 +55,163 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     Navigator.of(context).pushNamed(AppRoutes.createAccountStub);
   }
 
+  void _next() {
+    if (_isLast) {
+      _goGetStarted();
+      return;
+    }
+    if (!_pages.hasClients) return;
+    _pages.nextPage(
+      duration: const Duration(milliseconds: 320),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  void _back() {
+    if (_isFirst || !_pages.hasClients) return;
+    _pages.previousPage(
+      duration: const Duration(milliseconds: 280),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  void _goToPage(int index) {
+    if (index < 0 || index >= _pageCount) return;
+    if (!_pages.hasClients) return;
+    if (index == _pageIndex) return;
+    _pages.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final appName = AppConfig.instance.appName;
+    final size = MediaQuery.sizeOf(context);
+    final short = size.height < 700;
+    final narrow = size.width < 360;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: _bg,
         body: SafeArea(
-          child: FadeTransition(
-            opacity: _fade,
-            child: SlideTransition(
-              position: _slide,
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final compact = constraints.maxHeight < 780;
-                  final wide = constraints.maxWidth >= 720;
-                  final contentWidth = wide ? 430.0 : constraints.maxWidth;
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final maxW =
+                  constraints.maxWidth >= 720 ? 440.0 : constraints.maxWidth;
 
-                  return Center(
-                    child: SingleChildScrollView(
-                      padding: EdgeInsets.fromLTRB(
-                        wide ? 24 : 22,
-                        8,
-                        wide ? 24 : 22,
-                        18,
-                      ),
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          minHeight: constraints.maxHeight - 26,
-                          maxWidth: contentWidth,
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
+              return Center(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: maxW,
+                    maxHeight: constraints.maxHeight,
+                  ),
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: PageView(
+                          controller: _pages,
+                          physics: const BouncingScrollPhysics(
+                            parent: PageScrollPhysics(),
+                          ),
+                          onPageChanged: (i) => setState(() => _pageIndex = i),
                           children: [
-                            _TopBar(appName: appName, onSkip: _goSignIn),
-                            SizedBox(height: compact ? 18 : 26),
-                            const _Headline(),
-                            SizedBox(height: compact ? 8 : 12),
-                            _HeroScene(compact: compact),
-                            SizedBox(height: compact ? 12 : 16),
-                            const _FeatureGrid(),
-                            const SizedBox(height: 18),
-                            const _PageDots(activeIndex: 0, count: 4),
-                            SizedBox(height: compact ? 16 : 20),
-                            _GradientCta(
-                              label: 'Get Started',
-                              onPressed: _goGetStarted,
+                            _OnboardingPage(
+                              short: short,
+                              narrow: narrow,
+                              ink: _ink,
+                              muted: _muted,
+                              blue: _blue,
+                              skip: _skip,
+                              onSkip: _goSignIn,
+                              header: const _BrandHeader(),
+                              title: const [
+                                _TitlePart('Your Preparation\n', false),
+                                _TitlePart('Companion', true),
+                              ],
+                              body:
+                                  'Quality content, smart practice and AI-powered feedback — all in one place.',
+                              blob: const Color(0xFFC8DDFF),
+                              heroAsset:
+                                  'assets/images/onboarding/hero_companion.png',
+                              heroLabel: 'Student holding a notebook',
                             ),
-                            const SizedBox(height: 12),
-                            _OutlineCta(
-                              label: 'I already have an account',
-                              onPressed: _goSignIn,
+                            _OnboardingPage(
+                              short: short,
+                              narrow: narrow,
+                              ink: _ink,
+                              muted: _muted,
+                              blue: _blue,
+                              skip: _skip,
+                              onSkip: _goSignIn,
+                              header: const _AccentIcon(
+                                background: Color(0xFFFFE4EF),
+                                iconColor: Color(0xFFE91E8C),
+                                icon: Icons.track_changes_rounded,
+                              ),
+                              title: const [
+                                _TitlePart('Practice with\n', false),
+                                _TitlePart('Purpose', true),
+                              ],
+                              body:
+                                  'Take quizzes, mock tests, previous year papers and get instant AI-powered feedback.',
+                              blob: const Color(0xFFE0D4FF),
+                              heroAsset:
+                                  'assets/images/onboarding/hero_practice.png',
+                              heroLabel: 'Student practicing on a laptop',
+                              chips: true,
                             ),
-                            SizedBox(height: compact ? 18 : 22),
-                            const _AudienceRow(),
+                            _OnboardingPage(
+                              short: short,
+                              narrow: narrow,
+                              ink: _ink,
+                              muted: _muted,
+                              blue: _blue,
+                              skip: _skip,
+                              onSkip: _goSignIn,
+                              header: const _AccentIcon(
+                                background: Color(0xFFDDF7E8),
+                                iconColor: Color(0xFF12B76A),
+                                icon: Icons.bar_chart_rounded,
+                              ),
+                              title: const [
+                                _TitlePart('Track Your\n', false),
+                                _TitlePart('Growth', true),
+                              ],
+                              body:
+                                  'Stay consistent, track your progress and get closer to your dream.',
+                              blob: const Color(0xFFC8F0D8),
+                              heroAsset:
+                                  'assets/images/onboarding/hero_growth.png',
+                              heroLabel:
+                                  'Student celebrating learning progress',
+                            ),
                           ],
                         ),
                       ),
-                    ),
-                  );
-                },
-              ),
-            ),
+                      _BottomChrome(
+                        index: _pageIndex,
+                        pageCount: _pageCount,
+                        isFirst: _isFirst,
+                        isLast: _isLast,
+                        short: short,
+                        muted: _muted,
+                        blue: _blue,
+                        blueDeep: _blueDeep,
+                        dotInactive: _dotInactive,
+                        onBack: _back,
+                        onNext: _next,
+                        onGetStarted: _goGetStarted,
+                        onSignIn: _goSignIn,
+                        onDotTap: _goToPage,
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
         ),
       ),
@@ -129,156 +219,200 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   }
 }
 
-class _TopBar extends StatelessWidget {
-  const _TopBar({required this.appName, required this.onSkip});
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
-  final String appName;
+class _TitlePart {
+  const _TitlePart(this.text, this.accent);
+  final String text;
+  final bool accent;
+}
+
+class _OnboardingPage extends StatelessWidget {
+  const _OnboardingPage({
+    required this.short,
+    required this.narrow,
+    required this.ink,
+    required this.muted,
+    required this.blue,
+    required this.skip,
+    required this.onSkip,
+    required this.header,
+    required this.title,
+    required this.body,
+    required this.blob,
+    required this.heroAsset,
+    required this.heroLabel,
+    this.chips = false,
+  });
+
+  final bool short;
+  final bool narrow;
+  final Color ink;
+  final Color muted;
+  final Color blue;
+  final Color skip;
   final VoidCallback onSkip;
+  final Widget header;
+  final List<_TitlePart> title;
+  final String body;
+  final Color blob;
+  final String heroAsset;
+  final String heroLabel;
+  final bool chips;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: Column(
+    final hPad = narrow ? 18.0 : 24.0;
+    final titleSize = short ? 24.0 : (narrow ? 26.0 : 30.0);
+    final bodySize = short ? 13.5 : 15.0;
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(hPad, short ? 4 : 8, hPad, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const PragyuLogo(height: 40),
-              const SizedBox(height: 8),
-              const Text(
-                'LEARN  ·  PRACTICE  ·  IMPROVE  ·  SUCCEED',
-                style: TextStyle(
-                  fontFamily: AppTheme.fontFamily,
-                  fontSize: 10.5,
-                  letterSpacing: 1.1,
-                  fontWeight: FontWeight.w500,
-                  color: Color(0xFF9AA3B5),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 12),
-        OutlinedButton(
-          onPressed: onSkip,
-          style: OutlinedButton.styleFrom(
-            foregroundColor: const Color(0xFF8A93A8),
-            side: const BorderSide(color: Color(0xFFD8DEE9)),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            minimumSize: const Size(0, 34),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            textStyle: const TextStyle(
-              fontFamily: AppTheme.fontFamily,
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          child: const Text('Skip'),
-        ),
-      ],
-    );
-  }
-}
-
-class _Headline extends StatelessWidget {
-  const _Headline();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Column(
-      children: [
-        Text.rich(
-          TextSpan(
-            style: TextStyle(
-              fontFamily: AppTheme.fontFamily,
-              fontSize: 30,
-              height: 1.2,
-              fontWeight: FontWeight.w700,
-              color: _WelcomeScreenState._ink,
-              letterSpacing: -0.35,
-            ),
-            children: [
-              TextSpan(text: 'Your Learning Journey, '),
-              WidgetSpan(
-                alignment: PlaceholderAlignment.baseline,
-                baseline: TextBaseline.alphabetic,
-                child: _GradientText(
-                  'Smarter',
-                  style: TextStyle(
+              Expanded(child: header),
+              TextButton(
+                onPressed: onSkip,
+                style: TextButton.styleFrom(
+                  foregroundColor: skip,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  minimumSize: const Size(48, 40),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  textStyle: const TextStyle(
                     fontFamily: AppTheme.fontFamily,
-                    fontSize: 30,
-                    height: 1.2,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.35,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
+                child: const Text('Skip'),
               ),
             ],
           ),
-          textAlign: TextAlign.center,
-        ),
-        SizedBox(height: 10),
-        Text(
-          'AI-powered learning for students, teachers, and institutes — clearer goals, better results.',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontFamily: AppTheme.fontFamily,
-            fontSize: 14.5,
-            height: 1.45,
-            color: _WelcomeScreenState._muted,
-            fontWeight: FontWeight.w400,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _HeroScene extends StatelessWidget {
-  const _HeroScene({required this.compact});
-
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    final height = compact ? 320.0 : 390.0;
-    return SizedBox(
-      height: height,
-      width: double.infinity,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Positioned(
-            left: 8,
-            right: 8,
-            top: height * 0.08,
-            bottom: height * 0.04,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    _WelcomeScreenState._softBlue.withValues(alpha: 0.9),
-                    const Color(0xFFF3EEFF).withValues(alpha: 0.45),
-                    Colors.white.withValues(alpha: 0),
-                  ],
-                ),
+          SizedBox(height: short ? 12 : 20),
+          Text.rich(
+            TextSpan(
+              style: TextStyle(
+                fontFamily: AppTheme.fontFamily,
+                fontSize: titleSize,
+                height: 1.18,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.35,
               ),
+              children: [
+                for (final part in title)
+                  TextSpan(
+                    text: part.text,
+                    style: TextStyle(color: part.accent ? blue : ink),
+                  ),
+              ],
+            ),
+            softWrap: true,
+          ),
+          SizedBox(height: short ? 8 : 10),
+          Text(
+            body,
+            softWrap: true,
+            style: TextStyle(
+              fontFamily: AppTheme.fontFamily,
+              fontSize: bodySize,
+              height: 1.45,
+              color: muted,
+              fontWeight: FontWeight.w400,
             ),
           ),
-          Image.asset(
-            'assets/images/welcome_hero.jpg',
-            height: height,
-            width: double.infinity,
-            fit: BoxFit.contain,
-            filterQuality: FilterQuality.high,
-            errorBuilder: (_, error, stackTrace) => Icon(
-              Icons.school_rounded,
-              size: height * 0.35,
-              color: _WelcomeScreenState._blue,
+          SizedBox(height: short ? 8 : 12),
+          Expanded(
+            child: LayoutBuilder(
+              builder: (context, box) {
+                return Stack(
+                  alignment: Alignment.bottomCenter,
+                  children: [
+                    Positioned(
+                      left: 12,
+                      right: 12,
+                      bottom: 0,
+                      height: box.maxHeight * 0.72,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: RadialGradient(
+                            center: Alignment.bottomCenter,
+                            radius: 1.1,
+                            colors: [
+                              blob.withValues(alpha: 0.5),
+                              blob.withValues(alpha: 0.12),
+                              Colors.transparent,
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (chips) ...[
+                      Positioned(
+                        top: 0,
+                        left: 0,
+                        child: _Chip(
+                          icon: Icons.description_rounded,
+                          color: const Color(0xFF8B5CF6),
+                          label: 'Mock Tests',
+                          compact: short || narrow,
+                        ),
+                      ),
+                      Positioned(
+                        top: short ? 4 : 8,
+                        right: 0,
+                        child: _Chip(
+                          icon: Icons.smart_toy_outlined,
+                          color: blue,
+                          label: 'AI Feedback',
+                          compact: short || narrow,
+                        ),
+                      ),
+                      Positioned(
+                        top: short ? 44 : 54,
+                        left: 4,
+                        child: _Chip(
+                          icon: Icons.article_outlined,
+                          color: const Color(0xFFEF4444),
+                          label: 'Previous Year Papers',
+                          compact: short || narrow,
+                        ),
+                      ),
+                      Positioned(
+                        top: short ? 48 : 60,
+                        right: 4,
+                        child: _Chip(
+                          icon: Icons.bar_chart_rounded,
+                          color: const Color(0xFF10B981),
+                          label: 'Track Progress',
+                          compact: short || narrow,
+                        ),
+                      ),
+                    ],
+                    Positioned.fill(
+                      top: chips ? (short ? 72.0 : 88.0) : 0,
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: narrow ? 8 : 16,
+                        ),
+                        child: Image.asset(
+                          heroAsset,
+                          fit: BoxFit.contain,
+                          alignment: Alignment.bottomCenter,
+                          filterQuality: FilterQuality.high,
+                          semanticLabel: heroLabel,
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
           ),
         ],
@@ -287,312 +421,414 @@ class _HeroScene extends StatelessWidget {
   }
 }
 
-class _FeatureGrid extends StatelessWidget {
-  const _FeatureGrid();
+// ─── Bottom chrome ────────────────────────────────────────────────────────────
+
+class _BottomChrome extends StatelessWidget {
+  const _BottomChrome({
+    required this.index,
+    required this.pageCount,
+    required this.isFirst,
+    required this.isLast,
+    required this.short,
+    required this.muted,
+    required this.blue,
+    required this.blueDeep,
+    required this.dotInactive,
+    required this.onBack,
+    required this.onNext,
+    required this.onGetStarted,
+    required this.onSignIn,
+    required this.onDotTap,
+  });
+
+  final int index;
+  final int pageCount;
+  final bool isFirst;
+  final bool isLast;
+  final bool short;
+  final Color muted;
+  final Color blue;
+  final Color blueDeep;
+  final Color dotInactive;
+  final VoidCallback onBack;
+  final VoidCallback onNext;
+  final VoidCallback onGetStarted;
+  final VoidCallback onSignIn;
+  final ValueChanged<int> onDotTap;
 
   @override
   Widget build(BuildContext context) {
-    const items = [
-      (
-        Icons.menu_book_rounded,
-        Color(0xFF4A6CF7),
-        'Practice & Tests',
-        'Prepare better every day',
-      ),
-      (
-        Icons.bar_chart_rounded,
-        Color(0xFF14B8A6),
-        'Track Progress',
-        'See your growth clearly',
-      ),
-      (
-        Icons.psychology_alt_rounded,
-        Color(0xFF8B5CF6),
-        'AI Evaluation',
-        'Get detailed feedback',
-      ),
-      (
-        Icons.school_rounded,
-        Color(0xFFF59E0B),
-        'Quality Content',
-        'Built for competitive exams',
-      ),
-    ];
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        const gap = 10.0;
-        final tileWidth = (constraints.maxWidth - gap) / 2;
-        return Wrap(
-          spacing: gap,
-          runSpacing: gap,
+    return CustomPaint(
+      painter: const _CurveTopPainter(),
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          short ? 18 : 24,
+          short ? 28 : 34,
+          short ? 18 : 24,
+          short ? 12 : 16,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            for (final item in items)
-              SizedBox(
-                width: tileWidth,
-                child: _FeatureCard(
-                  icon: item.$1,
-                  iconColor: item.$2,
-                  title: item.$3,
-                  subtitle: item.$4,
-                ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(pageCount, (i) {
+                final active = i == index;
+                return Semantics(
+                  button: true,
+                  selected: active,
+                  label: 'Onboarding page ${i + 1} of $pageCount',
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => onDotTap(i),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 10,
+                      ),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        height: 8,
+                        width: active ? 22 : 8,
+                        decoration: BoxDecoration(
+                          color: active ? blue : dotInactive,
+                          borderRadius: BorderRadius.circular(99),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ),
+            SizedBox(height: short ? 12 : 16),
+            if (isLast)
+              _GetStartedBlock(
+                blue: blue,
+                blueDeep: blueDeep,
+                muted: muted,
+                short: short,
+                onGetStarted: onGetStarted,
+                onSignIn: onSignIn,
+              )
+            else
+              _StepRow(
+                isFirst: isFirst,
+                muted: muted,
+                blue: blue,
+                short: short,
+                onBack: onBack,
+                onNext: onNext,
               ),
           ],
-        );
-      },
+        ),
+      ),
     );
   }
 }
 
-class _FeatureCard extends StatelessWidget {
-  const _FeatureCard({
-    required this.icon,
+class _CurveTopPainter extends CustomPainter {
+  const _CurveTopPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final path = Path()
+      ..moveTo(0, size.height)
+      ..lineTo(0, 28)
+      ..quadraticBezierTo(size.width * 0.5, 0, size.width, 28)
+      ..lineTo(size.width, size.height)
+      ..close();
+
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = const Color(0xFF0D2052).withValues(alpha: 0.05)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
+    );
+    canvas.drawPath(path, Paint()..color = Colors.white);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _StepRow extends StatelessWidget {
+  const _StepRow({
+    required this.isFirst,
+    required this.muted,
+    required this.blue,
+    required this.short,
+    required this.onBack,
+    required this.onNext,
+  });
+
+  final bool isFirst;
+  final Color muted;
+  final Color blue;
+  final bool short;
+  final VoidCallback onBack;
+  final VoidCallback onNext;
+
+  @override
+  Widget build(BuildContext context) {
+    final circle = short ? 46.0 : 52.0;
+
+    return Row(
+      children: [
+        if (!isFirst)
+          TextButton(
+            onPressed: onBack,
+            style: TextButton.styleFrom(
+              foregroundColor: muted,
+              minimumSize: const Size(48, 44),
+              textStyle: TextStyle(
+                fontFamily: AppTheme.fontFamily,
+                fontSize: short ? 15 : 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            child: const Text('Back'),
+          )
+        else
+          const SizedBox(width: 56),
+        const Spacer(),
+        TextButton(
+          onPressed: onNext,
+          style: TextButton.styleFrom(
+            foregroundColor: blue,
+            minimumSize: const Size(48, 44),
+            textStyle: TextStyle(
+              fontFamily: AppTheme.fontFamily,
+              fontSize: short ? 15 : 16,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          child: const Text('Next'),
+        ),
+        const SizedBox(width: 4),
+        Material(
+          color: blue,
+          shape: const CircleBorder(),
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: onNext,
+            child: SizedBox(
+              width: circle,
+              height: circle,
+              child: const Icon(
+                Icons.arrow_forward_rounded,
+                color: Colors.white,
+                size: 22,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _GetStartedBlock extends StatelessWidget {
+  const _GetStartedBlock({
+    required this.blue,
+    required this.blueDeep,
+    required this.muted,
+    required this.short,
+    required this.onGetStarted,
+    required this.onSignIn,
+  });
+
+  final Color blue;
+  final Color blueDeep;
+  final Color muted;
+  final bool short;
+  final VoidCallback onGetStarted;
+  final VoidCallback onSignIn;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: double.infinity,
+          height: short ? 48 : 54,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(28),
+              gradient: LinearGradient(colors: [blue, blueDeep]),
+              boxShadow: [
+                BoxShadow(
+                  color: blue.withValues(alpha: 0.28),
+                  blurRadius: 14,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: onGetStarted,
+                borderRadius: BorderRadius.circular(28),
+                child: const Center(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Get Started',
+                        style: TextStyle(
+                          fontFamily: AppTheme.fontFamily,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                      SizedBox(width: 8),
+                      Icon(
+                        Icons.arrow_forward_rounded,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        SizedBox(height: short ? 10 : 12),
+        Wrap(
+          alignment: WrapAlignment.center,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            Text(
+              'Already have an account? ',
+              style: TextStyle(
+                fontFamily: AppTheme.fontFamily,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: muted,
+              ),
+            ),
+            GestureDetector(
+              onTap: onSignIn,
+              child: Text(
+                'Sign In',
+                style: TextStyle(
+                  fontFamily: AppTheme.fontFamily,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: blue,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+// ─── Shared ───────────────────────────────────────────────────────────────────
+
+class _BrandHeader extends StatelessWidget {
+  const _BrandHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        PragyuLogo(height: 44),
+        SizedBox(height: 6),
+        Text(
+          'Learn • Practice • Grow',
+          style: TextStyle(
+            fontFamily: AppTheme.fontFamily,
+            fontSize: 12.5,
+            fontWeight: FontWeight.w500,
+            color: Color(0xFF8A93A8),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _AccentIcon extends StatelessWidget {
+  const _AccentIcon({
+    required this.background,
     required this.iconColor,
-    required this.title,
-    required this.subtitle,
+    required this.icon,
+  });
+
+  final Color background;
+  final Color iconColor;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(icon, color: iconColor, size: 24),
+      ),
+    );
+  }
+}
+
+class _Chip extends StatelessWidget {
+  const _Chip({
+    required this.icon,
+    required this.color,
+    required this.label,
+    required this.compact,
   });
 
   final IconData icon;
-  final Color iconColor;
-  final String title;
-  final String subtitle;
+  final Color color;
+  final String label;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 8 : 10,
+        vertical: compact ? 6 : 8,
+      ),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _WelcomeScreenState._cardBorder),
+        borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF1A2340).withValues(alpha: 0.05),
+            color: const Color(0xFF0D2052).withValues(alpha: 0.08),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: iconColor.withValues(alpha: 0.12),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, size: 18, color: iconColor),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontFamily: AppTheme.fontFamily,
-                    fontSize: 13,
-                    height: 1.25,
-                    fontWeight: FontWeight.w700,
-                    color: _WelcomeScreenState._ink,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    fontFamily: AppTheme.fontFamily,
-                    fontSize: 11.5,
-                    height: 1.3,
-                    color: _WelcomeScreenState._muted,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-              ],
+          Icon(icon, size: compact ? 14 : 16, color: color),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              fontFamily: AppTheme.fontFamily,
+              fontSize: compact ? 10.5 : 12,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF0D2052),
             ),
           ),
         ],
       ),
-    );
-  }
-}
-
-class _PageDots extends StatelessWidget {
-  const _PageDots({required this.activeIndex, required this.count});
-
-  final int activeIndex;
-  final int count;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(count, (index) {
-        final active = index == activeIndex;
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 220),
-          margin: const EdgeInsets.symmetric(horizontal: 3.5),
-          width: active ? 8 : 8,
-          height: 8,
-          decoration: BoxDecoration(
-            color: active
-                ? _WelcomeScreenState._blue
-                : const Color(0xFFD5DBE8),
-            borderRadius: BorderRadius.circular(8),
-          ),
-        );
-      }),
-    );
-  }
-}
-
-class _GradientCta extends StatelessWidget {
-  const _GradientCta({required this.label, required this.onPressed});
-
-  final String label;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(28),
-        child: Ink(
-          height: 54,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(28),
-            gradient: const LinearGradient(
-              colors: [
-                _WelcomeScreenState._blue,
-                _WelcomeScreenState._blueDeep,
-              ],
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: _WelcomeScreenState._blue.withValues(alpha: 0.3),
-                blurRadius: 16,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                label,
-                style: const TextStyle(
-                  fontFamily: AppTheme.fontFamily,
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(width: 8),
-              const Icon(
-                Icons.arrow_forward_rounded,
-                color: Colors.white,
-                size: 20,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _OutlineCta extends StatelessWidget {
-  const _OutlineCta({required this.label, required this.onPressed});
-
-  final String label;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 52,
-      child: OutlinedButton(
-        onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          foregroundColor: _WelcomeScreenState._blue,
-          side: const BorderSide(
-            color: _WelcomeScreenState._blue,
-            width: 1.4,
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(28),
-          ),
-          textStyle: const TextStyle(
-            fontFamily: AppTheme.fontFamily,
-            fontSize: 15,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        child: Text(label),
-      ),
-    );
-  }
-}
-
-class _AudienceRow extends StatelessWidget {
-  const _AudienceRow();
-
-  @override
-  Widget build(BuildContext context) {
-    Widget item(IconData icon, String label) {
-      return Expanded(
-        child: Column(
-          children: [
-            Icon(icon, size: 22, color: const Color(0xFF9AA3B5)),
-            const SizedBox(height: 6),
-            Text(
-              label,
-              style: const TextStyle(
-                fontFamily: AppTheme.fontFamily,
-                fontSize: 12.5,
-                fontWeight: FontWeight.w500,
-                color: Color(0xFF9AA3B5),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return Row(
-      children: [
-        item(Icons.school_outlined, 'Students'),
-        Container(width: 1, height: 28, color: const Color(0xFFE2E6EF)),
-        item(Icons.groups_outlined, 'Teachers'),
-        Container(width: 1, height: 28, color: const Color(0xFFE2E6EF)),
-        item(Icons.account_balance_outlined, 'Institutes'),
-      ],
-    );
-  }
-}
-
-class _GradientText extends StatelessWidget {
-  const _GradientText(this.text, {required this.style});
-
-  final String text;
-  final TextStyle style;
-
-  @override
-  Widget build(BuildContext context) {
-    return ShaderMask(
-      blendMode: BlendMode.srcIn,
-      shaderCallback: (bounds) => const LinearGradient(
-        colors: [
-          _WelcomeScreenState._blue,
-          _WelcomeScreenState._blueDeep,
-        ],
-      ).createShader(bounds),
-      child: Text(text, style: style.copyWith(color: Colors.white)),
     );
   }
 }

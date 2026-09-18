@@ -74,12 +74,13 @@ class MeSnapshot {
   MeSnapshot copyWith({
     bool? emailNotificationsEnabled,
     double? dailyStudyHours,
+    UserProfileSummary? userProfile,
   }) {
     return MeSnapshot(
       user: user,
       organizationName: organizationName,
       studentProfile: studentProfile,
-      userProfile: userProfile,
+      userProfile: userProfile ?? this.userProfile,
       emailNotificationsEnabled:
           emailNotificationsEnabled ?? this.emailNotificationsEnabled,
       dailyStudyHours: dailyStudyHours ?? this.dailyStudyHours,

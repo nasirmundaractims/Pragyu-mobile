@@ -11,6 +11,7 @@ import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/core/session/auth_navigation.dart';
 import 'package:student_mobile/features/auth/data/auth_repository.dart';
 import 'package:student_mobile/features/auth/domain/auth_models.dart';
+import 'package:student_mobile/features/auth/presentation/screens/verify_email_screen.dart';
 
 /// S-04 Create account — student registration with phone OTP.
 class RegisterScreen extends StatefulWidget {
@@ -256,13 +257,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('OK'),
+                  child: const Text('Continue'),
                 ),
               ],
             ),
           );
           if (!mounted) return;
-          Navigator.of(context).pushReplacementNamed(AppRoutes.signIn);
+          Navigator.of(context).pushReplacementNamed(
+            AppRoutes.verifyEmail,
+            arguments: VerifyEmailArgs(email: email),
+          );
       }
     } on ApiException catch (error) {
       if (!mounted) return;

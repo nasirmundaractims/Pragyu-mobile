@@ -167,6 +167,9 @@ lib/
     exam_workspace/ # S-66
     exam_series/ # S-67
     attendance/  # S-68
+    announcements/ # S-69
+    notification_preferences/ # S-75
+    help/        # S-77
     payments/    # S-72
     settings/    # S-71
     tutorials/   # S-74
@@ -176,8 +179,11 @@ lib/
 ## Screens status
 
 - **S-01…S-06** — auth entry complete
-- **S-03 Sign in** — email/password (+ MFA), org picker next
+- **S-03 Sign in** — email/password (+ MFA), org picker next; unverified email → verify screen
 - **S-04 Create account** — register with phone OTP, terms, org picker / email verify
+- **S-04 Forgot password** — request reset email; in-app reset with token
+- **Email verify** — confirm `id`+`token` or resend verification
+- **Reset password** — email + token + new password (from forgot or email link args)
 - **S-10 Home** — implemented
 - **S-11 Today detail** — implemented
 - **S-12 Quick search** — implemented (sheet: courses / tests / materials)
@@ -196,7 +202,7 @@ lib/
 - **S-40 Tests hub** — implemented (Tests tab: published assessments list + filters)
 - **S-41 Assessment detail** — overview, results, entry to instructions
 - **S-42 Attempt instructions** — timer/rules accept → starts attempt → S-43
-- **S-43 Attempt player** — MCQ / T-F / short text, palette, autosave, timer
+- **S-43 Attempt player** — MCQ / T-F / short text / essay / numerical / fill-in, passage + HTML stem, palette, autosave, timer
 - **S-44 Submit confirm** — sheet: unanswered/marked review → finalize
 - **S-45 Submission status** — poll processing / AI evaluating / ready → S-46
 - **S-46 Result / feedback** — score, per-question breakdown, AI feedback
@@ -214,11 +220,38 @@ lib/
 - **S-66 Exam Workspace** — practice hub, readiness, pattern-aware assessments, Me entry
 - **S-67 Question Bank** — exam series packs hub + detail (rank, Take test), Me entry
 - **S-68 My Attendance** — rate, present/absent/late/excused, recent marks, Me entry
-- **S-70 Me** — profile summary, email/study prefs, switch institute, sign out
+- **S-69 Announcements** — pinned + recent institute notices, detail + mark-read, Me entry, alert deep links
+- **S-70 Me** — profile edit, study hours, account shortcuts, switch institute, logout
 - **S-71 Settings** — password, sessions, language/timezone, trusted devices, Me entry
-- **S-72 Payments** — fees, billing history, AI credit balance/packs, Me entry
-- **S-73 Catalog checkout** — create order, pay/confirm, enrollment unlock from catalog detail
+- **S-75 Notification preferences** — email / in-app / SMS / WhatsApp / push channel toggles (`GET|PATCH /notifications/preferences`)
+- **S-76 Switch organization** — covered by Me “Switch institute” (same as S-05 picker)
+- **S-77 Help & About** — version, support email, privacy/terms links, Me entry
+- **S-78 Sign out confirm** — logout confirm dialog on Me + Settings
+- **Push delivery** — preference toggle only; OS push still blocked until FCM token API exists
+- **S-72 Payments** — fees, billing history, AI credits; browser handoff waiting banner + resume refresh
+- **S-73 Catalog checkout** — create order, pay/confirm, enrollment unlock; Razorpay via student-web handoff + auto-confirm on return
 - **S-74 Tutorials** — public exam/class guides hub, browse hierarchy, article reader, Me entry
+
+Handoff config: set `STUDENT_WEB_BASE_URL` (see `assets/env/.env.development`). For Chrome:
+
+```bash
+flutter run -d chrome \
+  --dart-define=API_BASE_URL=http://127.0.0.1:8000/api/v1 \
+  --dart-define=STUDENT_WEB_BASE_URL=http://127.0.0.1:3002
+```
+
+## Store release hardening
+
+| Item | Status |
+| --- | --- |
+| Android release signing | Wire `android/key.properties` from `key.properties.example` (gitignored). Without it, release still signs with debug for local testing. |
+| Android minify | Release `isMinifyEnabled` + `proguard-rules.pro` |
+| Cleartext HTTP | Debug/profile only — removed from main manifest |
+| Production env | Loads `assets/env/.env.production` (gitignored) or requires `--dart-define=API_BASE_URL=…` — no longer loads `.example` |
+| Legal / support URLs | `SUPPORT_EMAIL`, `PRIVACY_URL`, `TERMS_URL` in env / dart-define |
+| iOS | `ITSAppUsesNonExemptEncryption=false`, mic usage string, `PrivacyInfo.xcprivacy` |
+
+Still out of band for store listing: Play Console / App Store Connect assets, final counsel privacy text, FCM push registration.
 
 ## Troubleshooting
 

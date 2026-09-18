@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import 'package:student_mobile/app/router/app_router.dart';
 import 'package:student_mobile/app/theme/app_colors.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/features/payments/data/payments_repository.dart';
 import 'package:student_mobile/features/payments/domain/payments_models.dart';
+import 'package:student_mobile/features/payments/presentation/payment_handoff.dart';
 
 /// S-72 Payments — fees, billing history, and AI credit balance.
 class PaymentsScreen extends StatefulWidget {
@@ -23,13 +23,16 @@ class PaymentsScreen extends StatefulWidget {
   State<PaymentsScreen> createState() => _PaymentsScreenState();
 }
 
-class _PaymentsScreenState extends State<PaymentsScreen> {
+class _PaymentsScreenState extends State<PaymentsScreen>
+    with WidgetsBindingObserver {
   late final PaymentsGateway _repo =
       widget.paymentsRepository ?? PaymentsRepository();
 
   bool _loading = true;
   bool _paying = false;
   bool _purchasing = false;
+  bool _awaitingFeeHandoff = false;
+  Uri? _feeHandoffUri;
   String? _receiptBusyId;
   String? _error;
   String? _selectedPackageId;
@@ -39,21 +42,42 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _view = widget.initialView;
     _load();
   }
 
-  Future<void> _load() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed &&
+        _awaitingFeeHandoff &&
+        !_loading) {
+      _refreshAfterHandoff(fromResume: true);
+    }
+  }
+
+  Future<void> _load({bool quiet = false}) async {
+    if (!quiet) {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
+    }
     try {
       final snapshot = await _repo.loadHub();
       if (!mounted) return;
       setState(() {
         _snapshot = snapshot;
         _loading = false;
+        if (_awaitingFeeHandoff && snapshot.fees.payableAssignment == null) {
+          _awaitingFeeHandoff = false;
+        }
       });
     } catch (error) {
       if (!mounted) return;
@@ -70,6 +94,16 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
+  Future<void> _refreshAfterHandoff({bool fromResume = false}) async {
+    await _load(quiet: true);
+    if (!mounted) return;
+    if (_snapshot.fees.payableAssignment == null) {
+      _toast('Payment recorded. You can send a receipt below.');
+    } else if (!fromResume) {
+      _toast('Payment not recorded yet. Finish checkout, then refresh again.');
+    }
+  }
+
   Future<void> _payNow() async {
     final assignment = _snapshot.fees.payableAssignment;
     if (assignment == null || _paying) return;
@@ -80,16 +114,31 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
       if (result.checkoutUrl != null) {
         final uri = Uri.tryParse(result.checkoutUrl!);
         if (uri != null) {
-          await launchUrl(uri, mode: LaunchMode.externalApplication);
-        } else {
-          _toast('Payment initiated. Complete checkout with your institute gateway.');
+          final proceed = await confirmPaymentHandoff(context);
+          if (!mounted) return;
+          if (!proceed) return;
+          final opened = await launchPaymentHandoff(uri);
+          if (!mounted) return;
+          setState(() {
+            _feeHandoffUri = uri;
+            _awaitingFeeHandoff = true;
+            _view = PaymentsViewId.fees;
+          });
+          if (!opened) {
+            _toast('Could not open payment page. Try Open payment again.');
+          }
+          return;
         }
+        _toast('Payment initiated. Complete checkout with your institute gateway.');
+        setState(() => _awaitingFeeHandoff = true);
       } else if (result.isCompleted) {
         _toast('Payment completed. You can send a receipt below.');
+        setState(() => _awaitingFeeHandoff = false);
       } else {
         _toast('Payment initiated.');
+        setState(() => _awaitingFeeHandoff = true);
       }
-      await _load();
+      await _load(quiet: true);
     } catch (error) {
       if (!mounted) return;
       _toast(
@@ -97,6 +146,19 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
       );
     } finally {
       if (mounted) setState(() => _paying = false);
+    }
+  }
+
+  Future<void> _openFeeHandoffAgain() async {
+    final uri = _feeHandoffUri;
+    if (uri == null) {
+      _toast('No payment link available. Tap Pay now to start again.');
+      return;
+    }
+    final opened = await launchPaymentHandoff(uri);
+    if (!mounted) return;
+    if (!opened) {
+      _toast('Could not open payment page.');
     }
   }
 
@@ -175,6 +237,19 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                               onChanged: (view) => setState(() => _view = view),
                             ),
                             const SizedBox(height: 16),
+                            if (_awaitingFeeHandoff &&
+                                _view == PaymentsViewId.fees) ...[
+                              PaymentWaitingBanner(
+                                confirming: _loading,
+                                confirmLabel: 'I’ve paid — refresh',
+                                onConfirm: () => _refreshAfterHandoff(),
+                                onOpenAgain: _openFeeHandoffAgain,
+                                onDismiss: () => setState(
+                                  () => _awaitingFeeHandoff = false,
+                                ),
+                              ),
+                              const SizedBox(height: 14),
+                            ],
                             if (_view == PaymentsViewId.fees)
                               _FeesPanel(
                                 fees: _snapshot.fees,

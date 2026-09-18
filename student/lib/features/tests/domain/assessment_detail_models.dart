@@ -71,11 +71,15 @@ class AssessmentQuestionPreview {
     this.questionId,
     required this.sortOrder,
     this.content,
+    this.contentHtml,
+    this.passageHtml,
     this.maxMarks,
     this.type,
+    this.uiType,
     this.choices = const [],
     this.wordLimit,
     this.allowsImageUpload = false,
+    this.mediaUrls = const [],
   });
 
   /// Assessment-question link id (row id).
@@ -85,11 +89,26 @@ class AssessmentQuestionPreview {
   final String? questionId;
   final int sortOrder;
   final String? content;
+  /// Original HTML stem when present (for rich rendering).
+  final String? contentHtml;
+  /// Passage / stimulus HTML shown above the stem.
+  final String? passageHtml;
   final double? maxMarks;
   final String? type;
+  /// Optional `metadata.ui_type` override used for player classification.
+  final String? uiType;
   final List<AnswerChoice> choices;
   final int? wordLimit;
   final bool allowsImageUpload;
+  /// Image attachment URLs from metadata (shown under stem).
+  final List<String> mediaUrls;
+
+  /// Effective type for CBT: prefer ui_type, then API type.
+  String? get effectiveType {
+    final ui = uiType?.trim();
+    if (ui != null && ui.isNotEmpty) return ui;
+    return type;
+  }
 
   String get answerKey {
     final source = questionId?.trim();
@@ -99,7 +118,8 @@ class AssessmentQuestionPreview {
 
   List<AnswerChoice> get effectiveChoices {
     if (choices.isNotEmpty) return choices;
-    final normalized = (type ?? '').toLowerCase().replaceAll('-', '_');
+    final normalized =
+        (effectiveType ?? '').toLowerCase().replaceAll('-', '_');
     if (normalized == 'true_false' ||
         normalized == 'truefalse' ||
         normalized == 'boolean') {
@@ -130,6 +150,7 @@ class AssessmentQuestionPreview {
 
     final contentRaw = (snapMap?['content'] ?? json['content'])?.toString();
     final content = _stripHtml(contentRaw);
+    final contentHtml = _asHtml(contentRaw);
     final sourceQuestionId = json['question_id']?.toString() ??
         json['questionId']?.toString() ??
         snapMap?['id']?.toString();
@@ -138,26 +159,40 @@ class AssessmentQuestionPreview {
     final type = (snapMap?['type'] ?? json['type'])?.toString();
     final metadata = snapMap?['metadata'];
     final rubric = snapMap?['marking_rubric'] ?? snapMap?['markingRubric'];
+    String? uiType;
     int? wordLimit;
+    var mediaUrls = const <String>[];
+    String? passageHtml;
     if (metadata is Map) {
       final metaMap = metadata.map((k, v) => MapEntry(k.toString(), v));
+      uiType = (metaMap['ui_type'] ?? metaMap['uiType'])?.toString();
       wordLimit = _readWordLimit(metaMap['word_limit']);
+      mediaUrls = _readMediaUrls(metaMap);
+      passageHtml = _readPassageHtml(snapMap, metaMap);
+    } else {
+      passageHtml = _readPassageHtml(snapMap, const {});
     }
     if (wordLimit == null && rubric is Map) {
       final rubricMap = rubric.map((k, v) => MapEntry(k.toString(), v));
       wordLimit = _readWordLimit(rubricMap['word_limit']);
     }
 
+    final effective = (uiType?.trim().isNotEmpty == true) ? uiType : type;
+
     return AssessmentQuestionPreview(
       id: linkId.isNotEmpty ? linkId : (sourceQuestionId ?? ''),
       questionId: sourceQuestionId,
       sortOrder: asInt(json['sort_order']),
       content: content,
+      contentHtml: contentHtml,
+      passageHtml: passageHtml,
       maxMarks: asDouble(json['max_marks'] ?? snapMap?['max_marks']),
       type: type,
+      uiType: uiType,
       choices: _readChoices(snapMap, json),
       wordLimit: wordLimit,
-      allowsImageUpload: _allowsImageUpload(type),
+      allowsImageUpload: _allowsImageUpload(effective),
+      mediaUrls: mediaUrls,
     );
   }
 
@@ -190,6 +225,58 @@ class AssessmentQuestionPreview {
         .replaceAll(RegExp(r'\s+'), ' ')
         .trim();
     return cleaned.isEmpty ? null : cleaned;
+  }
+
+  static String? _asHtml(String? raw) {
+    if (raw == null) return null;
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) return null;
+    if (!RegExp(r'<\/?[a-z][\s\S]*>', caseSensitive: false).hasMatch(trimmed)) {
+      return null;
+    }
+    return trimmed;
+  }
+
+  static String? _readPassageHtml(
+    Map<String, dynamic>? snapMap,
+    Map<String, dynamic> metadata,
+  ) {
+    Object? passage = metadata['passage'] ??
+        metadata['stimulus'] ??
+        snapMap?['passage'] ??
+        snapMap?['stimulus'];
+    if (passage is String && passage.trim().isNotEmpty) {
+      return passage.trim();
+    }
+    if (passage is Map) {
+      final row = passage.map((k, v) => MapEntry(k.toString(), v));
+      final html = (row['html'] ?? row['content'] ?? row['text'])
+          ?.toString()
+          .trim();
+      if (html != null && html.isNotEmpty) return html;
+    }
+    return null;
+  }
+
+  static List<String> _readMediaUrls(Map<String, dynamic> metadata) {
+    final raw = metadata['attachments'] ?? metadata['media'];
+    if (raw is! List) return const [];
+    final out = <String>[];
+    for (final item in raw) {
+      if (item is! Map) continue;
+      final row = item.map((k, v) => MapEntry(k.toString(), v));
+      final url =
+          (row['url'] ?? row['src'] ?? row['href'])?.toString().trim() ?? '';
+      if (url.isEmpty) continue;
+      final mime =
+          (row['mime_type'] ?? row['mimeType'] ?? row['type'])?.toString() ??
+              '';
+      final isImage = mime.startsWith('image/') ||
+          RegExp(r'\.(png|jpe?g|gif|webp|svg)(\?|$)', caseSensitive: false)
+              .hasMatch(url);
+      if (isImage) out.add(url);
+    }
+    return out;
   }
 
   static List<AnswerChoice> _readChoices(

@@ -16,10 +16,30 @@ class _FakeMe implements MeGateway {
   MeSnapshot snapshot;
   bool? lastEmailEnabled;
   double? lastHours;
+  String? lastDisplayName;
+  String? lastPhone;
   int signOutCalls = 0;
 
   @override
   Future<MeSnapshot> loadMe() async => snapshot;
+
+  @override
+  Future<UserProfileSummary> updateProfile({
+    required String displayName,
+    String? phone,
+  }) async {
+    lastDisplayName = displayName;
+    lastPhone = phone;
+    final updated = UserProfileSummary(
+      id: snapshot.userProfile?.id ?? 'up1',
+      displayName: displayName,
+      phone: phone,
+      locale: snapshot.userProfile?.locale,
+      timezone: snapshot.userProfile?.timezone,
+    );
+    snapshot = snapshot.copyWith(userProfile: updated);
+    return updated;
+  }
 
   @override
   Future<void> setEmailNotifications({
@@ -85,12 +105,23 @@ void main() {
     );
   }
 
-  testWidgets('S-70 shows profile and toggles email notifications', (tester) async {
+  testWidgets('S-70 shows profile and opens notification preferences', (tester) async {
     final fake = _FakeMe(sample());
 
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light(),
+        onGenerateRoute: (settings) {
+          if (settings.name == AppRoutes.notificationPreferences) {
+            return MaterialPageRoute<void>(
+              settings: settings,
+              builder: (_) => const Scaffold(
+                body: Text('Notification preferences page'),
+              ),
+            );
+          }
+          return null;
+        },
         home: MeScreen(meRepository: fake),
       ),
     );
@@ -102,14 +133,41 @@ void main() {
     expect(find.text('alex@pragyu.test'), findsOneWidget);
     expect(find.text('Pragyu Demo Institute'), findsWidgets);
     expect(find.textContaining('STU-101'), findsOneWidget);
-    expect(find.text('Email notifications'), findsOneWidget);
+    expect(find.text('Notification preferences'), findsOneWidget);
+    expect(find.text('Help & About'), findsOneWidget);
     expect(find.text('Switch institute'), findsOneWidget);
     expect(find.text('Logout'), findsWidgets);
 
-    await tester.tap(find.byType(Switch));
+    await tester.tap(find.text('Notification preferences'));
+    await tester.pumpAndSettle();
+    expect(find.text('Notification preferences page'), findsOneWidget);
+  });
+
+  testWidgets('S-70 edits display name and phone', (tester) async {
+    final fake = _FakeMe(sample());
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: MeScreen(meRepository: fake),
+      ),
+    );
     await tester.pumpAndSettle();
 
-    expect(fake.lastEmailEnabled, isFalse);
+    await tester.tap(find.text('Edit'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Edit profile'), findsOneWidget);
+    final fields = find.byType(TextField);
+    await tester.enterText(fields.at(0), 'Alex Updated');
+    await tester.enterText(fields.at(1), '9876543210');
+    await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+    await tester.pumpAndSettle();
+
+    expect(fake.lastDisplayName, 'Alex Updated');
+    expect(fake.lastPhone, '9876543210');
+    expect(find.text('Alex Updated'), findsOneWidget);
+    expect(find.text('9876543210'), findsOneWidget);
   });
 
   testWidgets('S-70 logout confirms and navigates to welcome', (tester) async {

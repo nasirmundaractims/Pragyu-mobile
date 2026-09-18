@@ -272,6 +272,7 @@ CbtQuestionKind parseCbtQuestionKind(String? raw, {int choiceCount = 0}) {
     case 'objective':
     case 'single_choice':
     case 'single_select':
+    case 'multiple_select':
       return CbtQuestionKind.mcq;
     case 'true_false':
     case 'truefalse':
@@ -286,6 +287,10 @@ CbtQuestionKind parseCbtQuestionKind(String? raw, {int choiceCount = 0}) {
     case 'short_answer':
     case 'short_text':
     case 'text':
+    case 'numerical':
+    case 'fill_in_blank':
+    case 'fill_blank':
+    case 'fill_in_the_blank':
       return CbtQuestionKind.shortText;
     default:
       if (choiceCount >= 2) return CbtQuestionKind.mcq;
@@ -294,8 +299,10 @@ CbtQuestionKind parseCbtQuestionKind(String? raw, {int choiceCount = 0}) {
 }
 
 extension AssessmentQuestionCbt on AssessmentQuestionPreview {
-  CbtQuestionKind get kind =>
-      parseCbtQuestionKind(type, choiceCount: choices.length);
+  CbtQuestionKind get kind => parseCbtQuestionKind(
+        effectiveType,
+        choiceCount: choices.length,
+      );
 }
 
 CbtPaletteStatus paletteStatusFor({

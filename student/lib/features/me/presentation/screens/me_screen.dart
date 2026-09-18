@@ -26,8 +26,8 @@ class _MeScreenState extends State<MeScreen> {
   late final MeGateway _me = widget.meRepository ?? MeRepository();
 
   bool _loading = true;
-  bool _savingNotify = false;
   bool _savingHours = false;
+  bool _savingProfile = false;
   bool _signingOut = false;
   String? _error;
   MeSnapshot? _snapshot;
@@ -61,40 +61,6 @@ class _MeScreenState extends State<MeScreen> {
     }
   }
 
-  Future<void> _toggleEmail(bool enabled) async {
-    final snapshot = _snapshot;
-    final profileId = snapshot?.studentProfile?.id;
-    if (snapshot == null || profileId == null || profileId.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Student profile is required to save notifications.'),
-        ),
-      );
-      return;
-    }
-    setState(() {
-      _savingNotify = true;
-      _snapshot = snapshot.copyWith(emailNotificationsEnabled: enabled);
-    });
-    try {
-      await _me.setEmailNotifications(
-        studentProfileId: profileId,
-        enabled: enabled,
-      );
-      if (!mounted) return;
-      setState(() => _savingNotify = false);
-    } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _savingNotify = false;
-        _snapshot = snapshot;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Couldn't save notification preference.")),
-      );
-    }
-  }
-
   Future<void> _saveStudyHours(double hours) async {
     final snapshot = _snapshot;
     final profileId = snapshot?.studentProfile?.id;
@@ -118,6 +84,117 @@ class _MeScreenState extends State<MeScreen> {
       });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Couldn't save study hours.")),
+      );
+    }
+  }
+
+  Future<void> _editProfile() async {
+    final snapshot = _snapshot;
+    if (snapshot == null || _savingProfile) return;
+
+    final nameController = TextEditingController(text: snapshot.displayName);
+    final phoneController = TextEditingController(
+      text: snapshot.userProfile?.phone ?? '',
+    );
+
+    final saved = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 8,
+            bottom: MediaQuery.viewInsetsOf(context).bottom + 20,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                'Edit profile',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.ink,
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: nameController,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(
+                  labelText: 'Display name',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: phoneController,
+                keyboardType: TextInputType.phone,
+                textInputAction: TextInputAction.done,
+                decoration: const InputDecoration(
+                  labelText: 'Phone',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              FilledButton(
+                onPressed: () {
+                  if (nameController.text.trim().isEmpty) return;
+                  Navigator.of(context).pop(true);
+                },
+                style: FilledButton.styleFrom(backgroundColor: AppColors.brand),
+                child: const Text('Save'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    final name = nameController.text.trim();
+    final phone = phoneController.text.trim();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      nameController.dispose();
+      phoneController.dispose();
+    });
+
+    if (saved != true || !mounted) return;
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Display name is required.')),
+      );
+      return;
+    }
+
+    setState(() => _savingProfile = true);
+    try {
+      final updated = await _me.updateProfile(
+        displayName: name,
+        phone: phone,
+      );
+      if (!mounted) return;
+      setState(() {
+        _savingProfile = false;
+        _snapshot = snapshot.copyWith(userProfile: updated);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profile updated.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _savingProfile = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            error is ApiException
+                ? error.message
+                : "Couldn't update profile.",
+          ),
+        ),
       );
     }
   }
@@ -286,6 +363,9 @@ class _MeScreenState extends State<MeScreen> {
           organizationName: snapshot.organizationName,
           studentCode: profile?.studentCode,
           status: profile?.status,
+          phone: snapshot.userProfile?.phone,
+          saving: _savingProfile,
+          onEdit: _editProfile,
         ),
         const SizedBox(height: 18),
         const _SectionLabel('Preferences'),
@@ -293,26 +373,29 @@ class _MeScreenState extends State<MeScreen> {
         _Card(
           child: Column(
             children: [
-              SwitchListTile.adaptive(
+              ListTile(
                 contentPadding: EdgeInsets.zero,
+                leading: const Icon(
+                  Icons.notifications_active_outlined,
+                  color: AppColors.brand,
+                ),
                 title: const Text(
-                  'Email notifications',
+                  'Notification preferences',
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
                     color: AppColors.ink,
                   ),
                 ),
                 subtitle: const Text(
-                  'Tests, scores, and evaluation updates',
+                  'Email, in-app, SMS, WhatsApp, and push',
                   style: TextStyle(color: AppColors.muted, fontSize: 13),
                 ),
-                value: snapshot.emailNotificationsEnabled,
-                activeThumbColor: AppColors.brand,
-                onChanged: (profile == null || _savingNotify)
-                    ? null
-                    : _toggleEmail,
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => Navigator.of(context).pushNamed(
+                  AppRoutes.notificationPreferences,
+                ),
               ),
-              const Divider(height: 20),
+              const Divider(height: 8),
               Row(
                 children: [
                   const Expanded(
@@ -585,6 +668,28 @@ class _MeScreenState extends State<MeScreen> {
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(
+                  Icons.campaign_outlined,
+                  color: AppColors.brand,
+                ),
+                title: const Text(
+                  'Announcements',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.ink,
+                  ),
+                ),
+                subtitle: const Text(
+                  'Institute and course notices',
+                  style: TextStyle(color: AppColors.muted, fontSize: 13),
+                ),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () =>
+                    Navigator.of(context).pushNamed(AppRoutes.announcements),
+              ),
+              const Divider(height: 8),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(
                   Icons.account_balance_wallet_outlined,
                   color: AppColors.brand,
                 ),
@@ -624,6 +729,28 @@ class _MeScreenState extends State<MeScreen> {
                 trailing: const Icon(Icons.chevron_right_rounded),
                 onTap: () =>
                     Navigator.of(context).pushNamed(AppRoutes.settings),
+              ),
+              const Divider(height: 8),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(
+                  Icons.help_outline,
+                  color: AppColors.brand,
+                ),
+                title: const Text(
+                  'Help & About',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.ink,
+                  ),
+                ),
+                subtitle: const Text(
+                  'Support, version, privacy, and terms',
+                  style: TextStyle(color: AppColors.muted, fontSize: 13),
+                ),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () =>
+                    Navigator.of(context).pushNamed(AppRoutes.helpAbout),
               ),
               const Divider(height: 8),
               ListTile(
@@ -734,6 +861,9 @@ class _ProfileHero extends StatelessWidget {
     this.organizationName,
     this.studentCode,
     this.status,
+    this.phone,
+    this.saving = false,
+    this.onEdit,
   });
 
   final String name;
@@ -741,6 +871,9 @@ class _ProfileHero extends StatelessWidget {
   final String? organizationName;
   final String? studentCode;
   final String? status;
+  final String? phone;
+  final bool saving;
+  final VoidCallback? onEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -760,17 +893,38 @@ class _ProfileHero extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(
-            radius: 28,
-            backgroundColor: AppColors.brandSoft,
-            child: Text(
-              _initialLetter(name),
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w700,
-                color: AppColors.brand,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CircleAvatar(
+                radius: 28,
+                backgroundColor: AppColors.brandSoft,
+                child: Text(
+                  _initialLetter(name),
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.brand,
+                  ),
+                ),
               ),
-            ),
+              const Spacer(),
+              if (onEdit != null)
+                TextButton.icon(
+                  onPressed: saving ? null : onEdit,
+                  icon: saving
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.brand,
+                          ),
+                        )
+                      : const Icon(Icons.edit_outlined, size: 18),
+                  label: Text(saving ? 'Saving…' : 'Edit'),
+                ),
+            ],
           ),
           const SizedBox(height: 14),
           Text(
@@ -786,6 +940,13 @@ class _ProfileHero extends StatelessWidget {
             email,
             style: const TextStyle(color: AppColors.muted, height: 1.35),
           ),
+          if (phone != null && phone!.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              phone!,
+              style: const TextStyle(color: AppColors.muted, height: 1.35),
+            ),
+          ],
           if (organizationName != null && organizationName!.isNotEmpty) ...[
             const SizedBox(height: 10),
             Text(

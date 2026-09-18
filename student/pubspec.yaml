@@ -21,6 +21,7 @@ dependencies:
   path_provider: ^2.1.6
   image_picker: ^1.2.0
   crypto: ^3.0.6
+  package_info_plus: ^10.2.1
 
 dev_dependencies:
   flutter_test:
@@ -33,6 +34,8 @@ flutter:
     - assets/env/
     - assets/images/
     - assets/images/brand/
+    - assets/images/splash/
+    - assets/images/onboarding/
   fonts:
     - family: Inter
       fonts:

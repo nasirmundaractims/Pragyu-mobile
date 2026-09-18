@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import 'package:student_mobile/app/router/app_router.dart';
 import 'package:student_mobile/app/theme/app_colors.dart';
@@ -9,6 +8,7 @@ import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/features/catalog/data/catalog_checkout_repository.dart';
 import 'package:student_mobile/features/catalog/domain/catalog_checkout_models.dart';
 import 'package:student_mobile/features/payments/domain/payments_models.dart';
+import 'package:student_mobile/features/payments/presentation/payment_handoff.dart';
 
 /// S-73 Catalog checkout — create order, pay, confirm enrollment.
 class CatalogCheckoutScreen extends StatefulWidget {
@@ -25,7 +25,8 @@ class CatalogCheckoutScreen extends StatefulWidget {
   State<CatalogCheckoutScreen> createState() => _CatalogCheckoutScreenState();
 }
 
-class _CatalogCheckoutScreenState extends State<CatalogCheckoutScreen> {
+class _CatalogCheckoutScreenState extends State<CatalogCheckoutScreen>
+    with WidgetsBindingObserver {
   late final CatalogCheckoutGateway _repo =
       widget.checkoutRepository ?? CatalogCheckoutRepository();
 
@@ -34,20 +35,34 @@ class _CatalogCheckoutScreenState extends State<CatalogCheckoutScreen> {
   bool _loading = true;
   bool _paying = false;
   bool _confirming = false;
+  bool _awaitingHandoff = false;
+  Uri? _handoffUri;
   String? _error;
   CatalogCheckoutSnapshot? _snapshot;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _couponController.text = widget.args.couponCode ?? '';
     _bootstrap();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _couponController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed &&
+        _awaitingHandoff &&
+        !_confirming &&
+        !(_snapshot?.order.isPaid ?? false)) {
+      _confirm(fromResume: true);
+    }
   }
 
   Future<void> _bootstrap() async {
@@ -79,6 +94,9 @@ class _CatalogCheckoutScreenState extends State<CatalogCheckoutScreen> {
       setState(() {
         _snapshot = snapshot;
         _loading = false;
+        if (_isProcessing(snapshot.order)) {
+          _awaitingHandoff = true;
+        }
       });
     } catch (error) {
       if (!mounted) return;
@@ -89,6 +107,12 @@ class _CatalogCheckoutScreenState extends State<CatalogCheckoutScreen> {
             : 'Unable to open checkout.';
       });
     }
+  }
+
+  static bool _isProcessing(CommerceOrder order) {
+    if (order.isPaid) return false;
+    final status = (order.paymentStatus ?? order.status ?? '').toLowerCase();
+    return status.contains('process') || status == 'awaiting_payment';
   }
 
   void _toast(String message) {
@@ -109,30 +133,51 @@ class _CatalogCheckoutScreenState extends State<CatalogCheckoutScreen> {
             order: result.order,
             offer: _snapshot?.offer,
           );
+          _awaitingHandoff = false;
         });
         _toast('Payment successful. Enrollment activated.');
         return;
       }
 
       final session = result.session;
+      Uri? handoff;
       if (session?.checkoutUrl != null && session!.checkoutUrl!.isNotEmpty) {
-        final uri = Uri.tryParse(session.checkoutUrl!);
-        if (uri != null) {
-          await launchUrl(uri, mode: LaunchMode.externalApplication);
-        }
-        _toast('Complete payment, then tap Confirm payment.');
-        return;
-      }
-
-      if (session?.isRazorpay == true) {
-        final opened = await _openWebCheckout(order.id);
-        if (opened) {
-          _toast('Complete Razorpay payment in the browser, then confirm here.');
-        } else {
+        handoff = Uri.tryParse(session.checkoutUrl!);
+      } else if (session?.isRazorpay == true) {
+        handoff = _webCheckoutUri(order.id);
+        if (handoff == null) {
           _toast(
             'Razorpay checkout needs student-web. Set STUDENT_WEB_BASE_URL, '
             'or finish payment on web and tap Confirm payment.',
           );
+          setState(() {
+            _snapshot = CatalogCheckoutSnapshot(
+              order: result.order,
+              offer: _snapshot?.offer,
+            );
+            _awaitingHandoff = true;
+          });
+          return;
+        }
+      }
+
+      if (handoff != null) {
+        final proceed = await confirmPaymentHandoff(context);
+        if (!mounted) return;
+        if (!proceed) return;
+
+        final opened = await launchPaymentHandoff(handoff);
+        if (!mounted) return;
+        setState(() {
+          _handoffUri = handoff;
+          _awaitingHandoff = true;
+          _snapshot = CatalogCheckoutSnapshot(
+            order: result.order,
+            offer: _snapshot?.offer,
+          );
+        });
+        if (!opened) {
+          _toast('Could not open payment page. Try Open payment again.');
         }
         return;
       }
@@ -142,6 +187,7 @@ class _CatalogCheckoutScreenState extends State<CatalogCheckoutScreen> {
           order: result.order,
           offer: _snapshot?.offer,
         );
+        _awaitingHandoff = true;
       });
       _toast('Payment started. Confirm if the status does not update.');
     } catch (error) {
@@ -152,14 +198,29 @@ class _CatalogCheckoutScreenState extends State<CatalogCheckoutScreen> {
     }
   }
 
-  Future<bool> _openWebCheckout(String orderId) async {
+  Uri? _webCheckoutUri(String orderId) {
     final base = AppConfig.instance.studentWebBaseUrl;
-    if (base == null || base.isEmpty) return false;
-    final uri = Uri.parse('$base/catalog/checkout/$orderId');
-    return launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (base == null || base.isEmpty) return null;
+    return Uri.parse('$base/catalog/checkout/$orderId');
   }
 
-  Future<void> _confirm() async {
+  Future<void> _openHandoffAgain() async {
+    final uri = _handoffUri ??
+        (_snapshot?.order.id != null
+            ? _webCheckoutUri(_snapshot!.order.id)
+            : null);
+    if (uri == null) {
+      _toast('No payment link available. Tap Pay now to start again.');
+      return;
+    }
+    final opened = await launchPaymentHandoff(uri);
+    if (!mounted) return;
+    if (!opened) {
+      _toast('Could not open payment page.');
+    }
+  }
+
+  Future<void> _confirm({bool fromResume = false}) async {
     final order = _snapshot?.order;
     if (order == null || _confirming) return;
     setState(() => _confirming = true);
@@ -171,21 +232,26 @@ class _CatalogCheckoutScreenState extends State<CatalogCheckoutScreen> {
           order: paid,
           offer: _snapshot?.offer,
         );
+        if (paid.isPaid) {
+          _awaitingHandoff = false;
+        }
       });
       if (paid.isPaid) {
         _toast('Payment successful. Enrollment activated.');
-      } else {
+      } else if (!fromResume) {
         _toast(
           'Payment is still confirming. Wait a moment and try again.',
         );
       }
     } catch (error) {
       if (!mounted) return;
-      _toast(
-        error is ApiException
-            ? error.message
-            : 'Unable to confirm payment.',
-      );
+      if (!fromResume) {
+        _toast(
+          error is ApiException
+              ? error.message
+              : 'Unable to confirm payment.',
+        );
+      }
     } finally {
       if (mounted) setState(() => _confirming = false);
     }
@@ -196,6 +262,10 @@ class _CatalogCheckoutScreenState extends State<CatalogCheckoutScreen> {
     final title = _snapshot?.courseTitle ??
         widget.args.title ??
         'Complete payment';
+    final order = _snapshot?.order;
+    final showConfirm = order != null &&
+        !order.isPaid &&
+        (_awaitingHandoff || _isProcessing(order));
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
@@ -239,6 +309,19 @@ class _CatalogCheckoutScreenState extends State<CatalogCheckoutScreen> {
                               ),
                             ),
                             const SizedBox(height: 16),
+                            if (_awaitingHandoff &&
+                                order != null &&
+                                !order.isPaid) ...[
+                              PaymentWaitingBanner(
+                                confirming: _confirming,
+                                onConfirm: () => _confirm(),
+                                onOpenAgain: _openHandoffAgain,
+                                onDismiss: () => setState(
+                                  () => _awaitingHandoff = false,
+                                ),
+                              ),
+                              const SizedBox(height: 14),
+                            ],
                             if (_snapshot != null) ...[
                               _OrderSummaryCard(snapshot: _snapshot!),
                               const SizedBox(height: 14),
@@ -246,8 +329,9 @@ class _CatalogCheckoutScreenState extends State<CatalogCheckoutScreen> {
                                 order: _snapshot!.order,
                                 paying: _paying,
                                 confirming: _confirming,
+                                showConfirm: showConfirm && !_awaitingHandoff,
                                 onPay: _pay,
-                                onConfirm: _confirm,
+                                onConfirm: () => _confirm(),
                                 onOpenLearning: () => Navigator.of(context)
                                     .pushNamedAndRemoveUntil(
                                   AppRoutes.home,
@@ -342,6 +426,7 @@ class _PaymentCard extends StatelessWidget {
     required this.order,
     required this.paying,
     required this.confirming,
+    required this.showConfirm,
     required this.onPay,
     required this.onConfirm,
     required this.onOpenLearning,
@@ -351,6 +436,7 @@ class _PaymentCard extends StatelessWidget {
   final CommerceOrder order;
   final bool paying;
   final bool confirming;
+  final bool showConfirm;
   final VoidCallback onPay;
   final VoidCallback onConfirm;
   final VoidCallback onOpenLearning;
@@ -401,13 +487,15 @@ class _PaymentCard extends StatelessWidget {
               style: FilledButton.styleFrom(backgroundColor: AppColors.brand),
               child: Text(paying ? 'Starting…' : 'Pay now'),
             ),
-            const SizedBox(height: 8),
-            OutlinedButton(
-              onPressed: confirming ? null : onConfirm,
-              child: Text(
-                confirming ? 'Confirming…' : 'Confirm payment',
+            if (showConfirm) ...[
+              const SizedBox(height: 8),
+              OutlinedButton(
+                onPressed: confirming ? null : onConfirm,
+                child: Text(
+                  confirming ? 'Confirming…' : 'Confirm payment',
+                ),
               ),
-            ),
+            ],
           ],
         ],
       ),

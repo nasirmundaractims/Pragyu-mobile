@@ -70,7 +70,11 @@
 	<string>Pragyu needs camera access to photograph handwritten answer pages.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Pragyu needs photo access to upload handwritten answer pages.</string>
-	<!-- Allow HTTP to local/dev Pragyu API (disable for App Store production builds). -->
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Pragyu needs microphone access for live class audio.</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<!-- Allow HTTP to local/dev Pragyu API only via NSAllowsLocalNetworking (not global ATS exception). -->
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsLocalNetworking</key>

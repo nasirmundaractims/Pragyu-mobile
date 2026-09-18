@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:student_mobile/app/router/app_router.dart';
 import 'package:student_mobile/features/alerts/domain/alert_deep_link_resolver.dart';
 import 'package:student_mobile/features/alerts/domain/alerts_models.dart';
+import 'package:student_mobile/features/announcements/domain/announcements_models.dart';
 import 'package:student_mobile/features/learn/domain/learn_models.dart';
 import 'package:student_mobile/features/tests/domain/assessment_detail_models.dart';
 import 'package:student_mobile/features/tests/domain/submission_status_models.dart';
@@ -97,12 +98,40 @@ void main() {
     expect(target?.route, AppRoutes.calendar);
   });
 
-  test('unresolvable alert returns null', () {
+  test('announcement alert opens announcements hub', () {
     const item = AlertItem(
       id: 'n6',
       source: AlertSource.inbox,
       title: 'Announcement',
       eventType: 'engagement.announcement_published',
+    );
+
+    final target = AlertDeepLinkResolver.resolve(item);
+    expect(target?.route, AppRoutes.announcements);
+  });
+
+  test('announcement action url opens detail', () {
+    const item = AlertItem(
+      id: 'n7',
+      source: AlertSource.notification,
+      title: 'Welcome Week',
+      actionUrl: '/announcements/ann-1',
+    );
+
+    final target = AlertDeepLinkResolver.resolve(item);
+    expect(target?.route, AppRoutes.announcementDetail);
+    expect(
+      (target?.arguments as AnnouncementDetailArgs?)?.announcementId,
+      'ann-1',
+    );
+  });
+
+  test('unresolvable alert returns null', () {
+    const item = AlertItem(
+      id: 'n8',
+      source: AlertSource.inbox,
+      title: 'Mystery',
+      eventType: 'something.unknown',
     );
 
     expect(AlertDeepLinkResolver.resolve(item), isNull);

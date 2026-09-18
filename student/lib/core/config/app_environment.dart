@@ -20,7 +20,9 @@ enum AppEnvironment {
   String get envFileName => switch (this) {
         AppEnvironment.development => '.env.development',
         AppEnvironment.staging => '.env.staging',
-        AppEnvironment.production => '.env.production.example',
+        // Ship real values via CI `--dart-define` or a private `.env.production`.
+        // `.env.production.example` is documentation only and is not loaded.
+        AppEnvironment.production => '.env.production',
       };
 
   bool get isProduction => this == AppEnvironment.production;

@@ -13,6 +13,9 @@ class AppConfig {
     required this.apiBaseUrl,
     required this.appName,
     this.studentWebBaseUrl,
+    this.supportEmail,
+    this.privacyUrl,
+    this.termsUrl,
   });
 
   final AppEnvironment environment;
@@ -20,6 +23,9 @@ class AppConfig {
   final String appName;
   /// Optional student-web origin for hosted Razorpay checkout handoff.
   final String? studentWebBaseUrl;
+  final String? supportEmail;
+  final String? privacyUrl;
+  final String? termsUrl;
 
   static AppConfig? _instance;
 
@@ -37,6 +43,12 @@ class AppConfig {
     const nameFromDefine = String.fromEnvironment('APP_NAME', defaultValue: '');
     const webFromDefine =
         String.fromEnvironment('STUDENT_WEB_BASE_URL', defaultValue: '');
+    const supportFromDefine =
+        String.fromEnvironment('SUPPORT_EMAIL', defaultValue: '');
+    const privacyFromDefine =
+        String.fromEnvironment('PRIVACY_URL', defaultValue: '');
+    const termsFromDefine =
+        String.fromEnvironment('TERMS_URL', defaultValue: '');
 
     final environment = AppEnvironment.fromString(
       envFromDefine.isEmpty ? null : envFromDefine,
@@ -51,14 +63,35 @@ class AppConfig {
       environment: environment,
       apiBaseUrl: apiFromDefine.isNotEmpty
           ? apiFromDefine
-          : (fileValues['API_BASE_URL'] ?? 'http://10.0.2.2:8000/api/v1'),
+          : (fileValues['API_BASE_URL'] ??
+              (environment.isProduction
+                  ? ''
+                  : 'http://10.0.2.2:8000/api/v1')),
       appName: nameFromDefine.isNotEmpty
           ? nameFromDefine
           : (fileValues['APP_NAME'] ?? 'Pragyu'),
-      studentWebBaseUrl: (webBase != null && webBase.trim().isNotEmpty)
-          ? webBase.trim().replaceAll(RegExp(r'/+$'), '')
-          : null,
+      studentWebBaseUrl: _nullableUrl(webBase),
+      supportEmail: _nullableTrim(
+        supportFromDefine.isNotEmpty
+            ? supportFromDefine
+            : fileValues['SUPPORT_EMAIL'],
+      ),
+      privacyUrl: _nullableUrl(
+        privacyFromDefine.isNotEmpty
+            ? privacyFromDefine
+            : fileValues['PRIVACY_URL'],
+      ),
+      termsUrl: _nullableUrl(
+        termsFromDefine.isNotEmpty ? termsFromDefine : fileValues['TERMS_URL'],
+      ),
     );
+
+    if (config.apiBaseUrl.isEmpty) {
+      throw StateError(
+        'API_BASE_URL is required for production. Pass '
+        '--dart-define=API_BASE_URL=https://… or ship assets/env/.env.production.',
+      );
+    }
 
     _instance = config;
 
@@ -88,5 +121,17 @@ class AppConfig {
     } catch (_) {
       return const {};
     }
+  }
+
+  static String? _nullableTrim(String? raw) {
+    final value = raw?.trim();
+    if (value == null || value.isEmpty) return null;
+    return value;
+  }
+
+  static String? _nullableUrl(String? raw) {
+    final value = _nullableTrim(raw);
+    if (value == null) return null;
+    return value.replaceAll(RegExp(r'/+$'), '');
   }
 }

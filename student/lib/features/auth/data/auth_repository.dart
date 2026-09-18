@@ -20,6 +20,26 @@ abstract class AuthGateway {
   /// Requests a reset email. API always succeeds (no account enumeration).
   Future<void> forgotPassword({required String email});
 
+  /// Completes password reset with the token from the email link.
+  Future<void> resetPassword({
+    required String email,
+    required String token,
+    required String password,
+    required String passwordConfirmation,
+  });
+
+  /// Confirms email from the verification link (`id` + `token` query params).
+  Future<AuthUser> verifyEmail({
+    required String id,
+    required String token,
+  });
+
+  /// Resends the verification email. Prefer `email` or `identityId`.
+  Future<bool> resendVerification({
+    String? email,
+    String? identityId,
+  });
+
   Future<void> requestRegistrationPhoneOtp({required String phone});
 
   Future<PhoneOtpConfirmResult> confirmRegistrationPhoneOtp({
@@ -99,6 +119,68 @@ class AuthRepository implements AuthGateway {
       '/auth/forgot-password',
       body: {'email': email.trim()},
     );
+  }
+
+  @override
+  Future<void> resetPassword({
+    required String email,
+    required String token,
+    required String password,
+    required String passwordConfirmation,
+  }) async {
+    await _api.post(
+      '/auth/reset-password',
+      body: {
+        'email': email.trim(),
+        'token': token.trim(),
+        'password': password,
+        'password_confirmation': passwordConfirmation,
+      },
+    );
+  }
+
+  @override
+  Future<AuthUser> verifyEmail({
+    required String id,
+    required String token,
+  }) async {
+    final envelope = await _api.get(
+      '/auth/verify-email',
+      query: {
+        'id': id.trim(),
+        'token': token.trim(),
+      },
+    );
+    final data = _asJsonMap(envelope['data']);
+    final user = AuthUser.fromJson(data);
+    if (user.id.isEmpty) {
+      throw StateError('Verify-email response missing user.');
+    }
+    return user;
+  }
+
+  @override
+  Future<bool> resendVerification({
+    String? email,
+    String? identityId,
+  }) async {
+    final body = <String, dynamic>{};
+    final trimmedEmail = email?.trim();
+    final trimmedId = identityId?.trim();
+    if (trimmedEmail != null && trimmedEmail.isNotEmpty) {
+      body['email'] = trimmedEmail;
+    } else if (trimmedId != null && trimmedId.isNotEmpty) {
+      body['identity_id'] = trimmedId;
+    } else {
+      throw ArgumentError('email or identityId is required');
+    }
+
+    final envelope = await _api.post(
+      '/auth/resend-verification',
+      body: body,
+    );
+    final data = _asJsonMap(envelope['data']);
+    return data['sent'] == true;
   }
 
   @override

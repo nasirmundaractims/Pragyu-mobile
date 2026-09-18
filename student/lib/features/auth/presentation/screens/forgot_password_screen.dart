@@ -8,6 +8,7 @@ import 'package:student_mobile/app/widgets/primary_button.dart';
 import 'package:student_mobile/app/widgets/secondary_button.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/features/auth/data/auth_repository.dart';
+import 'package:student_mobile/features/auth/presentation/screens/reset_password_screen.dart';
 
 /// S-04 Forgot password — request a secure reset link by email.
 class ForgotPasswordScreen extends StatefulWidget {
@@ -202,6 +203,18 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         SecondaryButton(
           label: 'Back to sign in',
           onPressed: _backToSignIn,
+        ),
+        const SizedBox(height: 8),
+        TextButton(
+          onPressed: () {
+            Navigator.of(context).pushNamed(
+              AppRoutes.resetPassword,
+              arguments: ResetPasswordArgs(
+                email: _emailController.text.trim(),
+              ),
+            );
+          },
+          child: const Text('I have a reset token'),
         ),
       ],
     );

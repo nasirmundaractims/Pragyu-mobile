@@ -41,6 +41,63 @@ void main() {
     expect(question.kind, CbtQuestionKind.mcq);
   });
 
+  test('numerical and fill-in map to short text', () {
+    final numerical = AssessmentQuestionPreview.fromJson({
+      'id': 'aq3',
+      'question_id': 'q3',
+      'sort_order': 3,
+      'question_snapshot': {
+        'type': 'numerical',
+        'content': 'What is 2 + 2?',
+      },
+    });
+    expect(numerical.kind, CbtQuestionKind.shortText);
+    expect(numerical.allowsImageUpload, isTrue);
+
+    final fillIn = AssessmentQuestionPreview.fromJson({
+      'id': 'aq4',
+      'question_id': 'q4',
+      'sort_order': 4,
+      'question_snapshot': {
+        'type': 'short_answer',
+        'content': 'Capital of India is ____',
+        'metadata': {'ui_type': 'fill_in_blank'},
+      },
+    });
+    expect(fillIn.uiType, 'fill_in_blank');
+    expect(fillIn.kind, CbtQuestionKind.shortText);
+  });
+
+  test('keeps passage and content HTML for rich render', () {
+    final question = AssessmentQuestionPreview.fromJson({
+      'id': 'aq5',
+      'question_id': 'q5',
+      'sort_order': 5,
+      'question_snapshot': {
+        'type': 'mcq',
+        'content': '<p>Pick the <strong>correct</strong> option.</p>',
+        'metadata': {
+          'passage': '<p>Read this carefully.</p>',
+          'attachments': [
+            {
+              'url': 'https://cdn.example.com/diagram.png',
+              'mime_type': 'image/png',
+            },
+          ],
+          'choices': [
+            {'id': 'a', 'label': '<em>One</em>'},
+            {'id': 'b', 'label': 'Two'},
+          ],
+        },
+      },
+    });
+
+    expect(question.content, contains('Pick the'));
+    expect(question.contentHtml, contains('<strong>'));
+    expect(question.passageHtml, contains('Read this'));
+    expect(question.mediaUrls, ['https://cdn.example.com/diagram.png']);
+  });
+
   test('StudentAnswerValue treats images as answered', () {
     const answer = StudentAnswerValue(
       images: [

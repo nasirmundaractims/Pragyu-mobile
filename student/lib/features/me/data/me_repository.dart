@@ -10,6 +10,11 @@ import 'package:student_mobile/features/organization/data/tenant_store.dart';
 abstract class MeGateway {
   Future<MeSnapshot> loadMe();
 
+  Future<UserProfileSummary> updateProfile({
+    required String displayName,
+    String? phone,
+  });
+
   Future<void> setEmailNotifications({
     required String studentProfileId,
     required bool enabled,
@@ -76,6 +81,28 @@ class MeRepository implements MeGateway {
       emailNotificationsEnabled: emailNotifications,
       dailyStudyHours: studyHours,
     );
+  }
+
+  @override
+  Future<UserProfileSummary> updateProfile({
+    required String displayName,
+    String? phone,
+  }) async {
+    final session = await _requireSession();
+    final envelope = await _api.patch(
+      '/users/me/profile',
+      body: {
+        'display_name': displayName.trim(),
+        'phone': phone?.trim().isEmpty == true ? null : phone?.trim(),
+      },
+      accessToken: session.accessToken,
+      organizationId: session.organizationId,
+    );
+    final profile = UserProfileSummary.fromJson(_asMap(envelope['data']));
+    if (profile.id.isEmpty) {
+      throw StateError('Profile update response missing user.');
+    }
+    return profile;
   }
 
   @override

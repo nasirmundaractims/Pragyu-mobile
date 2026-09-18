@@ -1,5 +1,6 @@
 import 'package:student_mobile/app/router/app_router.dart';
 import 'package:student_mobile/features/alerts/domain/alerts_models.dart';
+import 'package:student_mobile/features/announcements/domain/announcements_models.dart';
 import 'package:student_mobile/features/learn/domain/learn_models.dart';
 import 'package:student_mobile/features/lectures/domain/lecture_models.dart';
 import 'package:student_mobile/features/materials/domain/material_models.dart';
@@ -127,6 +128,21 @@ abstract final class AlertDeepLinkResolver {
           route: AppRoutes.studyMaterials,
           arguments: StudyMaterialsListArgs(courseId: item.courseId),
           label: 'Open materials',
+        );
+
+      case 'engagement.announcement_published':
+      case 'announcement.published':
+        final announcementId = item.relatedEntityId;
+        if (announcementId != null && announcementId.isNotEmpty) {
+          return AlertDeepLinkTarget(
+            route: AppRoutes.announcementDetail,
+            arguments: AnnouncementDetailArgs(announcementId: announcementId),
+            label: 'Open announcement',
+          );
+        }
+        return const AlertDeepLinkTarget(
+          route: AppRoutes.announcements,
+          label: 'Open announcements',
         );
 
       case 'learning.lesson_published':
@@ -275,6 +291,24 @@ abstract final class AlertDeepLinkResolver {
       );
     }
 
+    final announcements = RegExp(r'^/announcements/([^/]+)/?$').firstMatch(path);
+    if (announcements != null) {
+      return AlertDeepLinkTarget(
+        route: AppRoutes.announcementDetail,
+        arguments: AnnouncementDetailArgs(
+          announcementId: announcements.group(1)!,
+        ),
+        label: 'Open announcement',
+      );
+    }
+
+    if (path == '/announcements') {
+      return const AlertDeepLinkTarget(
+        route: AppRoutes.announcements,
+        label: 'Open announcements',
+      );
+    }
+
     if (path == '/study-materials' || path.startsWith('/study-materials')) {
       return const AlertDeepLinkTarget(
         route: AppRoutes.studyMaterials,
@@ -331,6 +365,13 @@ abstract final class AlertDeepLinkResolver {
           route: AppRoutes.courseDetail,
           arguments: CourseDetailArgs(courseId: id),
           label: 'Open course',
+        );
+      case 'engagement_announcement':
+      case 'announcement':
+        return AlertDeepLinkTarget(
+          route: AppRoutes.announcementDetail,
+          arguments: AnnouncementDetailArgs(announcementId: id),
+          label: 'Open announcement',
         );
       case 'lesson':
         return AlertDeepLinkTarget(

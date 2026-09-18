@@ -49,6 +49,30 @@ class _FakeAuth implements AuthGateway {
   Future<void> forgotPassword({required String email}) async {}
 
   @override
+  Future<void> resetPassword({
+    required String email,
+    required String token,
+    required String password,
+    required String passwordConfirmation,
+  }) async {}
+
+  @override
+  Future<AuthUser> verifyEmail({
+    required String id,
+    required String token,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<bool> resendVerification({
+    String? email,
+    String? identityId,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
   Future<void> requestRegistrationPhoneOtp({required String phone}) async {}
 
   @override

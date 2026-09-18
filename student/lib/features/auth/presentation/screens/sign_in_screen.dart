@@ -8,6 +8,7 @@ import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/core/session/auth_navigation.dart';
 import 'package:student_mobile/features/auth/data/auth_repository.dart';
 import 'package:student_mobile/features/auth/domain/auth_models.dart';
+import 'package:student_mobile/features/auth/presentation/screens/verify_email_screen.dart';
 
 /// S-03 Sign in — email + password against Identity API (optional MFA step).
 class SignInScreen extends StatefulWidget {
@@ -113,6 +114,37 @@ class _SignInScreenState extends State<SignInScreen> {
         _passwordError = error.fieldErrors['password'];
         _formError = error.message;
       });
+      if (error.code == 'AUTH_011') {
+        final email = _emailController.text.trim();
+        final goVerify = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Verify your email'),
+            content: Text(
+              error.message.isNotEmpty
+                  ? error.message
+                  : 'Please verify your email address before signing in.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('Resend email'),
+              ),
+            ],
+          ),
+        );
+        if (!mounted) return;
+        if (goVerify == true) {
+          Navigator.of(context).pushNamed(
+            AppRoutes.verifyEmail,
+            arguments: VerifyEmailArgs(email: email),
+          );
+        }
+      }
     } catch (_) {
       if (!mounted) return;
       setState(() {
@@ -196,7 +228,9 @@ class _SignInScreenState extends State<SignInScreen> {
   void _googleStub() {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Google sign-in will be available in a later build.'),
+        content: Text(
+          'Google sign-in needs a native token API. Use email for now.',
+        ),
       ),
     );
   }
