@@ -80,6 +80,8 @@ class HomeSnapshot {
     this.continueLearning,
     this.progress,
     this.upcomingLectures = const [],
+    this.profileDisplayName,
+    this.avatarUrl,
   });
 
   final AuthUser user;
@@ -89,6 +91,8 @@ class HomeSnapshot {
   final HomeContinueItem? continueLearning;
   final HomeProgressSummary? progress;
   final List<HomeLecture> upcomingLectures;
+  final String? profileDisplayName;
+  final String? avatarUrl;
 
   HomeProgressSummary get progressOrEmpty =>
       progress ?? const HomeProgressSummary();

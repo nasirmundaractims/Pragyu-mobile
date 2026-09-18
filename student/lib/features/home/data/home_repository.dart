@@ -25,11 +25,13 @@ class HomeRepository implements HomeGateway {
     final session = await _requireSession();
     final userFuture = _loadUser(session);
     final profileFuture = _loadStudentProfileId(session);
+    final userProfileFuture = _loadUserProfile(session);
     final unreadFuture = _loadUnreadCount(session);
     final assessmentsFuture = _loadAssessments(session);
 
     final user = await userFuture;
     final profileId = await profileFuture;
+    final userProfile = await userProfileFuture;
     final unread = await unreadFuture;
     final assessments = await assessmentsFuture;
     final lectures = profileId == null
@@ -46,6 +48,11 @@ class HomeRepository implements HomeGateway {
     final overall = _averageProgress(courses);
     final upcoming = _upcomingLectures(lectures);
 
+    final profileDisplayName = _nullableTrim(
+      userProfile?['display_name']?.toString(),
+    );
+    final avatarUrl = _nullableTrim(userProfile?['avatar_url']?.toString());
+
     return HomeSnapshot(
       user: user,
       nextLecture: _pickNextLecture(lectures),
@@ -58,6 +65,8 @@ class HomeRepository implements HomeGateway {
         testsAttempted: assessments.length,
       ),
       upcomingLectures: upcoming,
+      profileDisplayName: profileDisplayName,
+      avatarUrl: avatarUrl,
     );
   }
 
@@ -112,9 +121,6 @@ class HomeRepository implements HomeGateway {
   }
 
   Future<AuthUser> _loadUser(SessionContext session) async {
-    if (session.cachedUser != null) {
-      return session.cachedUser!;
-    }
     try {
       final envelope = await _api.get(
         '/auth/me',
@@ -122,9 +128,28 @@ class HomeRepository implements HomeGateway {
         organizationId: session.organizationId,
       );
       final data = _asMap(envelope['data']);
-      return AuthUser.fromJson(data);
+      final user = AuthUser.fromJson(data);
+      if (user.id.isNotEmpty || user.email.isNotEmpty) {
+        return user;
+      }
+    } catch (_) {}
+    return session.cachedUser ??
+        const AuthUser(id: '', email: '', firstName: 'Student');
+  }
+
+  Future<Map<String, dynamic>?> _loadUserProfile(SessionContext session) async {
+    try {
+      final envelope = await _api.get(
+        '/users/me/profile',
+        accessToken: session.accessToken,
+        organizationId: session.organizationId,
+      );
+      final data = _asMap(envelope['data']);
+      return data.isEmpty ? null : data;
+    } on ApiException {
+      return null;
     } catch (_) {
-      return const AuthUser(id: '', email: '', firstName: 'Student');
+      return null;
     }
   }
 
@@ -398,6 +423,12 @@ class HomeRepository implements HomeGateway {
       return value.map((key, item) => MapEntry(key.toString(), item));
     }
     return const {};
+  }
+
+  static String? _nullableTrim(String? raw) {
+    final value = raw?.trim();
+    if (value == null || value.isEmpty) return null;
+    return value;
   }
 }
 

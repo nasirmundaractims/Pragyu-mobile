@@ -29,6 +29,7 @@ class UserProfileSummary {
     this.phone,
     this.locale,
     this.timezone,
+    this.avatarUrl,
   });
 
   final String id;
@@ -36,6 +37,7 @@ class UserProfileSummary {
   final String? phone;
   final String? locale;
   final String? timezone;
+  final String? avatarUrl;
 
   factory UserProfileSummary.fromJson(Map<String, dynamic> json) {
     return UserProfileSummary(
@@ -44,6 +46,7 @@ class UserProfileSummary {
       phone: _nullableTrim(json['phone']?.toString()),
       locale: _nullableTrim(json['locale']?.toString()),
       timezone: _nullableTrim(json['timezone']?.toString()),
+      avatarUrl: _nullableTrim(json['avatar_url']?.toString()),
     );
   }
 }

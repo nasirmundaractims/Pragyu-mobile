@@ -36,7 +36,7 @@ void main() {
   testWidgets('S-10 home shows greeting, schedule, progress, shortcuts', (
     tester,
   ) async {
-    await tester.binding.setSurfaceSize(const Size(390, 1200));
+    await tester.binding.setSurfaceSize(const Size(390, 1400));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     final fake = _FakeHome(
       home: HomeSnapshot(
@@ -98,12 +98,12 @@ void main() {
     expect(find.text('Weekly Quiz 3'), findsOneWidget);
     expect(find.text('Catalog'), findsOneWidget);
     expect(find.text('AI Mentor'), findsOneWidget);
-    expect(find.text('My Progress'), findsOneWidget);
+    expect(find.text('Your Goal'), findsOneWidget);
     expect(find.textContaining('3'), findsWidgets);
   });
 
   testWidgets('S-10 empty schedule message', (tester) async {
-    await tester.binding.setSurfaceSize(const Size(390, 1200));
+    await tester.binding.setSurfaceSize(const Size(390, 1400));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
       MaterialApp(
@@ -126,7 +126,7 @@ void main() {
   });
 
   testWidgets('S-10 opens S-11 today detail', (tester) async {
-    await tester.binding.setSurfaceSize(const Size(390, 1200));
+    await tester.binding.setSurfaceSize(const Size(390, 1400));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     final fake = _FakeHome(
       home: const HomeSnapshot(
@@ -172,12 +172,70 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.ensureVisible(find.text('Upcoming Schedule'));
-    await tester.tap(find.text('View All →').at(1));
+    await tester.tap(find.text('See All >').last);
     await tester.pumpAndSettle();
 
     expect(find.text('Classes'), findsOneWidget);
     expect(find.text('Morning Class'), findsOneWidget);
     expect(find.text('Quiz due today'), findsOneWidget);
+  });
+
+  testWidgets('S-10 home has no overflow across phone sizes', (tester) async {
+    const sizes = <Size>[
+      Size(320, 700),
+      Size(360, 740),
+      Size(390, 844),
+      Size(430, 932),
+    ];
+
+    final fake = _FakeHome(
+      home: const HomeSnapshot(
+        user: AuthUser(
+          id: '1',
+          email: 'alex@example.com',
+          firstName: 'Alex',
+          lastName: 'Munda',
+        ),
+        continueLearning: HomeContinueItem(
+          courseId: 'c1',
+          title: 'Indian Constitution',
+          subjectTag: 'Polity',
+          progressPercent: 68,
+        ),
+        progress: HomeProgressSummary(overallPercent: 64, coursesEnrolled: 3),
+        upcomingLectures: [
+          HomeLecture(
+            id: 'lec-1',
+            title: 'Current Affairs',
+            sessionStatus: 'live',
+          ),
+        ],
+        unreadCount: 3,
+      ),
+    );
+
+    for (final size in sizes) {
+      await tester.binding.setSurfaceSize(size);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          home: StudentShell(homeRepository: fake),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull, reason: 'size $size');
+      expect(find.textContaining('Alex'), findsOneWidget);
+
+      await tester.drag(
+        find.byType(SingleChildScrollView).first,
+        const Offset(0, -500),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull, reason: 'scrolled $size');
+    }
+
+    addTearDown(() => tester.binding.setSurfaceSize(null));
   });
 
   test('deriveDueState marks overdue and due today', () {
