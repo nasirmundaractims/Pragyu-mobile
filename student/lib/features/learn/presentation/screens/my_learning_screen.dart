@@ -348,9 +348,11 @@ class _MyLearningScreenState extends State<MyLearningScreen> {
           onProfile: () => _openTab(4),
         ),
         SizedBox(height: short ? 12 : 16),
-        _LearnHero(narrow: narrow, short: short),
-        SizedBox(height: short ? 10 : 12),
-        const _KnowledgeScript(),
+        _LearnHero(
+          narrow: narrow,
+          short: short,
+          script: const _KnowledgeScript(),
+        ),
         SizedBox(height: short ? 12 : 14),
         _SearchFilterRow(
           controller: _search,
@@ -608,14 +610,16 @@ class _LearnHero extends StatelessWidget {
   const _LearnHero({
     required this.narrow,
     required this.short,
+    required this.script,
   });
 
   final bool narrow;
   final bool short;
+  final Widget script;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    final copy = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
@@ -644,28 +648,96 @@ class _LearnHero extends StatelessWidget {
         ),
       ],
     );
+
+    // Reference layout: title/subtitle on the left, cursive flourish on the
+    // right so it sits visually above the Filters button.
+    if (narrow) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          copy,
+          const SizedBox(height: 8),
+          Align(alignment: Alignment.centerRight, child: script),
+        ],
+      );
+    }
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(flex: 6, child: copy),
+        const SizedBox(width: 8),
+        Flexible(
+          flex: 5,
+          child: Align(
+            alignment: Alignment.topRight,
+            child: script,
+          ),
+        ),
+      ],
+    );
   }
 }
 
 class _KnowledgeScript extends StatelessWidget {
   const _KnowledgeScript();
 
+  static const _asset = 'assets/images/learn/knowledge_builds_script.png';
+
   @override
   Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.centerRight,
+    final width = MediaQuery.sizeOf(context).width;
+    final maxW = width < 360 ? 98.0 : width < 420 ? 110.0 : 122.0;
+
+    Widget scriptImage({double opacity = 1}) {
+      return Opacity(
+        opacity: opacity,
+        child: Image.asset(
+          _asset,
+          fit: BoxFit.contain,
+          alignment: Alignment.centerRight,
+          filterQuality: FilterQuality.high,
+          errorBuilder: (_, error, stackTrace) {
+            return Text(
+              'Knowledge Builds\nBetter You',
+              textAlign: TextAlign.right,
+              softWrap: true,
+              style: TextStyle(
+                fontFamily: AppTheme.scriptFontFamily,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                height: 1.15,
+                color: _MyLearningScreenState._ink,
+              ),
+            );
+          },
+        ),
+      );
+    }
+
+    return Semantics(
+      label: 'Knowledge Builds Better You',
       child: Transform.rotate(
-        angle: -0.08,
-        child: Text(
-          'Knowledge Builds Better You',
-          textAlign: TextAlign.right,
-          softWrap: true,
-          style: TextStyle(
-            fontFamily: AppTheme.scriptFontFamily,
-            fontSize: 22,
-            fontWeight: FontWeight.w600,
-            color: _MyLearningScreenState._blue.withValues(alpha: 0.9),
-            height: 1.2,
+        angle: -0.14,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: maxW, maxHeight: 46),
+          child: AspectRatio(
+            aspectRatio: 950 / 460,
+            child: Stack(
+              alignment: Alignment.centerRight,
+              children: [
+                // Slight offset copies make the calligraphy read bolder.
+                Transform.translate(
+                  offset: const Offset(0.6, 0),
+                  child: scriptImage(opacity: 0.85),
+                ),
+                Transform.translate(
+                  offset: const Offset(0, 0.5),
+                  child: scriptImage(opacity: 0.85),
+                ),
+                scriptImage(),
+              ],
+            ),
           ),
         ),
       ),

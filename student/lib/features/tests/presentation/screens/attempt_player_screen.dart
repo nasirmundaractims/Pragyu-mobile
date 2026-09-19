@@ -6,6 +6,8 @@ import 'package:image_picker/image_picker.dart';
 
 import 'package:student_mobile/app/router/app_router.dart';
 import 'package:student_mobile/app/theme/app_colors.dart';
+import 'package:student_mobile/app/theme/app_theme.dart';
+import 'package:student_mobile/app/widgets/pragyu_logo.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/features/tests/data/tests_repository.dart';
 import 'package:student_mobile/features/tests/domain/assessment_detail_models.dart';
@@ -454,74 +456,76 @@ class _AttemptPlayerScreenState extends State<AttemptPlayerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final title = _snapshot?.assessment.title ??
+    final snapshot = _snapshot;
+    final title = snapshot?.assessment.title ??
         (widget.args.title?.trim().isNotEmpty == true
             ? widget.args.title!.trim()
             : 'Attempt');
+    final subtitle = snapshot?.assessment.typeLabel;
+    final size = MediaQuery.sizeOf(context);
+    final wide = size.width >= 900;
+    final question = _current;
+    final marked = question != null &&
+        _player.markedForReview.contains(question.answerKey);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
       child: Scaffold(
-        backgroundColor: AppColors.background,
-        appBar: AppBar(
-          backgroundColor: AppColors.background,
-          title: Text(title),
-          actions: [
-            if (_player.deadlineAt != null)
-              Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: Center(
-                  child: Text(
-                    formatRemaining(_remaining),
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      color: _remaining.inMinutes < 5
-                          ? AppColors.danger
-                          : AppColors.ink,
-                    ),
-                  ),
-                ),
-              ),
-            IconButton(
-              tooltip: 'Question palette',
-              onPressed: _snapshot == null || _snapshot!.questions.isEmpty
-                  ? null
-                  : () => showCbtPaletteSheet(
-                        context: context,
-                        questions: _snapshot!.questions,
-                        currentId: _current?.answerKey,
-                        answers: _answers,
-                        player: _player,
-                        onSelect: _goTo,
-                      ),
-              icon: const Icon(Icons.grid_view_rounded),
-            ),
-          ],
-        ),
-        body: SafeArea(child: _buildBody()),
-        bottomNavigationBar: _snapshot == null || _current == null
-            ? null
-            : _Footer(
-                canPrev: _index > 0,
-                canNext: _index < (_snapshot!.questions.length - 1),
-                marked: _player.markedForReview
-                    .contains(_current!.answerKey),
-                autosave: _autosave,
+        backgroundColor: const Color(0xFFF8FAFD),
+        body: SafeArea(
+          child: Column(
+            children: [
+              _AttemptHeader(
+                title: title,
+                subtitle: subtitle,
                 submitting: _submitting,
-                onPrev: () => _goTo(_index - 1),
-                onNext: () => _goTo(_index + 1),
-                onClear: _clearAnswer,
-                onMark: () => _toggleMark(advance: true),
-                onSubmit: _requestSubmit,
+                onBack: () => Navigator.of(context).maybePop(),
+                onSubmit: snapshot == null || question == null
+                    ? null
+                    : _requestSubmit,
+                onPalette: snapshot == null || snapshot.questions.isEmpty
+                    ? null
+                    : () => showCbtPaletteSheet(
+                          context: context,
+                          questions: snapshot.questions,
+                          currentId: question?.answerKey,
+                          answers: _answers,
+                          player: _player,
+                          onSelect: _goTo,
+                        ),
+                showPaletteButton: !wide,
               ),
+              if (snapshot != null)
+                _StatsBar(
+                  remaining: _remaining,
+                  showTimer: _player.deadlineAt != null,
+                  totalQuestions: snapshot.questions.length,
+                  totalMarks: snapshot.assessment.totalMarks,
+                  durationMinutes: snapshot.assessment.durationMinutes,
+                ),
+              Expanded(child: _buildBody(wide: wide, marked: marked)),
+              if (snapshot != null && question != null)
+                _AttemptFooter(
+                  canPrev: _index > 0,
+                  canNext: _index < snapshot.questions.length - 1,
+                  autosave: _autosave,
+                  submitting: _submitting,
+                  onPrev: () => _goTo(_index - 1),
+                  onNext: () => _goTo(_index + 1),
+                  onClear: _clearAnswer,
+                  onSubmit: _requestSubmit,
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody({required bool wide, required bool marked}) {
     if (_loading && _snapshot == null) {
       return const Center(
-        child: CircularProgressIndicator(color: AppColors.brand),
+        child: CircularProgressIndicator(color: Color(0xFF2F7BFF)),
       );
     }
     if (_error != null && _snapshot == null) {
@@ -536,7 +540,9 @@ class _AttemptPlayerScreenState extends State<AttemptPlayerScreen> {
           const SizedBox(height: 16),
           FilledButton(
             onPressed: _load,
-            style: FilledButton.styleFrom(backgroundColor: AppColors.brand),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF2F7BFF),
+            ),
             child: const Text('Retry'),
           ),
         ],
@@ -555,56 +561,506 @@ class _AttemptPlayerScreenState extends State<AttemptPlayerScreen> {
     }
 
     final question = _current!;
-    return CbtQuestionBody(
-      key: ValueKey(question.answerKey),
-      question: question,
-      index: _index,
-      total: questions.length,
-      answer: _answers[question.answerKey],
-      onChoice: _selectChoice,
-      onTextChanged: _setText,
-      onAddImages: question.allowsImageUpload ? _addImages : null,
-      onRemoveImage: question.allowsImageUpload ? _removeImage : null,
-      isUploading: _uploadingImages,
-      uploadProgress: _uploadProgress,
+    final questionCard = Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: const Color(0xFFE6EAF2)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            Expanded(
+              child: CbtQuestionBody(
+                key: ValueKey(question.answerKey),
+                question: question,
+                index: _index,
+                total: questions.length,
+                answer: _answers[question.answerKey],
+                onChoice: _selectChoice,
+                onTextChanged: _setText,
+                onAddImages: question.allowsImageUpload ? _addImages : null,
+                onRemoveImage:
+                    question.allowsImageUpload ? _removeImage : null,
+                isUploading: _uploadingImages,
+                uploadProgress: _uploadProgress,
+                markedForReview: marked,
+                onReviewLater: () => _toggleMark(advance: false),
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+              ),
+            ),
+            _TestInfoTile(
+              assessment: _snapshot!.assessment,
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (!wide) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+        child: questionCard,
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(flex: 7, child: questionCard),
+          const SizedBox(width: 12),
+          Expanded(
+            flex: 4,
+            child: Material(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(18),
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: const Color(0xFFE6EAF2)),
+                ),
+                child: CbtQuestionPalettePanel(
+                  questions: questions,
+                  currentId: question.answerKey,
+                  answers: _answers,
+                  player: _player,
+                  onSelect: _goTo,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
-class _Footer extends StatelessWidget {
-  const _Footer({
+class _AttemptHeader extends StatelessWidget {
+  const _AttemptHeader({
+    required this.title,
+    required this.subtitle,
+    required this.submitting,
+    required this.onBack,
+    required this.onSubmit,
+    required this.onPalette,
+    required this.showPaletteButton,
+  });
+
+  final String title;
+  final String? subtitle;
+  final bool submitting;
+  final VoidCallback onBack;
+  final VoidCallback? onSubmit;
+  final VoidCallback? onPalette;
+  final bool showPaletteButton;
+
+  @override
+  Widget build(BuildContext context) {
+    final narrow = MediaQuery.sizeOf(context).width < 380;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 4, 12, 4),
+      child: Row(
+        children: [
+          IconButton(
+            tooltip: 'Back',
+            onPressed: onBack,
+            icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF1A2B4C)),
+          ),
+          const PragyuLogo(height: 28),
+          if (!narrow) ...[
+            const SizedBox(width: 8),
+            const Flexible(
+              flex: 2,
+              child: Text(
+                'Learn • Practice • Grow',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontFamily: AppTheme.fontFamily,
+                  fontSize: 10,
+                  color: Color(0xFF7A8499),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+          const SizedBox(width: 8),
+          Expanded(
+            flex: 4,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontFamily: AppTheme.fontFamily,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF1A2B4C),
+                  ),
+                ),
+                if (subtitle != null && subtitle!.isNotEmpty)
+                  Text(
+                    subtitle!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontFamily: AppTheme.fontFamily,
+                      fontSize: 11,
+                      color: Color(0xFF7A8499),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          if (showPaletteButton)
+            IconButton(
+              tooltip: 'Question palette',
+              onPressed: onPalette,
+              icon: const Icon(
+                Icons.grid_view_rounded,
+                color: Color(0xFF1A2B4C),
+              ),
+            ),
+          const SizedBox(width: 4),
+          FilledButton.icon(
+            onPressed: submitting ? null : onSubmit,
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFE85D75),
+              foregroundColor: Colors.white,
+              disabledBackgroundColor: const Color(0xFFF5C2CB),
+              padding: EdgeInsets.symmetric(
+                horizontal: narrow ? 10 : 14,
+                vertical: 10,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            icon: const Icon(Icons.send_rounded, size: 16),
+            label: Text(
+              submitting ? 'Submitting…' : 'Submit test',
+              style: const TextStyle(
+                fontFamily: AppTheme.fontFamily,
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatsBar extends StatelessWidget {
+  const _StatsBar({
+    required this.remaining,
+    required this.showTimer,
+    required this.totalQuestions,
+    required this.totalMarks,
+    required this.durationMinutes,
+  });
+
+  final Duration remaining;
+  final bool showTimer;
+  final int totalQuestions;
+  final double? totalMarks;
+  final int? durationMinutes;
+
+  @override
+  Widget build(BuildContext context) {
+    final marksLabel = totalMarks == null
+        ? '—'
+        : (totalMarks == totalMarks!.roundToDouble()
+            ? '${totalMarks!.round()}'
+            : '$totalMarks');
+    final durationLabel = durationMinutes != null && durationMinutes! > 0
+        ? '$durationMinutes min'
+        : '—';
+
+    final items = <(IconData, String, String)>[
+      if (showTimer)
+        (Icons.schedule_rounded, 'Time Left', formatRemaining(remaining)),
+      (Icons.description_outlined, 'Questions', '$totalQuestions'),
+      (Icons.emoji_events_outlined, 'Total Marks', marksLabel),
+      (Icons.timer_outlined, 'Duration', durationLabel),
+    ];
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(12, 4, 12, 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE6EAF2)),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final wrap = constraints.maxWidth < 520;
+          if (wrap) {
+            return Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final item in items)
+                  SizedBox(
+                    width: (constraints.maxWidth - 8) / 2,
+                    child: _StatItem(
+                      icon: item.$1,
+                      label: item.$2,
+                      value: item.$3,
+                    ),
+                  ),
+              ],
+            );
+          }
+          return Row(
+            children: [
+              for (var i = 0; i < items.length; i++) ...[
+                if (i > 0)
+                  Container(
+                    width: 1,
+                    height: 36,
+                    color: const Color(0xFFE6EAF2),
+                  ),
+                Expanded(
+                  child: _StatItem(
+                    icon: items[i].$1,
+                    label: items[i].$2,
+                    value: items[i].$3,
+                  ),
+                ),
+              ],
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _StatItem extends StatelessWidget {
+  const _StatItem({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      child: Row(
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            alignment: Alignment.center,
+            decoration: const BoxDecoration(
+              color: Color(0xFFE8F1FF),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, size: 16, color: const Color(0xFF2F7BFF)),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontFamily: AppTheme.fontFamily,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF7A8499),
+                  ),
+                ),
+                Text(
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontFamily: AppTheme.fontFamily,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF1A2B4C),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TestInfoTile extends StatefulWidget {
+  const _TestInfoTile({required this.assessment});
+
+  final AssessmentDetail assessment;
+
+  @override
+  State<_TestInfoTile> createState() => _TestInfoTileState();
+}
+
+class _TestInfoTileState extends State<_TestInfoTile> {
+  bool _open = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final assessment = widget.assessment;
+    final details = <String>[
+      assessment.typeLabel,
+      if (assessment.durationMinutes != null && assessment.durationMinutes! > 0)
+        '${assessment.durationMinutes} min',
+      if (assessment.totalMarks != null)
+        '${assessment.totalMarks == assessment.totalMarks!.roundToDouble() ? assessment.totalMarks!.round() : assessment.totalMarks} marks',
+      if ((assessment.questionsCount ?? assessment.questions.length) > 0)
+        '${assessment.questionsCount ?? assessment.questions.length} questions',
+    ];
+
+    return Material(
+      color: const Color(0xFFF8FAFD),
+      child: InkWell(
+        onTap: () => setState(() => _open = !_open),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  const Icon(
+                    Icons.info_outline_rounded,
+                    size: 18,
+                    color: Color(0xFF2F7BFF),
+                  ),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'Test Information',
+                      style: TextStyle(
+                        fontFamily: AppTheme.fontFamily,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                        color: Color(0xFF1A2B4C),
+                      ),
+                    ),
+                  ),
+                  Icon(
+                    _open
+                        ? Icons.keyboard_arrow_up_rounded
+                        : Icons.keyboard_arrow_down_rounded,
+                    color: const Color(0xFF7A8499),
+                  ),
+                ],
+              ),
+              if (_open) ...[
+                const SizedBox(height: 8),
+                Text(
+                  details.join(' · '),
+                  softWrap: true,
+                  style: const TextStyle(
+                    fontFamily: AppTheme.fontFamily,
+                    fontSize: 12,
+                    color: Color(0xFF7A8499),
+                    height: 1.4,
+                  ),
+                ),
+                if ((assessment.instructions ?? '').trim().isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    assessment.instructions!.trim(),
+                    softWrap: true,
+                    maxLines: 6,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontFamily: AppTheme.fontFamily,
+                      fontSize: 12,
+                      color: Color(0xFF5B6B7C),
+                      height: 1.4,
+                    ),
+                  ),
+                ] else if ((assessment.description ?? '').trim().isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    assessment.description!.trim(),
+                    softWrap: true,
+                    maxLines: 6,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontFamily: AppTheme.fontFamily,
+                      fontSize: 12,
+                      color: Color(0xFF5B6B7C),
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AttemptFooter extends StatelessWidget {
+  const _AttemptFooter({
     required this.canPrev,
     required this.canNext,
-    required this.marked,
     required this.autosave,
     required this.submitting,
     required this.onPrev,
     required this.onNext,
     required this.onClear,
-    required this.onMark,
     required this.onSubmit,
   });
 
   final bool canPrev;
   final bool canNext;
-  final bool marked;
   final CbtAutosaveState autosave;
   final bool submitting;
   final VoidCallback onPrev;
   final VoidCallback onNext;
   final VoidCallback onClear;
-  final VoidCallback onMark;
   final VoidCallback onSubmit;
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      elevation: 8,
-      color: AppColors.surface,
+      color: Colors.white,
+      elevation: 6,
+      shadowColor: Colors.black26,
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -613,60 +1069,87 @@ class _Footer extends StatelessWidget {
                 child: Text(
                   _autosaveLabel(autosave),
                   style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.muted,
+                    fontFamily: AppTheme.fontFamily,
+                    fontSize: 11,
+                    color: Color(0xFF7A8499),
                   ),
                 ),
               ),
               const SizedBox(height: 8),
-              Row(
-                children: [
-                  IconButton(
-                    tooltip: 'Previous',
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final stack = constraints.maxWidth < 340;
+                  final prev = OutlinedButton.icon(
                     onPressed: submitting || !canPrev ? null : onPrev,
-                    icon: const Icon(Icons.chevron_left_rounded),
-                  ),
-                  TextButton(
-                    onPressed: submitting ? null : onClear,
-                    child: const Text('Clear'),
-                  ),
-                  TextButton(
-                    onPressed: submitting ? null : onMark,
-                    child: Text(marked ? 'Unmark' : 'Mark'),
-                  ),
-                  const Spacer(),
-                  if (canNext)
-                    FilledButton(
-                      onPressed: submitting ? null : onNext,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.brand,
-                      ),
-                      child: const Text('Next'),
-                    )
-                  else
-                    FilledButton(
-                      onPressed: submitting ? null : onSubmit,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.brand,
-                      ),
-                      child: Text(submitting ? 'Submitting…' : 'Submit'),
-                    ),
-                ],
-              ),
-              if (canNext) ...[
-                const SizedBox(height: 6),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton(
-                    onPressed: submitting ? null : onSubmit,
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.ink,
-                      side: const BorderSide(color: AppColors.brandSoft),
+                      foregroundColor: const Color(0xFF2F7BFF),
+                      side: const BorderSide(color: Color(0xFF2F7BFF)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
-                    child: const Text('Submit test'),
-                  ),
-                ),
-              ],
+                    icon: const Icon(Icons.arrow_back_rounded, size: 16),
+                    label: const Text('Previous'),
+                  );
+                  final clear = OutlinedButton(
+                    onPressed: submitting ? null : onClear,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF2F7BFF),
+                      side: const BorderSide(color: Color(0xFF2F7BFF)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text('Clear Answer'),
+                  );
+                  final next = FilledButton.icon(
+                    onPressed: submitting
+                        ? null
+                        : (canNext ? onNext : onSubmit),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF2F7BFF),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    icon: Icon(
+                      canNext
+                          ? Icons.arrow_forward_rounded
+                          : Icons.send_rounded,
+                      size: 16,
+                    ),
+                    label: Text(canNext ? 'Next' : 'Submit'),
+                  );
+
+                  if (stack) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        clear,
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(child: prev),
+                            const SizedBox(width: 8),
+                            Expanded(child: next),
+                          ],
+                        ),
+                      ],
+                    );
+                  }
+
+                  return Row(
+                    children: [
+                      prev,
+                      const SizedBox(width: 8),
+                      clear,
+                      const Spacer(),
+                      next,
+                    ],
+                  );
+                },
+              ),
             ],
           ),
         ),

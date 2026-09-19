@@ -88,7 +88,13 @@ void main() {
     expect(find.text('Polity Basics · Polity'), findsOneWidget);
     expect(find.text('In progress'), findsOneWidget);
     expect(find.textContaining('We, the people of India.'), findsOneWidget);
-    expect(find.text('Resources'), findsOneWidget);
+    expect(find.text('Resources'), findsWidgets);
+
+    final resourcesTab = find.byKey(const ValueKey('lesson-tab-resources'));
+    await tester.ensureVisible(resourcesTab);
+    await tester.tap(resourcesTab);
+    await tester.pumpAndSettle();
+
     expect(find.text('Lecture notes'), findsOneWidget);
     expect(find.text('Overview video'), findsOneWidget);
     expect(find.text('Mark complete'), findsOneWidget);

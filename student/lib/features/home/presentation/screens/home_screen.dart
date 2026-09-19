@@ -1565,9 +1565,12 @@ class StudentShellState extends State<StudentShell> {
               label: 'Learn',
             ),
             const NavigationDestination(
-              icon: Icon(Icons.quiz_outlined),
-              selectedIcon: Icon(Icons.quiz_rounded),
-              label: 'Tests',
+              icon: Icon(Icons.track_changes_outlined),
+              selectedIcon: Icon(
+                Icons.track_changes_rounded,
+                color: Color(0xFF2F7BFF),
+              ),
+              label: 'Practice',
             ),
             NavigationDestination(
               icon: Badge(

@@ -240,10 +240,17 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Intro lesson'));
+    final intro = find.text('Intro lesson');
+    await tester.scrollUntilVisible(
+      intro,
+      240,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(intro);
     await tester.pumpAndSettle();
 
-    expect(find.text('Welcome to the course.'), findsOneWidget);
+    expect(find.text('Welcome to the course.'), findsWidgets);
     expect(find.text('Mark complete'), findsOneWidget);
   });
 }

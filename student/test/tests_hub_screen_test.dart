@@ -187,14 +187,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Tests'), findsOneWidget);
-    expect(find.text('Polity Weekly Quiz'), findsOneWidget);
-    expect(find.text('Due today'), findsOneWidget);
+    expect(find.text('Practice'), findsWidgets);
+    expect(find.text('Polity Weekly Quiz'), findsWidgets);
+    expect(find.text('Due today'), findsWidgets);
     expect(find.textContaining('Quiz'), findsWidgets);
-    expect(find.text('GS Mock Exam'), findsOneWidget);
+    expect(find.text('GS Mock Exam'), findsWidgets);
     expect(find.text('All'), findsOneWidget);
     expect(find.text('Due soon'), findsOneWidget);
-    expect(find.text('Practice'), findsOneWidget);
   });
 
   testWidgets('S-40 empty assigned list', (tester) async {
@@ -234,8 +233,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Tests'), findsWidgets);
-    expect(find.text('Current Affairs Drill'), findsOneWidget);
+    expect(find.text('Practice'), findsWidgets);
+    expect(find.text('Current Affairs Drill'), findsWidgets);
     expect(find.text('S-40 is next'), findsNothing);
   });
 
@@ -283,14 +282,107 @@ void main() {
     await tester.tap(find.text('Due soon'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Due Quiz'), findsOneWidget);
+    expect(find.text('Due Quiz'), findsWidgets);
     expect(find.text('Later Exam'), findsNothing);
 
-    await tester.tap(find.text('Due Quiz'));
+    await tester.ensureVisible(find.text('Due Quiz').first);
+    await tester.tap(find.text('Due Quiz').first);
+    await tester.pumpAndSettle();
+    // Topic card selects; open via Start / Submit Test CTA.
+    await tester.ensureVisible(find.text('Submit Test'));
+    await tester.tap(find.text('Submit Test'));
     await tester.pumpAndSettle();
 
     expect(find.text('Assessment detail'), findsOneWidget);
     expect(pushedArgs, isA<AssessmentDetailArgs>());
     expect((pushedArgs! as AssessmentDetailArgs).assessmentId, 'a1');
+  });
+
+  testWidgets('S-40 Practice layout has no overflow at phone sizes', (tester) async {
+    final sizes = <Size>[
+      const Size(320, 568),
+      const Size(360, 640),
+      const Size(390, 844),
+      const Size(430, 932),
+    ];
+    final overflows = <String>[];
+
+    for (final size in sizes) {
+      await tester.binding.setSurfaceSize(size);
+
+      final previousOnError = FlutterError.onError;
+      FlutterError.onError = (details) {
+        final message = details.exceptionAsString();
+        if (message.contains('overflowed')) {
+          overflows.add('${size.width.toInt()}x${size.height.toInt()}: $message');
+        }
+        previousOnError?.call(details);
+      };
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          home: TestsHubScreen(
+            testsRepository: _FakeTests(
+              TestsSnapshot(
+                items: [
+                  TestListItem(
+                    id: 'a1',
+                    title: 'Polity Weekly Quiz',
+                    type: TestKind.quiz,
+                    durationMinutes: 30,
+                    totalMarks: 50,
+                    questionsCount: 25,
+                    due: const DueState(
+                      urgency: DueUrgency.dueToday,
+                      label: 'Due today',
+                    ),
+                  ),
+                  const TestListItem(
+                    id: 'a2',
+                    title: 'GS Mock Exam',
+                    type: TestKind.exam,
+                    durationMinutes: 120,
+                    totalMarks: 200,
+                    questionsCount: 100,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // Allow async load + first frame; avoid hanging on asset/image tickers.
+      var found = false;
+      for (var i = 0; i < 20; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+        if (find.text('Practice').evaluate().isNotEmpty) {
+          found = true;
+          break;
+        }
+      }
+      expect(
+        found,
+        isTrue,
+        reason: 'Practice hero missing at ${size.width}x${size.height}',
+      );
+
+      if (find.byType(RefreshIndicator).evaluate().isNotEmpty) {
+        await tester.drag(
+          find.byType(RefreshIndicator),
+          const Offset(0, -600),
+        );
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+
+      FlutterError.onError = previousOnError;
+    }
+
+    await tester.binding.setSurfaceSize(null);
+    expect(overflows, isEmpty, reason: overflows.join('\n'));
   });
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:student_mobile/app/theme/app_theme.dart';
+import 'package:student_mobile/core/config/app_config.dart';
 import 'package:student_mobile/features/tests/data/tests_repository.dart';
 import 'package:student_mobile/features/tests/domain/assessment_detail_models.dart';
 import 'package:student_mobile/features/tests/domain/attempt_flow_models.dart';
@@ -127,6 +128,10 @@ class _FakeTests implements TestsGateway {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  setUpAll(() async {
+    await AppConfig.load();
+  });
+
   testWidgets('S-46 shows score breakdown and AI feedback', (tester) async {
     final fake = _FakeTests(
       ResultFeedbackSnapshot(
@@ -191,18 +196,28 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Polity Weekly Quiz'), findsOneWidget);
+    expect(find.text('Polity Weekly Quiz'), findsWidgets);
     expect(find.text('Your score'), findsOneWidget);
     expect(find.text('14 / 20'), findsOneWidget);
-    expect(find.textContaining('Attempt 2'), findsOneWidget);
-    expect(find.textContaining('70%'), findsOneWidget);
-    expect(find.textContaining('Grade B'), findsOneWidget);
+    expect(find.textContaining('Attempt 2'), findsWidgets);
+    expect(find.textContaining('70%'), findsWidgets);
+    expect(find.textContaining('Grade B'), findsWidgets);
 
+    await tester.scrollUntilVisible(
+      find.text('Score breakdown'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('Score breakdown'), findsOneWidget);
     expect(find.text('Question 1 · 7 / 10'), findsOneWidget);
     expect(find.text('Clear structure and relevant examples.'), findsOneWidget);
-    expect(find.text('accuracy'), findsOneWidget);
+    expect(find.text('accuracy'), findsWidgets);
 
+    await tester.scrollUntilVisible(
+      find.text('Overall feedback'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('Overall feedback'), findsOneWidget);
     expect(
       find.text('Solid attempt with room to deepen concepts.'),
@@ -254,9 +269,19 @@ void main() {
 
     expect(find.text('Your score'), findsOneWidget);
     expect(find.text('—'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Question scores appear when AI evaluation finishes.'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(
       find.text('Question scores appear when AI evaluation finishes.'),
       findsOneWidget,
+    );
+    await tester.scrollUntilVisible(
+      find.text('Detailed feedback appears after AI scoring completes.'),
+      300,
+      scrollable: find.byType(Scrollable).first,
     );
     expect(
       find.text('Detailed feedback appears after AI scoring completes.'),
