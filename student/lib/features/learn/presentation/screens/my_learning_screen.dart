@@ -344,7 +344,8 @@ class _MyLearningScreenState extends State<MyLearningScreen> {
           unreadCount: _unread,
           initials: initials,
           onSearch: () => showQuickSearchSheet(context),
-          onAlerts: () => _openTab(3),
+          onAlerts: () =>
+              Navigator.of(context).pushNamed(AppRoutes.alerts),
           onProfile: () => _openTab(4),
         ),
         SizedBox(height: short ? 12 : 16),

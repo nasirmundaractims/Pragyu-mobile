@@ -48,8 +48,35 @@ class CatalogListing {
   String get priceLabel {
     if (price == null) return 'Free / Contact';
     final amount = discountPrice ?? price;
-    final code = (currency ?? 'INR').toUpperCase();
-    return '$code $amount';
+    return _formatMoney(amount, currency);
+  }
+
+  /// Current / sale price for marketplace cards.
+  String get salePriceLabel {
+    if (price == null && discountPrice == null) return 'Free / Contact';
+    return _formatMoney(discountPrice ?? price, currency);
+  }
+
+  /// Original list price when a discount applies; otherwise null.
+  String? get listPriceLabel {
+    if (price == null || discountPrice == null) return null;
+    if (discountPrice! >= price!) return null;
+    return _formatMoney(price, currency);
+  }
+
+  bool get isTestSeriesListing {
+    final type = (listingType ?? '').toLowerCase();
+    return type.contains('test') || type.contains('exam');
+  }
+
+  bool get isCourseListing {
+    final type = (listingType ?? '').toLowerCase();
+    if (type.isEmpty) return true;
+    if (isTestSeriesListing) return false;
+    return type.contains('course') ||
+        type.contains('program') ||
+        type.contains('live') ||
+        type.contains('material');
   }
 
   String get metaLabel {
@@ -59,6 +86,16 @@ class CatalogListing {
       if (format != null && format!.isNotEmpty) format!,
     ];
     return parts.join(' · ');
+  }
+
+  static String _formatMoney(num? amount, String? currency) {
+    if (amount == null) return 'Free';
+    final code = (currency ?? 'INR').toUpperCase();
+    final formatted = amount % 1 == 0
+        ? amount.toInt().toString()
+        : amount.toStringAsFixed(2);
+    if (code == 'INR') return '₹$formatted';
+    return '$code $formatted';
   }
 
   factory CatalogListing.fromJson(Map<String, dynamic> json) {

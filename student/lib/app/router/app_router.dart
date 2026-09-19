@@ -33,6 +33,7 @@ import '../../features/catalog/domain/catalog_checkout_models.dart';
 import '../../features/catalog/presentation/screens/catalog_browse_screen.dart';
 import '../../features/catalog/presentation/screens/catalog_checkout_screen.dart';
 import '../../features/catalog/presentation/screens/catalog_detail_screen.dart';
+import '../../features/alerts/presentation/screens/alerts_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
 import '../../features/home/presentation/screens/today_detail_screen.dart';
 import '../../features/learn/domain/learn_models.dart';
@@ -93,6 +94,7 @@ abstract final class AppRoutes {
   static const resultFeedback = '/result-feedback';
   static const deepFeedback = '/deep-feedback';
   static const pastResults = '/past-results';
+  static const alerts = '/alerts';
   static const aiMentor = '/ai-mentor';
   static const weakTopics = '/weak-topics';
   static const studyPlanner = '/study-planner';
@@ -299,6 +301,11 @@ Route<dynamic> onGenerateRoute(RouteSettings settings) {
       return MaterialPageRoute<void>(
         settings: settings,
         builder: (_) => const PastResultsScreen(),
+      );
+    case AppRoutes.alerts:
+      return MaterialPageRoute<void>(
+        settings: settings,
+        builder: (_) => const AlertsScreen(),
       );
     case AppRoutes.aiMentor:
       return MaterialPageRoute<void>(

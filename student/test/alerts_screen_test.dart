@@ -8,7 +8,133 @@ import 'package:student_mobile/features/home/data/home_repository.dart';
 import 'package:student_mobile/features/home/domain/home_models.dart';
 import 'package:student_mobile/features/home/presentation/screens/home_screen.dart';
 import 'package:student_mobile/features/auth/domain/auth_models.dart';
+import 'package:student_mobile/features/tests/data/tests_repository.dart';
+import 'package:student_mobile/features/tests/domain/assessment_detail_models.dart';
+import 'package:student_mobile/features/tests/domain/attempt_flow_models.dart';
+import 'package:student_mobile/features/tests/domain/cbt_player_models.dart';
+import 'package:student_mobile/features/tests/domain/deep_feedback_models.dart';
+import 'package:student_mobile/features/tests/domain/past_results_models.dart';
+import 'package:student_mobile/features/tests/domain/result_feedback_models.dart';
 import 'package:student_mobile/features/tests/domain/submission_status_models.dart';
+import 'package:student_mobile/features/tests/domain/tests_models.dart';
+
+class _FakePastResults implements TestsGateway {
+  _FakePastResults(this.snapshot);
+
+  final PastResultsSnapshot snapshot;
+
+  @override
+  Future<PastResultsSnapshot> loadPastResults() async => snapshot;
+
+  @override
+  Future<TestsSnapshot> loadTests() async => const TestsSnapshot();
+
+  @override
+  Future<AssessmentDetailSnapshot> loadAssessmentDetail(
+    AssessmentDetailArgs args,
+  ) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<AssessmentAttemptSession> startAttempt(String assessmentId) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<SubmissionSummary> finalizeSubmission(String submissionId) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<AttemptPlayerSnapshot> loadAttemptPlayer(
+    AttemptPlayerArgs args,
+  ) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> updateSubmissionMetadata(
+    String submissionId,
+    Map<String, dynamic> metadata,
+  ) async {}
+
+  @override
+  Future<SubmissionStatusPayload> getSubmissionStatus(
+    String submissionId,
+  ) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<ResultFeedbackSnapshot> loadResultFeedback(
+    ResultFeedbackArgs args,
+  ) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<DeepFeedbackSnapshot> loadDeepFeedback(DeepFeedbackArgs args) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<FeedbackSuggestionItem>> listSuggestions(
+    String evaluationId,
+  ) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<FeedbackSuggestionItem>> generateSuggestions(
+    String feedbackId,
+  ) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<RewriteRequestSummary> requestRewrite(
+    String evaluationId,
+    RewriteOptions options,
+  ) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<RewriteRequestSummary?> getLatestRewrite(String evaluationId) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<RewriteRequestSummary> getRewriteRequest(
+    String rewriteRequestId,
+  ) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<RewriteResultPayload?> getRewriteResult(
+    String rewriteRequestId,
+  ) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<RewriteRequestSummary> processRewrite(String rewriteRequestId) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<AnswerImageAttachment> uploadAnswerImage({
+    required String submissionId,
+    required List<int> bytes,
+    required String fileName,
+    required String mimeType,
+    required int pageNumber,
+  }) async {
+    throw UnimplementedError();
+  }
+}
 
 class _FakeAlerts implements AlertsGateway {
   _FakeAlerts(this.snapshot);
@@ -162,8 +288,23 @@ void main() {
     expect(find.text("You're all caught up"), findsOneWidget);
   });
 
-  testWidgets('S-50 Alerts tab shows inbox in shell', (tester) async {
-    final fake = _FakeAlerts(sampleSnapshot());
+  testWidgets('AI Eval tab shows hub in shell', (tester) async {
+    final fakeTests = _FakePastResults(
+      PastResultsSnapshot(
+        submissions: const [
+          SubmissionSummary(
+            id: 'sub1',
+            assessmentId: 'a1',
+            attemptNumber: 1,
+            status: 'evaluated',
+            totalScore: 14,
+            maxScore: 20,
+            percentage: 70,
+          ),
+        ],
+        assessmentTitles: const {'a1': 'Polity Weekly Quiz'},
+      ),
+    );
 
     await tester.pumpWidget(
       MaterialApp(
@@ -171,15 +312,47 @@ void main() {
         home: StudentShell(
           initialIndex: 3,
           homeRepository: _FakeHome(),
-          alertsRepository: fake,
+          testsRepository: fakeTests,
         ),
       ),
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Alerts'), findsWidgets);
+    expect(find.text('AI Eval'), findsWidgets);
+    expect(find.text('AI Evaluation'), findsOneWidget);
+    expect(find.text('Polity Weekly Quiz'), findsOneWidget);
+    expect(find.text('Evaluation complete'), findsNothing);
+  });
+
+  testWidgets('S-50 Alerts opens via named route', (tester) async {
+    final fake = _FakeAlerts(sampleSnapshot());
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: TextButton(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => AlertsScreen(alertsRepository: fake),
+                  ),
+                );
+              },
+              child: const Text('Open alerts'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Open alerts'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Alerts'), findsOneWidget);
     expect(find.text('Evaluation complete'), findsOneWidget);
-    expect(find.text('S-50 is next'), findsNothing);
   });
 
   testWidgets('S-51 tap opens linked result screen', (tester) async {

@@ -5,7 +5,6 @@ import 'package:student_mobile/app/router/app_router.dart';
 import 'package:student_mobile/app/theme/app_theme.dart';
 import 'package:student_mobile/app/widgets/pragyu_logo.dart';
 import 'package:student_mobile/features/alerts/data/alerts_repository.dart';
-import 'package:student_mobile/features/alerts/presentation/screens/alerts_screen.dart';
 import 'package:student_mobile/features/home/data/home_repository.dart';
 import 'package:student_mobile/features/home/domain/greeting.dart';
 import 'package:student_mobile/features/home/domain/home_models.dart';
@@ -16,6 +15,7 @@ import 'package:student_mobile/features/me/data/me_repository.dart';
 import 'package:student_mobile/features/me/presentation/screens/me_screen.dart';
 import 'package:student_mobile/features/search/presentation/widgets/quick_search_sheet.dart';
 import 'package:student_mobile/features/tests/data/tests_repository.dart';
+import 'package:student_mobile/features/tests/presentation/screens/ai_evaluation_hub_screen.dart';
 import 'package:student_mobile/features/tests/presentation/screens/tests_hub_screen.dart';
 
 /// S-10 Home — dashboard matching Pragyu home design.
@@ -159,7 +159,8 @@ class _HomeScreenState extends State<HomeScreen> {
             initials: initials,
             avatarUrl: snapshot.avatarUrl,
             onSearch: () => showQuickSearchSheet(context),
-            onAlerts: () => _openTab(3),
+            onAlerts: () =>
+                Navigator.of(context).pushNamed(AppRoutes.alerts),
             onProfile: () => _openTab(4),
           ),
           SizedBox(height: short ? 12 : 16),
@@ -1467,15 +1468,11 @@ class StudentShell extends StatefulWidget {
 class StudentShellState extends State<StudentShell> {
   late int _index = widget.initialIndex;
   final Set<int> _mountedTabs = <int>{};
-  late final AlertsGateway _alerts =
-      widget.alertsRepository ?? AlertsRepository();
-  int _alertsUnread = 0;
 
   @override
   void initState() {
     super.initState();
     _mountedTabs.add(_index);
-    _refreshAlertsBadge();
   }
 
   void goToTab(int index) {
@@ -1484,22 +1481,6 @@ class StudentShellState extends State<StudentShell> {
       _index = index;
       _mountedTabs.add(index);
     });
-    if (index == 3) {
-      _refreshAlertsBadge();
-    }
-  }
-
-  void setAlertsUnread(int count) {
-    if (_alertsUnread == count) return;
-    setState(() => _alertsUnread = count < 0 ? 0 : count);
-  }
-
-  Future<void> _refreshAlertsBadge() async {
-    try {
-      final count = await _alerts.unreadCount();
-      if (!mounted) return;
-      setAlertsUnread(count);
-    } catch (_) {}
   }
 
   Widget _tab(int index) {
@@ -1517,9 +1498,8 @@ class StudentShellState extends State<StudentShell> {
       case 2:
         return TestsHubScreen(testsRepository: widget.testsRepository);
       case 3:
-        return AlertsScreen(
-          alertsRepository: widget.alertsRepository ?? _alerts,
-          onUnreadChanged: setAlertsUnread,
+        return AiEvaluationHubScreen(
+          testsRepository: widget.testsRepository,
         );
       case 4:
         return MeScreen(meRepository: widget.meRepository);
@@ -1531,8 +1511,6 @@ class StudentShellState extends State<StudentShell> {
   @override
   Widget build(BuildContext context) {
     final pages = List<Widget>.generate(5, _tab);
-    final unread = _alertsUnread < 0 ? 0 : _alertsUnread;
-    final badgeLabel = unread > 99 ? '99+' : '$unread';
 
     return PopScope(
       canPop: false,
@@ -1552,19 +1530,19 @@ class StudentShellState extends State<StudentShell> {
           backgroundColor: Colors.white,
           indicatorColor: const Color(0xFFE8F0FF),
           labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-          destinations: [
-            const NavigationDestination(
+          destinations: const [
+            NavigationDestination(
               icon: Icon(Icons.home_outlined),
               selectedIcon:
                   Icon(Icons.home_rounded, color: Color(0xFF2F7BFF)),
               label: 'Home',
             ),
-            const NavigationDestination(
+            NavigationDestination(
               icon: Icon(Icons.menu_book_outlined),
               selectedIcon: Icon(Icons.menu_book_rounded),
               label: 'Learn',
             ),
-            const NavigationDestination(
+            NavigationDestination(
               icon: Icon(Icons.track_changes_outlined),
               selectedIcon: Icon(
                 Icons.track_changes_rounded,
@@ -1573,19 +1551,14 @@ class StudentShellState extends State<StudentShell> {
               label: 'Practice',
             ),
             NavigationDestination(
-              icon: Badge(
-                isLabelVisible: unread > 0,
-                label: Text(badgeLabel),
-                child: const Icon(Icons.notifications_none_rounded),
+              icon: Icon(Icons.auto_awesome_outlined),
+              selectedIcon: Icon(
+                Icons.auto_awesome_rounded,
+                color: Color(0xFF2F7BFF),
               ),
-              selectedIcon: Badge(
-                isLabelVisible: unread > 0,
-                label: Text(badgeLabel),
-                child: const Icon(Icons.notifications_rounded),
-              ),
-              label: 'Alerts',
+              label: 'AI Eval',
             ),
-            const NavigationDestination(
+            NavigationDestination(
               icon: Icon(Icons.person_outline_rounded),
               selectedIcon: Icon(Icons.person_rounded),
               label: 'Me',

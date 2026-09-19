@@ -266,7 +266,8 @@ class _TestsHubScreenState extends State<TestsHubScreen> {
           unreadCount: _unread,
           initials: initials,
           onSearch: () => showQuickSearchSheet(context),
-          onAlerts: () => _openTab(3),
+          onAlerts: () =>
+              Navigator.of(context).pushNamed(AppRoutes.alerts),
           onProfile: () => _openTab(4),
           onHistory: () =>
               Navigator.of(context).pushNamed(AppRoutes.pastResults),
