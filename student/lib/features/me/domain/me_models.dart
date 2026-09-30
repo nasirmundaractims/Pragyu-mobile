@@ -55,6 +55,7 @@ class MeSnapshot {
   const MeSnapshot({
     required this.user,
     this.organizationName,
+    this.organizationType,
     this.studentProfile,
     this.userProfile,
     this.emailNotificationsEnabled = true,
@@ -63,10 +64,23 @@ class MeSnapshot {
 
   final AuthUser user;
   final String? organizationName;
+  final String? organizationType;
   final StudentProfileSummary? studentProfile;
   final UserProfileSummary? userProfile;
   final bool emailNotificationsEnabled;
   final double dailyStudyHours;
+
+  bool get isIndividualWorkspace => organizationType == 'individual';
+
+  String get contextTitle {
+    if (isIndividualWorkspace) return 'My Learning';
+    final name = organizationName?.trim();
+    if (name != null && name.isNotEmpty) return name;
+    return 'Organisation';
+  }
+
+  String get contextSubtitle =>
+      isIndividualWorkspace ? 'Individual' : 'Student';
 
   String get displayName {
     final fromProfile = userProfile?.displayName?.trim();
@@ -82,6 +96,7 @@ class MeSnapshot {
     return MeSnapshot(
       user: user,
       organizationName: organizationName,
+      organizationType: organizationType,
       studentProfile: studentProfile,
       userProfile: userProfile ?? this.userProfile,
       emailNotificationsEnabled:

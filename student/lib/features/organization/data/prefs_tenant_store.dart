@@ -45,6 +45,12 @@ class PrefsTenantStore implements TenantStore {
   }
 
   @override
+  Future<String?> readActiveOrganizationType() async {
+    final prefs = await _store();
+    return prefs.getString(_typeKey);
+  }
+
+  @override
   Future<void> clear() async {
     final prefs = await _store();
     await prefs.remove(_idKey);

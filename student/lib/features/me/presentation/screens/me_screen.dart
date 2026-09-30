@@ -465,7 +465,8 @@ class _MeScreenState extends State<MeScreen> {
           name: snapshot.displayName,
           email: snapshot.user.email,
           phone: snapshot.userProfile?.phone,
-          organizationName: snapshot.organizationName,
+          organizationName: snapshot.contextTitle,
+          contextLabel: snapshot.contextSubtitle,
           codeStatus: codeStatus,
           initials: _initials,
           avatarUrl: snapshot.userProfile?.avatarUrl,
@@ -680,11 +681,17 @@ class _MeScreenState extends State<MeScreen> {
               icon: Icons.apartment_outlined,
               tint: const Color(0xFF7B61FF),
               soft: const Color(0xFFF0EBFF),
-              title: 'Switch institute',
-              subtitle: snapshot.organizationName?.isNotEmpty == true
-                  ? snapshot.organizationName!
-                  : 'Choose another academy',
-              onTap: _switchInstitute,
+              title: snapshot.isIndividualWorkspace
+                  ? 'Join organisation'
+                  : 'Switch organisation',
+              subtitle: snapshot.isIndividualWorkspace
+                  ? 'Enter an organisation code'
+                  : (snapshot.organizationName?.isNotEmpty == true
+                      ? snapshot.organizationName!
+                      : 'Choose another academy'),
+              onTap: snapshot.isIndividualWorkspace
+                  ? () => Navigator.of(context).pushNamed(AppRoutes.orgCodeEntry)
+                  : _switchInstitute,
             ),
             _MenuTile(
               icon: Icons.star_outline_rounded,
@@ -809,6 +816,7 @@ class _ProfileBanner extends StatelessWidget {
     required this.onEdit,
     this.phone,
     this.organizationName,
+    this.contextLabel,
     this.codeStatus = '',
     this.avatarUrl,
   });
@@ -817,6 +825,7 @@ class _ProfileBanner extends StatelessWidget {
   final String email;
   final String? phone;
   final String? organizationName;
+  final String? contextLabel;
   final String codeStatus;
   final String initials;
   final String? avatarUrl;
@@ -924,6 +933,19 @@ class _ProfileBanner extends StatelessWidget {
                           fontWeight: FontWeight.w600,
                         ),
                       ),
+                      if (contextLabel != null &&
+                          contextLabel!.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          contextLabel!,
+                          softWrap: true,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: _MeScreenState._blue,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
                     ],
                     if (codeStatus.isNotEmpty) ...[
                       const SizedBox(height: 2),

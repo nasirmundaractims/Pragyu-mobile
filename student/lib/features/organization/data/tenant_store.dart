@@ -7,5 +7,6 @@ abstract class TenantStore {
 
   Future<String?> readActiveOrganizationId();
   Future<String?> readActiveOrganizationName();
+  Future<String?> readActiveOrganizationType();
   Future<void> clear();
 }

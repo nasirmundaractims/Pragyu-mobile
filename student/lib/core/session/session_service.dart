@@ -65,6 +65,23 @@ class SessionService {
     return access != null && access.isNotEmpty;
   }
 
+  /// Cached auth user from the last login (available before org selection).
+  Future<AuthUser?> readCachedUser() async {
+    final raw = await _tokens.readUserJson();
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map) {
+        return AuthUser.fromJson(
+          decoded.map((key, value) => MapEntry(key.toString(), value)),
+        );
+      }
+    } catch (_) {
+      return null;
+    }
+    return null;
+  }
+
   Future<void> clear() async {
     await _tokens.clear();
   }

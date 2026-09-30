@@ -250,7 +250,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       switch (result) {
         case RegisterSuccess():
-          AuthNavigation.goAndClear(context, AppRoutes.orgPicker);
+          await AuthNavigation.goToResolvedWorkspace(context);
         case RegisterEmailVerificationRequired(:final message, :final email):
           await showDialog<void>(
             context: context,

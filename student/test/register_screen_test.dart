@@ -3,12 +3,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:student_mobile/app/router/app_router.dart';
 import 'package:student_mobile/app/theme/app_theme.dart';
 import 'package:student_mobile/core/config/app_config.dart';
+import 'package:student_mobile/core/session/auth_navigation.dart';
 import 'package:student_mobile/features/auth/data/auth_repository.dart';
 import 'package:student_mobile/features/auth/domain/auth_models.dart';
 import 'package:student_mobile/features/auth/presentation/screens/register_screen.dart';
-import 'package:student_mobile/features/organization/data/organization_repository.dart';
 import 'package:student_mobile/features/organization/domain/organization_summary.dart';
 import 'package:student_mobile/features/organization/presentation/screens/org_picker_screen.dart';
+
+import 'support/fake_organization_gateway.dart';
 
 class _FakeAuth implements AuthGateway {
   _FakeAuth({
@@ -110,23 +112,22 @@ class _FakeAuth implements AuthGateway {
   Future<void> clearSession() async {}
 }
 
-class _FakeOrgs implements OrganizationGateway {
-  @override
-  Future<List<OrganizationSummary>> listOrganizations() async {
-    return const [
-      OrganizationSummary(
-        id: 'org-1',
-        name: 'Acme Institute',
-        type: 'institute',
-      ),
-    ];
-  }
-
-  @override
-  Future<void> selectOrganization(OrganizationSummary organization) async {}
-
-  @override
-  Future<String?> readActiveOrganizationId() async => null;
+class _FakeOrgs extends FakeOrganizationGateway {
+  _FakeOrgs()
+      : super(
+          organizations: const [
+            OrganizationSummary(
+              id: 'org-1',
+              name: 'Acme Institute',
+              type: 'institute',
+            ),
+            OrganizationSummary(
+              id: 'org-2',
+              name: 'Beta College',
+              type: 'institute',
+            ),
+          ],
+        );
 }
 
 Route<dynamic> _testRoutes(RouteSettings settings) {
@@ -147,6 +148,14 @@ void main() {
 
   setUpAll(() async {
     await AppConfig.load();
+  });
+
+  setUp(() {
+    AuthNavigation.organizationGatewayOverride = _FakeOrgs();
+  });
+
+  tearDown(() {
+    AuthNavigation.organizationGatewayOverride = null;
   });
 
   testWidgets('S-04 register validates required fields', (tester) async {

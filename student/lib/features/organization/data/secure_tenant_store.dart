@@ -34,6 +34,9 @@ class SecureTenantStore implements TenantStore {
   Future<String?> readActiveOrganizationName() => _storage.read(key: _nameKey);
 
   @override
+  Future<String?> readActiveOrganizationType() => _storage.read(key: _typeKey);
+
+  @override
   Future<void> clear() async {
     await _storage.delete(key: _idKey);
     await _storage.delete(key: _nameKey);

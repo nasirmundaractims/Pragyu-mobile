@@ -97,7 +97,7 @@ class _SignInScreenState extends State<SignInScreen> {
 
       switch (result) {
         case LoginSuccess():
-          AuthNavigation.goAndClear(context, AppRoutes.orgPicker);
+          await AuthNavigation.goToResolvedWorkspace(context);
         case LoginMfaRequired(:final challengeToken):
           setState(() {
             _mfaChallengeToken = challengeToken;
@@ -170,7 +170,7 @@ class _SignInScreenState extends State<SignInScreen> {
         code: code,
       );
       if (!mounted) return;
-      AuthNavigation.goAndClear(context, AppRoutes.orgPicker);
+      await AuthNavigation.goToResolvedWorkspace(context);
     } on ApiException catch (error) {
       if (!mounted) return;
       setState(() {

@@ -164,28 +164,35 @@ class _OrgPickerScreenState extends State<OrgPickerScreen> {
     }
 
     if (_items.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.all(24),
+      return Padding(
+        padding: const EdgeInsets.all(24),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              'No institute yet',
+            const Text(
+              'Set up your learning space',
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.w700,
                 color: AppColors.ink,
               ),
             ),
-            SizedBox(height: 10),
-            Text(
-              'Your account is signed in, but it is not linked to an institute '
-              'or learning workspace yet. Ask your institute admin to invite you, '
-              'then try again.',
+            const SizedBox(height: 10),
+            const Text(
+              'Join an organisation with a code, or continue as an Individual '
+              'learner on Pragyu.',
               style: TextStyle(
                 fontSize: 15,
                 height: 1.45,
                 color: AppColors.muted,
+              ),
+            ),
+            const SizedBox(height: 24),
+            PrimaryButton(
+              label: 'Continue',
+              onPressed: () => AuthNavigation.goAndClear(
+                context,
+                AppRoutes.orgAssociation,
               ),
             ),
           ],

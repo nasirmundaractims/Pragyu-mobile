@@ -6,35 +6,10 @@ import 'package:student_mobile/core/config/app_config.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/features/onboarding/data/memory_onboarding_store.dart';
 import 'package:student_mobile/features/onboarding/presentation/screens/onboarding_screen.dart';
-import 'package:student_mobile/features/organization/data/organization_repository.dart';
 import 'package:student_mobile/features/organization/domain/organization_summary.dart';
 import 'package:student_mobile/features/organization/presentation/screens/org_picker_screen.dart';
 
-class _FakeOrgs implements OrganizationGateway {
-  _FakeOrgs({
-    this.organizations = const [],
-    this.listError,
-  });
-
-  List<OrganizationSummary> organizations;
-  Object? listError;
-  OrganizationSummary? selected;
-
-  @override
-  Future<List<OrganizationSummary>> listOrganizations() async {
-    final error = listError;
-    if (error != null) throw error;
-    return organizations;
-  }
-
-  @override
-  Future<void> selectOrganization(OrganizationSummary organization) async {
-    selected = organization;
-  }
-
-  @override
-  Future<String?> readActiveOrganizationId() async => selected?.id;
-}
+import 'support/fake_organization_gateway.dart';
 
 Route<dynamic> _routes(RouteSettings settings) {
   if (settings.name == AppRoutes.onboarding) {
@@ -43,6 +18,14 @@ Route<dynamic> _routes(RouteSettings settings) {
       builder: (_) => OnboardingScreen(
         onboardingStore: MemoryOnboardingStore(),
         forceShow: true,
+      ),
+    );
+  }
+  if (settings.name == AppRoutes.orgAssociation) {
+    return MaterialPageRoute<void>(
+      settings: settings,
+      builder: (_) => const Scaffold(
+        body: Center(child: Text('Are you associated with an organisation?')),
       ),
     );
   }
@@ -60,19 +43,20 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light(),
+        onGenerateRoute: _routes,
         home: OrgPickerScreen(
-          organizationRepository: _FakeOrgs(),
+          organizationRepository: FakeOrganizationGateway(),
           autoSelectSingle: false,
         ),
       ),
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('No institute yet'), findsOneWidget);
+    expect(find.text('Set up your learning space'), findsOneWidget);
   });
 
   testWidgets('S-05 lists institutes for selection', (tester) async {
-    final fake = _FakeOrgs(
+    final fake = FakeOrganizationGateway(
       organizations: const [
         OrganizationSummary(
           id: 'org-1',
@@ -113,7 +97,7 @@ void main() {
   });
 
   testWidgets('S-05 auto-selects single institute', (tester) async {
-    final fake = _FakeOrgs(
+    final fake = FakeOrganizationGateway(
       organizations: const [
         OrganizationSummary(
           id: 'only-org',
@@ -141,18 +125,18 @@ void main() {
       MaterialApp(
         theme: AppTheme.light(),
         home: OrgPickerScreen(
-          organizationRepository: _FakeOrgs(
+          organizationRepository: FakeOrganizationGateway(
             listError: ApiException(
               message: 'Unauthorized',
               statusCode: 401,
             ),
           ),
+          autoSelectSingle: false,
         ),
       ),
     );
     await tester.pumpAndSettle();
 
     expect(find.text('Unauthorized'), findsOneWidget);
-    expect(find.text('Try again'), findsOneWidget);
   });
 }

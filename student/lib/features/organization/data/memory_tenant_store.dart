@@ -23,6 +23,9 @@ class MemoryTenantStore implements TenantStore {
   Future<String?> readActiveOrganizationName() async => name;
 
   @override
+  Future<String?> readActiveOrganizationType() async => type;
+
+  @override
   Future<void> clear() async {
     id = null;
     name = null;

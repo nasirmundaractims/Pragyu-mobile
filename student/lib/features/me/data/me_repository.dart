@@ -53,6 +53,7 @@ class MeRepository implements MeGateway {
         AuthUser(id: '', email: 'Signed in');
 
     final orgName = await _tenant.readActiveOrganizationName();
+    final orgType = await _tenant.readActiveOrganizationType();
     final profileFuture = _loadStudentProfile(session);
     final userProfileFuture = _loadUserProfile(session);
 
@@ -78,6 +79,7 @@ class MeRepository implements MeGateway {
             )
           : user,
       organizationName: orgName,
+      organizationType: orgType,
       studentProfile: student,
       userProfile: userProfile,
       emailNotificationsEnabled: emailNotifications,

@@ -27,11 +27,15 @@ class OrganizationSummary {
   String get typeLabel {
     switch (type) {
       case 'institute':
-        return 'Institute';
+        return 'Organisation';
       case 'individual':
         return 'Individual';
       default:
-        return type ?? 'Workspace';
+        return type ?? 'Learning';
     }
   }
+
+  bool get isIndividual => type == 'individual';
+
+  bool get isOrganisation => !isIndividual;
 }

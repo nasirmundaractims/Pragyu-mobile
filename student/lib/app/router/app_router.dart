@@ -48,8 +48,10 @@ import '../../features/lectures/presentation/screens/recorded_lecture_screen.dar
 import '../../features/materials/domain/material_models.dart';
 import '../../features/materials/presentation/screens/material_viewer_screen.dart';
 import '../../features/materials/presentation/screens/study_materials_list_screen.dart';
-import '../../features/onboarding/presentation/screens/onboarding_screen.dart';
+import '../../features/organization/presentation/screens/org_association_screen.dart';
+import '../../features/organization/presentation/screens/org_code_entry_screen.dart';
 import '../../features/organization/presentation/screens/org_picker_screen.dart';
+import '../../features/onboarding/presentation/screens/onboarding_screen.dart';
 import '../../features/splash/presentation/screens/splash_screen.dart';
 import '../../features/tests/domain/ai_answer_upload_models.dart';
 import '../../features/tests/domain/assessment_detail_models.dart';
@@ -75,6 +77,8 @@ abstract final class AppRoutes {
   static const resetPassword = '/reset-password';
   static const verifyEmail = '/verify-email';
   static const orgPicker = '/org-picker';
+  static const orgAssociation = '/org-association';
+  static const orgCodeEntry = '/org-code-entry';
   static const onboarding = '/onboarding';
   static const home = '/home';
   static const todayDetail = '/today';
@@ -163,6 +167,16 @@ Route<dynamic> onGenerateRoute(RouteSettings settings) {
       return MaterialPageRoute<void>(
         settings: settings,
         builder: (_) => const OrgPickerScreen(),
+      );
+    case AppRoutes.orgAssociation:
+      return MaterialPageRoute<void>(
+        settings: settings,
+        builder: (_) => const OrgAssociationScreen(),
+      );
+    case AppRoutes.orgCodeEntry:
+      return MaterialPageRoute<void>(
+        settings: settings,
+        builder: (_) => const OrgCodeEntryScreen(),
       );
     case AppRoutes.onboarding:
       return MaterialPageRoute<void>(
