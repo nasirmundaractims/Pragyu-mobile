@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import 'package:student_mobile/app/theme/app_colors.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
+import 'package:student_mobile/features/payments/presentation/credit_exhaustion.dart';
 import 'package:student_mobile/features/tests/data/tests_repository.dart';
 import 'package:student_mobile/features/tests/domain/deep_feedback_models.dart';
 
@@ -141,6 +142,11 @@ class _DeepFeedbackScreenState extends State<DeepFeedbackScreen> {
             ? error.message
             : 'Unable to request AI rewrite.';
       });
+      showCreditAwareError(
+        context,
+        error,
+        fallback: 'Unable to request AI rewrite.',
+      );
     }
   }
 
@@ -167,6 +173,11 @@ class _DeepFeedbackScreenState extends State<DeepFeedbackScreen> {
             ? error.message
             : 'Unable to retry rewrite.';
       });
+      showCreditAwareError(
+        context,
+        error,
+        fallback: 'Unable to retry rewrite.',
+      );
     }
   }
 

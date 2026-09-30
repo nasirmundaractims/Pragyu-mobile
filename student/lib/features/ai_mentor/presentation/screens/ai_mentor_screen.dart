@@ -10,6 +10,7 @@ import 'package:student_mobile/core/session/session_service.dart';
 import 'package:student_mobile/features/ai_mentor/data/ai_mentor_repository.dart';
 import 'package:student_mobile/features/ai_mentor/domain/ai_mentor_models.dart';
 import 'package:student_mobile/features/auth/domain/auth_models.dart';
+import 'package:student_mobile/features/payments/presentation/credit_exhaustion.dart';
 
 /// Enables mouse / trackpad drag for horizontal strips (needed on Flutter web).
 class _MentorDragScrollBehavior extends MaterialScrollBehavior {
@@ -220,15 +221,10 @@ class _AiMentorScreenState extends State<AiMentorScreen> {
     } catch (error) {
       if (!mounted) return;
       setState(() => _sending = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            error is ApiException
-                ? error.message
-                : 'Unable to open that chat.',
-          ),
-          behavior: SnackBarBehavior.floating,
-        ),
+      showCreditAwareError(
+        context,
+        error,
+        fallback: 'Unable to open that chat.',
       );
     }
   }
@@ -306,11 +302,10 @@ class _AiMentorScreenState extends State<AiMentorScreen> {
             ? error.message
             : 'Unable to send message.';
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_error!),
-          behavior: SnackBarBehavior.floating,
-        ),
+      showCreditAwareError(
+        context,
+        error,
+        fallback: 'Unable to send message.',
       );
     }
   }
@@ -729,7 +724,7 @@ class _MentorHeader extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    PragyuLogo(height: 30, semanticsLabel: 'Pragyu'),
+                    PragyuLogo(height: PragyuLogo.headerHeight, semanticsLabel: 'Pragyu'),
                     SizedBox(height: 2),
                     Text(
                       'Learn • Practice • Grow',

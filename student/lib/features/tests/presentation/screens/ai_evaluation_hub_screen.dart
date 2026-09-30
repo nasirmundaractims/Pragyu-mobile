@@ -7,12 +7,14 @@ import 'package:student_mobile/app/widgets/pragyu_logo.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/features/home/presentation/screens/home_screen.dart';
 import 'package:student_mobile/features/tests/data/tests_repository.dart';
+import 'package:student_mobile/features/tests/domain/ai_answer_upload_models.dart';
+import 'package:student_mobile/features/tests/domain/ai_evaluation_hub_models.dart';
 import 'package:student_mobile/features/tests/domain/assessment_detail_models.dart';
 import 'package:student_mobile/features/tests/domain/past_results_models.dart';
-import 'package:student_mobile/features/tests/domain/result_feedback_models.dart';
 import 'package:student_mobile/features/tests/domain/submission_status_models.dart';
+import 'package:student_mobile/features/tests/domain/tests_models.dart';
 
-/// Bottom-nav hub for AI Evaluation — lists evaluated attempts and opens S-46.
+/// Bottom-nav AI Evaluation hub — question-wise short/long answers by subject.
 class AiEvaluationHubScreen extends StatefulWidget {
   const AiEvaluationHubScreen({
     super.key,
@@ -25,6 +27,8 @@ class AiEvaluationHubScreen extends StatefulWidget {
   State<AiEvaluationHubScreen> createState() => _AiEvaluationHubScreenState();
 }
 
+enum _KindFilter { all, shortAnswer, longAnswer }
+
 class _AiEvaluationHubScreenState extends State<AiEvaluationHubScreen> {
   static const _ink = Color(0xFF1A2B4C);
   static const _muted = Color(0xFF7A8499);
@@ -35,13 +39,39 @@ class _AiEvaluationHubScreenState extends State<AiEvaluationHubScreen> {
       widget.testsRepository ?? TestsRepository();
 
   bool _loading = true;
+  bool _opening = false;
   String? _error;
-  PastResultsSnapshot? _snapshot;
   String _query = '';
+  _KindFilter _kindFilter = _KindFilter.all;
+  String? _subjectFilter;
+  List<AiEvalQuestionItem> _items = const <AiEvalQuestionItem>[];
 
   @override
   void initState() {
     super.initState();
+    _items = const <AiEvalQuestionItem>[];
+    StudentShell.aiEvalTabTicks.addListener(_onTabSelected);
+    _load();
+  }
+
+  @override
+  void reassemble() {
+    super.reassemble();
+    // Web hot reload can leave State fields undefined after field reshuffles.
+    final dynamic raw = _items;
+    if (raw is! List<AiEvalQuestionItem>) {
+      _items = const <AiEvalQuestionItem>[];
+    }
+  }
+
+  @override
+  void dispose() {
+    StudentShell.aiEvalTabTicks.removeListener(_onTabSelected);
+    super.dispose();
+  }
+
+  void _onTabSelected() {
+    if (!mounted || _loading) return;
     _load();
   }
 
@@ -51,11 +81,67 @@ class _AiEvaluationHubScreenState extends State<AiEvaluationHubScreen> {
       _error = null;
     });
     try {
-      final snapshot = await _tests.loadPastResults();
+      final resultsFuture = _tests.loadPastResults();
+      final testsFuture = _tests.loadTests();
+      final snapshot = await resultsFuture;
+      final tests = await testsFuture;
       if (!mounted) return;
+
+      final aiTests = tests.items
+          .where(_isAiEvaluationTest)
+          .toList(growable: false);
+
+      final details = <AssessmentDetailSnapshot>[];
+      for (final test in aiTests) {
+        try {
+          details.add(
+            await _tests.loadAssessmentDetail(
+              AssessmentDetailArgs(assessmentId: test.id, title: test.title),
+            ),
+          );
+        } catch (_) {
+          // Skip assessments the student cannot open.
+        }
+      }
+
+      final items = <AiEvalQuestionItem>[];
+      for (final detail in details) {
+        final assessment = detail.assessment;
+        final questions = assessment.questions
+            .where(isAiEvaluableQuestion)
+            .toList(growable: false);
+        if (questions.isEmpty) continue;
+
+        final submission = _latestForAssessment(snapshot, assessment.id);
+        final status = resolveAiEvalStatus(submission);
+
+        for (var i = 0; i < questions.length; i++) {
+          final question = questions[i];
+          items.add(
+            AiEvalQuestionItem(
+              assessmentId: assessment.id,
+              assessmentTitle: assessment.title,
+              question: question,
+              questionIndex: i,
+              questionTotal: questions.length,
+              kind: AiEvalQuestionItem.kindFor(question),
+              status: status,
+              subjectLabel: _subjectLabelFor(question, assessment.title),
+              examCategory: assessment.typeLabel,
+              submission: submission,
+              scoreMax: question.maxMarks,
+            ),
+          );
+        }
+      }
+
       setState(() {
-        _snapshot = snapshot;
+        _items = items;
         _loading = false;
+        if (_subjectFilter != null &&
+            !items.any((item) => item.subjectLabel == _subjectFilter)) {
+          _subjectFilter = null;
+        }
       });
     } catch (error) {
       if (!mounted) return;
@@ -68,44 +154,271 @@ class _AiEvaluationHubScreenState extends State<AiEvaluationHubScreen> {
     }
   }
 
-  List<SubmissionSummary> _items(PastResultsSnapshot snapshot) {
+  static bool _isAiEvaluationTest(TestListItem item) {
+    final title = item.title.toLowerCase();
+    if (item.type == TestKind.assignment) return true;
+    return title.contains('ai evaluation') ||
+        title.contains('essay') ||
+        title.contains('subjective') ||
+        title.contains('descriptive') ||
+        title.contains('short answer');
+  }
+
+  static String _subjectFromTitle(String title) {
+    final lower = title.toLowerCase();
+    if (lower.contains('polity')) return 'Polity';
+    if (lower.contains('history')) return 'History';
+    if (lower.contains('economy')) return 'Economy';
+    if (lower.contains('geography')) return 'Geography';
+    if (lower.contains('science')) return 'Science';
+    return 'General';
+  }
+
+  static String _subjectLabelFor(
+    AssessmentQuestionPreview question,
+    String assessmentTitle,
+  ) {
+    final named = question.subjectName?.trim();
+    if (named != null && named.isNotEmpty) return named;
+
+    final text = '${question.content ?? ''} $assessmentTitle'.toLowerCase();
+    if (text.contains('preamble') ||
+        text.contains('constitution') ||
+        text.contains('judicial') ||
+        text.contains('fundamental right') ||
+        text.contains('basic structure')) {
+      return 'Polity';
+    }
+    if (text.contains('mughal') ||
+        text.contains('maurya') ||
+        text.contains('quit india') ||
+        text.contains('history')) {
+      return 'History';
+    }
+    return _subjectFromTitle(assessmentTitle);
+  }
+
+  SubmissionSummary? _latestForAssessment(
+    PastResultsSnapshot snapshot,
+    String assessmentId,
+  ) {
+    SubmissionSummary? best;
+    for (final item in snapshot.submissions) {
+      if (item.assessmentId != assessmentId) continue;
+      if (best == null) {
+        best = item;
+        continue;
+      }
+      final bestStamp = best.evaluatedAt ?? best.submittedAt ?? best.updatedAt;
+      final itemStamp = item.evaluatedAt ?? item.submittedAt ?? item.updatedAt;
+      if (bestStamp == null) {
+        best = item;
+      } else if (itemStamp != null && itemStamp.isAfter(bestStamp)) {
+        best = item;
+      }
+    }
+    return best;
+  }
+
+  List<AiEvalQuestionItem> get _safeItems {
+    final dynamic raw = _items;
+    if (raw is! List<AiEvalQuestionItem>) {
+      return const <AiEvalQuestionItem>[];
+    }
+    return List<AiEvalQuestionItem>.from(raw);
+  }
+
+  List<AiEvalQuestionItem> get _visibleItems {
     final query = _query.trim().toLowerCase();
-    final ready = snapshot.scores;
-    if (query.isEmpty) return ready;
-    return ready.where((item) {
-      final title = snapshot.titleFor(item.assessmentId).toLowerCase();
-      return title.contains(query) ||
-          item.status.toLowerCase().contains(query) ||
-          item.id.toLowerCase().contains(query);
+    return _safeItems.where((item) {
+      if (_kindFilter == _KindFilter.shortAnswer &&
+          item.kind != AiAnswerKind.shortAnswer) {
+        return false;
+      }
+      if (_kindFilter == _KindFilter.longAnswer &&
+          item.kind != AiAnswerKind.longAnswer) {
+        return false;
+      }
+      if (_subjectFilter != null && item.subjectLabel != _subjectFilter) {
+        return false;
+      }
+      if (query.isEmpty) return true;
+      return item.questionText.toLowerCase().contains(query) ||
+          item.subjectLabel.toLowerCase().contains(query) ||
+          item.assessmentTitle.toLowerCase().contains(query) ||
+          item.kindLabel.toLowerCase().contains(query);
     }).toList(growable: false);
   }
 
-  void _openEvaluation(SubmissionSummary item) {
-    final title = _snapshot?.titleFor(item.assessmentId);
-    if (SubmissionPipeline.isReady(item.status)) {
-      Navigator.of(context).pushNamed(
+  List<String> get _subjects {
+    final items = _safeItems;
+    if (items.isEmpty) return const [];
+    final values = items.map((item) => item.subjectLabel).toSet().toList()
+      ..sort();
+    return values;
+  }
+
+  Future<void> _openQuestion(
+    AiEvalQuestionItem item, {
+    bool forceReattempt = false,
+  }) async {
+    if (_opening) return;
+
+    if (!forceReattempt &&
+        item.status == AiEvalQuestionStatus.evaluated &&
+        item.submission != null) {
+      await Navigator.of(context).pushNamed(
         AppRoutes.resultFeedback,
         arguments: ResultFeedbackArgs(
-          submissionId: item.id,
+          submissionId: item.submission!.id,
           assessmentId: item.assessmentId,
-          title: title,
+          title: item.assessmentTitle,
+          initialScoreIndex: item.questionIndex,
         ),
       );
+      if (mounted) await _load();
       return;
     }
-    Navigator.of(context).pushNamed(
-      AppRoutes.submissionStatus,
-      arguments: SubmissionStatusArgs(
-        submissionId: item.id,
-        assessmentId: item.assessmentId,
-        title: title,
-        initialStatus: item.status,
-      ),
-    );
+
+    if (!forceReattempt &&
+        item.status == AiEvalQuestionStatus.evaluating &&
+        item.submission != null) {
+      await Navigator.of(context).pushNamed(
+        AppRoutes.submissionStatus,
+        arguments: SubmissionStatusArgs(
+          submissionId: item.submission!.id,
+          assessmentId: item.assessmentId,
+          title: item.assessmentTitle,
+          initialStatus: item.submission!.status,
+          includesMedia: true,
+        ),
+      );
+      if (mounted) await _load();
+      return;
+    }
+
+    await _beginUpload(item, forceNewAttempt: forceReattempt);
+  }
+
+  Future<void> _beginUpload(
+    AiEvalQuestionItem item, {
+    required bool forceNewAttempt,
+  }) async {
+    setState(() => _opening = true);
+    try {
+      AssessmentAttemptSession session;
+      final existing = item.submission;
+      if (!forceNewAttempt &&
+          existing != null &&
+          existing.isDraft &&
+          (existing.assessmentAttemptId ?? '').isNotEmpty) {
+        session = AssessmentAttemptSession(
+          attempt: AssessmentAttemptSummary(
+            id: existing.assessmentAttemptId!,
+            assessmentId: item.assessmentId,
+            attemptNumber: existing.attemptNumber,
+            status: AttemptLifecycle.inProgress,
+          ),
+          submission: existing,
+        );
+      } else {
+        session = await _tests.startAttempt(item.assessmentId);
+      }
+
+      if (!mounted) return;
+      final result = await Navigator.of(context).pushNamed(
+        AppRoutes.aiAnswerUpload,
+        arguments: AiAnswerUploadArgs(
+          submissionId: session.submission.id,
+          assessmentId: item.assessmentId,
+          question: item.question,
+          questionIndex: item.questionIndex,
+          questionTotal: item.questionTotal,
+          assessmentTitle: item.assessmentTitle,
+          tags: [
+            item.kindLabel,
+            item.subjectLabel,
+            item.examCategory,
+          ],
+          finalizeOnSubmit: item.questionTotal <= 1,
+        ),
+      );
+
+      if (!mounted) return;
+
+      if (result is AiAnswerUploadResult && result.finalized) {
+        await Navigator.of(context).pushNamed(
+          AppRoutes.submissionStatus,
+          arguments: SubmissionStatusArgs(
+            submissionId: session.submission.id,
+            assessmentId: item.assessmentId,
+            title: item.assessmentTitle,
+            initialStatus: result.submissionStatus ?? 'ready_for_evaluation',
+            includesMedia: true,
+          ),
+        );
+      } else if (result is AiAnswerUploadResult &&
+          result.images.isNotEmpty &&
+          item.questionTotal > 1) {
+        final shouldSubmit = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Answer saved'),
+            content: const Text(
+              'Your page was saved. Submit this attempt for AI evaluation now, '
+              'or keep answering other questions.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Keep answering'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Submit for AI'),
+              ),
+            ],
+          ),
+        );
+        if (shouldSubmit == true && mounted) {
+          final summary =
+              await _tests.finalizeSubmission(session.submission.id);
+          if (!mounted) return;
+          await Navigator.of(context).pushNamed(
+            AppRoutes.submissionStatus,
+            arguments: SubmissionStatusArgs(
+              submissionId: session.submission.id,
+              assessmentId: item.assessmentId,
+              title: item.assessmentTitle,
+              initialStatus: summary.status,
+              includesMedia: true,
+            ),
+          );
+        }
+      }
+      await _load();
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            error is ApiException
+                ? error.message
+                : 'Unable to open answer upload.',
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _opening = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final visible = _visibleItems;
+    final subjects = _subjects;
+
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
       child: Scaffold(
@@ -121,10 +434,13 @@ class _AiEvaluationHubScreenState extends State<AiEvaluationHubScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          PragyuLogo(height: 34, semanticsLabel: 'Pragyu'),
+                          PragyuLogo(
+                            height: PragyuLogo.headerHeight,
+                            semanticsLabel: 'Pragyu',
+                          ),
                           SizedBox(height: 4),
                           Text(
-                            'Learn • Practice • Grow',
+                            'Upload · AI score · Improve',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
@@ -158,7 +474,7 @@ class _AiEvaluationHubScreenState extends State<AiEvaluationHubScreen> {
                 ),
               ),
               Expanded(
-                child: _loading && _snapshot == null
+                child: _loading && _safeItems.isEmpty
                     ? const Center(
                         child: CircularProgressIndicator(color: _blue),
                       )
@@ -182,7 +498,7 @@ class _AiEvaluationHubScreenState extends State<AiEvaluationHubScreen> {
                             ),
                             const SizedBox(height: 8),
                             const Text(
-                              'Open evaluated attempts to review scores, feedback, and model answers.',
+                              'Pick a short or long answer question, upload your sheet, then review AI score, strengths, and improvements.',
                               softWrap: true,
                               style: TextStyle(
                                 fontFamily: AppTheme.fontFamily,
@@ -192,12 +508,14 @@ class _AiEvaluationHubScreenState extends State<AiEvaluationHubScreen> {
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
+                            const SizedBox(height: 14),
+                            const _HowItWorks(),
                             const SizedBox(height: 16),
                             TextField(
                               onChanged: (value) =>
                                   setState(() => _query = value),
                               decoration: InputDecoration(
-                                hintText: 'Search evaluations',
+                                hintText: 'Search by question, subject…',
                                 prefixIcon: const Icon(Icons.search_rounded),
                                 filled: true,
                                 fillColor: Colors.white,
@@ -215,6 +533,68 @@ class _AiEvaluationHubScreenState extends State<AiEvaluationHubScreen> {
                                 ),
                               ),
                             ),
+                            const SizedBox(height: 12),
+                            SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Row(
+                                children: [
+                                  _FilterChip(
+                                    label: 'All',
+                                    selected: _kindFilter == _KindFilter.all,
+                                    onTap: () => setState(
+                                      () => _kindFilter = _KindFilter.all,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  _FilterChip(
+                                    label: 'Short answer',
+                                    selected:
+                                        _kindFilter == _KindFilter.shortAnswer,
+                                    onTap: () => setState(
+                                      () =>
+                                          _kindFilter = _KindFilter.shortAnswer,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  _FilterChip(
+                                    label: 'Long answer',
+                                    selected:
+                                        _kindFilter == _KindFilter.longAnswer,
+                                    onTap: () => setState(
+                                      () =>
+                                          _kindFilter = _KindFilter.longAnswer,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (subjects.isNotEmpty) ...[
+                              const SizedBox(height: 10),
+                              SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                child: Row(
+                                  children: [
+                                    _FilterChip(
+                                      label: 'All subjects',
+                                      selected: _subjectFilter == null,
+                                      onTap: () => setState(
+                                        () => _subjectFilter = null,
+                                      ),
+                                    ),
+                                    for (final subject in subjects) ...[
+                                      const SizedBox(width: 8),
+                                      _FilterChip(
+                                        label: subject,
+                                        selected: _subjectFilter == subject,
+                                        onTap: () => setState(
+                                          () => _subjectFilter = subject,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            ],
                             if (_error != null) ...[
                               const SizedBox(height: 12),
                               Text(
@@ -226,7 +606,42 @@ class _AiEvaluationHubScreenState extends State<AiEvaluationHubScreen> {
                               ),
                             ],
                             const SizedBox(height: 16),
-                            if (_snapshot != null) ..._buildList(_snapshot!),
+                            if (_opening)
+                              const Padding(
+                                padding: EdgeInsets.only(bottom: 12),
+                                child: LinearProgressIndicator(color: _blue),
+                              ),
+                            if (visible.isEmpty)
+                              _EmptyState(
+                                onPractice: () =>
+                                    StudentShell.of(context)?.goToTab(2),
+                              )
+                            else ...[
+                              Text(
+                                '${visible.length} question${visible.length == 1 ? '' : 's'}',
+                                style: const TextStyle(
+                                  fontFamily: AppTheme.fontFamily,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 16,
+                                  color: _ink,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              for (final item in visible)
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 12),
+                                  child: _QuestionCard(
+                                    item: item,
+                                    onOpen: () => _openQuestion(item),
+                                    onReattempt: item.canReattempt
+                                        ? () => _openQuestion(
+                                              item,
+                                              forceReattempt: true,
+                                            )
+                                        : null,
+                                  ),
+                                ),
+                            ],
                           ],
                         ),
                       ),
@@ -237,93 +652,142 @@ class _AiEvaluationHubScreenState extends State<AiEvaluationHubScreen> {
       ),
     );
   }
+}
 
-  List<Widget> _buildList(PastResultsSnapshot snapshot) {
-    final items = _items(snapshot);
-    if (snapshot.scores.isEmpty) {
-      return const [
-        Padding(
-          padding: EdgeInsets.only(top: 40),
-          child: Text(
-            'No AI evaluations yet.\nSubmit a practice test to see feedback here.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontFamily: AppTheme.fontFamily,
-              color: _muted,
-              height: 1.45,
-            ),
-          ),
-        ),
-      ];
-    }
-    if (items.isEmpty) {
-      return const [
-        Padding(
-          padding: EdgeInsets.only(top: 40),
-          child: Text(
-            'No evaluations match your search.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontFamily: AppTheme.fontFamily,
-              color: _muted,
-              height: 1.45,
-            ),
-          ),
-        ),
-      ];
-    }
+class _HowItWorks extends StatelessWidget {
+  const _HowItWorks();
 
-    return [
-      Text(
-        '${items.length} evaluation${items.length == 1 ? '' : 's'}',
-        style: const TextStyle(
-          fontFamily: AppTheme.fontFamily,
-          fontWeight: FontWeight.w700,
-          color: _ink,
-        ),
-      ),
-      const SizedBox(height: 12),
-      for (final item in items)
-        Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: _EvaluationCard(
-            title: snapshot.titleFor(item.assessmentId),
-            item: item,
-            onTap: () => _openEvaluation(item),
-          ),
-        ),
+  @override
+  Widget build(BuildContext context) {
+    const steps = <(String, String, IconData)>[
+      ('1', 'Upload', Icons.photo_camera_outlined),
+      ('2', 'AI scores', Icons.auto_awesome_outlined),
+      ('3', 'Improve', Icons.trending_up_rounded),
     ];
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE6EAF2)),
+      ),
+      child: Row(
+        children: [
+          for (var i = 0; i < steps.length; i++) ...[
+            if (i > 0)
+              const Expanded(
+                child: Divider(color: Color(0xFFE6EAF2), thickness: 1),
+              ),
+            Expanded(
+              flex: 2,
+              child: Column(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFE8F1FF),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(steps[i].$3, color: Color(0xFF2F7BFF), size: 18),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    steps[i].$2,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontFamily: AppTheme.fontFamily,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF1A2B4C),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 }
 
-class _EvaluationCard extends StatelessWidget {
-  const _EvaluationCard({
-    required this.title,
-    required this.item,
+class _FilterChip extends StatelessWidget {
+  const _FilterChip({
+    required this.label,
+    required this.selected,
     required this.onTap,
   });
 
-  final String title;
-  final SubmissionSummary item;
+  final String label;
+  final bool selected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final score = formatScorePair(item.totalScore, item.maxScore);
-    final pct = item.percentage;
-    final pctLabel = pct == null
-        ? null
-        : (pct == pct.roundToDouble()
-            ? '${pct.round()}%'
-            : '${pct.toStringAsFixed(1)}%');
+    return Material(
+      color: selected ? const Color(0xFFE8F1FF) : Colors.white,
+      borderRadius: BorderRadius.circular(999),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: selected
+                  ? const Color(0xFF2F7BFF)
+                  : const Color(0xFFE6EAF2),
+            ),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontFamily: AppTheme.fontFamily,
+              fontWeight: FontWeight.w700,
+              fontSize: 12.5,
+              color: selected
+                  ? const Color(0xFF2F7BFF)
+                  : const Color(0xFF7A8499),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _QuestionCard extends StatelessWidget {
+  const _QuestionCard({
+    required this.item,
+    required this.onOpen,
+    this.onReattempt,
+  });
+
+  final AiEvalQuestionItem item;
+  final VoidCallback onOpen;
+  final VoidCallback? onReattempt;
+
+  @override
+  Widget build(BuildContext context) {
+    final statusColor = switch (item.status) {
+      AiEvalQuestionStatus.evaluated => const Color(0xFF22A06B),
+      AiEvalQuestionStatus.evaluating => const Color(0xFF2F7BFF),
+      AiEvalQuestionStatus.failed => const Color(0xFFC0392B),
+      AiEvalQuestionStatus.draft => const Color(0xFFC47A1A),
+      AiEvalQuestionStatus.notStarted => const Color(0xFF7A8499),
+    };
 
     return Material(
       color: Colors.white,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
+        onTap: onOpen,
         borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
         child: Container(
+          width: double.infinity,
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
@@ -336,90 +800,221 @@ class _EvaluationCard extends StatelessWidget {
               ),
             ],
           ),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 44,
-                height: 44,
-                alignment: Alignment.center,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFE8F1FF),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.auto_awesome_rounded,
-                  color: Color(0xFF2F7BFF),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _MiniChip(
+                    label: item.kindLabel,
+                    color: item.kind == AiAnswerKind.shortAnswer
+                        ? const Color(0xFF7B5CFF)
+                        : const Color(0xFF2F7BFF),
+                  ),
+                  _MiniChip(
+                    label: item.subjectLabel,
+                    color: const Color(0xFF1A2B4C),
+                  ),
+                  _MiniChip(
+                    label: item.examCategory,
+                    color: const Color(0xFF7A8499),
+                  ),
+                  if (item.question.maxMarks != null)
+                    _MiniChip(
+                      label: item.question.maxMarks ==
+                              item.question.maxMarks!.roundToDouble()
+                          ? '${item.question.maxMarks!.round()} Marks'
+                          : '${item.question.maxMarks} Marks',
+                      color: const Color(0xFFC47A1A),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Text(
+                'Q${item.questionIndex + 1}. ${item.questionText}',
+                softWrap: true,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontFamily: AppTheme.fontFamily,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 15,
+                  height: 1.35,
+                  color: Color(0xFF1A2B4C),
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      softWrap: true,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+              const SizedBox(height: 6),
+              Text(
+                item.assessmentTitle,
+                softWrap: true,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontFamily: AppTheme.fontFamily,
+                  fontSize: 12,
+                  color: Color(0xFF7A8499),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: statusColor,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      item.status == AiEvalQuestionStatus.evaluated &&
+                              item.scoreLabel.isNotEmpty
+                          ? 'Score ${item.scoreLabel}'
+                          : item.statusLabel,
+                      style: TextStyle(
                         fontFamily: AppTheme.fontFamily,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 15,
-                        color: Color(0xFF1A2B4C),
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                        color: statusColor,
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      [
-                        'Attempt ${item.attemptNumber}',
-                        if (pctLabel != null) pctLabel,
-                        submissionStatusLabel(item.status),
-                      ].join(' · '),
-                      style: const TextStyle(
-                        fontFamily: AppTheme.fontFamily,
-                        fontSize: 12,
-                        color: Color(0xFF7A8499),
+                  ),
+                  Icon(Icons.chevron_right_rounded, color: statusColor),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: onOpen,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFF2F7BFF),
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size.fromHeight(42),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        item.status == AiEvalQuestionStatus.evaluated
+                            ? 'View score'
+                            : item.status == AiEvalQuestionStatus.evaluating
+                                ? 'Check status'
+                                : 'Upload answer',
+                        style: const TextStyle(
+                          fontFamily: AppTheme.fontFamily,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (onReattempt != null) ...[
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: onReattempt,
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF2F7BFF),
+                          side: const BorderSide(color: Color(0xFF2F7BFF)),
+                          minimumSize: const Size.fromHeight(42),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'Reattempt',
+                          style: TextStyle(
+                            fontFamily: AppTheme.fontFamily,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
                       ),
                     ),
                   ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    score,
-                    style: const TextStyle(
-                      fontFamily: AppTheme.fontFamily,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 15,
-                      color: Color(0xFF22A06B),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE8F8EF),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Text(
-                      'View',
-                      style: TextStyle(
-                        fontFamily: AppTheme.fontFamily,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF22A06B),
-                      ),
-                    ),
-                  ),
                 ],
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _MiniChip extends StatelessWidget {
+  const _MiniChip({required this.label, required this.color});
+
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontFamily: AppTheme.fontFamily,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: color,
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  const _EmptyState({required this.onPractice});
+
+  final VoidCallback onPractice;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 28),
+      child: Column(
+        children: [
+          const Icon(Icons.auto_awesome_outlined,
+              size: 40, color: Color(0xFF2F7BFF)),
+          const SizedBox(height: 12),
+          const Text(
+            'No matching AI questions yet',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontFamily: AppTheme.fontFamily,
+              fontWeight: FontWeight.w800,
+              fontSize: 16,
+              color: Color(0xFF1A2B4C),
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Pull to refresh, change filters, or open Practice for more tests.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontFamily: AppTheme.fontFamily,
+              color: Color(0xFF7A8499),
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 14),
+          TextButton.icon(
+            onPressed: onPractice,
+            icon: const Icon(Icons.track_changes_rounded),
+            label: const Text('Go to Practice'),
+          ),
+        ],
       ),
     );
   }

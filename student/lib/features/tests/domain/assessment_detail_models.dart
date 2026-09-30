@@ -80,6 +80,8 @@ class AssessmentQuestionPreview {
     this.wordLimit,
     this.allowsImageUpload = false,
     this.mediaUrls = const [],
+    this.subjectId,
+    this.subjectName,
   });
 
   /// Assessment-question link id (row id).
@@ -102,6 +104,8 @@ class AssessmentQuestionPreview {
   final bool allowsImageUpload;
   /// Image attachment URLs from metadata (shown under stem).
   final List<String> mediaUrls;
+  final String? subjectId;
+  final String? subjectName;
 
   /// Effective type for CBT: prefer ui_type, then API type.
   String? get effectiveType {
@@ -163,12 +167,16 @@ class AssessmentQuestionPreview {
     int? wordLimit;
     var mediaUrls = const <String>[];
     String? passageHtml;
+    String? subjectName;
     if (metadata is Map) {
       final metaMap = metadata.map((k, v) => MapEntry(k.toString(), v));
       uiType = (metaMap['ui_type'] ?? metaMap['uiType'])?.toString();
       wordLimit = _readWordLimit(metaMap['word_limit']);
       mediaUrls = _readMediaUrls(metaMap);
       passageHtml = _readPassageHtml(snapMap, metaMap);
+      subjectName = _nullableTrim(
+        (metaMap['subject_name'] ?? metaMap['subjectName'])?.toString(),
+      );
     } else {
       passageHtml = _readPassageHtml(snapMap, const {});
     }
@@ -176,6 +184,16 @@ class AssessmentQuestionPreview {
       final rubricMap = rubric.map((k, v) => MapEntry(k.toString(), v));
       wordLimit = _readWordLimit(rubricMap['word_limit']);
     }
+
+    final subjectRaw = snapMap?['subject'];
+    if (subjectName == null && subjectRaw is Map) {
+      subjectName = _nullableTrim(
+        (subjectRaw['name'] ?? subjectRaw['title'])?.toString(),
+      );
+    }
+    final subjectId = _nullableTrim(
+      (snapMap?['subject_id'] ?? json['subject_id'])?.toString(),
+    );
 
     final effective = (uiType?.trim().isNotEmpty == true) ? uiType : type;
 
@@ -193,7 +211,15 @@ class AssessmentQuestionPreview {
       wordLimit: wordLimit,
       allowsImageUpload: _allowsImageUpload(effective),
       mediaUrls: mediaUrls,
+      subjectId: subjectId,
+      subjectName: subjectName,
     );
+  }
+
+  static String? _nullableTrim(String? raw) {
+    final value = raw?.trim();
+    if (value == null || value.isEmpty) return null;
+    return value;
   }
 
   static int? _readWordLimit(Object? raw) {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:student_mobile/app/theme/app_theme.dart';
+import 'package:student_mobile/features/catalog/data/marketplace_access_service.dart';
 import 'package:student_mobile/features/payments/data/payments_repository.dart';
 import 'package:student_mobile/features/payments/domain/payments_models.dart';
 import 'package:student_mobile/features/payments/presentation/screens/payments_screen.dart';
@@ -31,8 +32,12 @@ class _FakePayments implements PaymentsGateway {
   }) async {}
 
   @override
-  Future<void> purchaseCreditPack(String packageId) async {
+  Future<PaymentCheckoutResult> purchaseCreditPack(String packageId) async {
     purchasedPackageId = packageId;
+    return PaymentCheckoutResult(
+      paymentId: 'credit-$packageId',
+      status: 'completed',
+    );
   }
 }
 
@@ -133,6 +138,7 @@ void main() {
   testWidgets('S-72 billing empty state', (tester) async {
     await tester.binding.setSurfaceSize(const Size(390, 1200));
     addTearDown(() => tester.binding.setSurfaceSize(null));
+    MarketplaceAccessService.instance.reset();
 
     await tester.pumpWidget(
       MaterialApp(
@@ -143,10 +149,10 @@ void main() {
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
 
     expect(find.text('Payments & invoices'), findsOneWidget);
     expect(find.textContaining('No payments yet'), findsOneWidget);
-    expect(find.text('Browse catalog'), findsOneWidget);
   });
 }

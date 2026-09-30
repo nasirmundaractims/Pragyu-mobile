@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:image_picker/image_picker.dart';
 
 import 'package:student_mobile/app/router/app_router.dart';
 import 'package:student_mobile/app/theme/app_colors.dart';
@@ -10,6 +9,7 @@ import 'package:student_mobile/app/theme/app_theme.dart';
 import 'package:student_mobile/app/widgets/pragyu_logo.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/features/tests/data/tests_repository.dart';
+import 'package:student_mobile/features/tests/domain/ai_answer_upload_models.dart';
 import 'package:student_mobile/features/tests/domain/assessment_detail_models.dart';
 import 'package:student_mobile/features/tests/domain/attempt_flow_models.dart';
 import 'package:student_mobile/features/tests/domain/cbt_player_models.dart';
@@ -51,9 +51,6 @@ class _AttemptPlayerScreenState extends State<AttemptPlayerScreen> {
   Timer? _clock;
   Duration _remaining = Duration.zero;
   bool _finalized = false;
-  bool _uploadingImages = false;
-  int _uploadProgress = 0;
-  final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
@@ -179,111 +176,47 @@ class _AttemptPlayerScreenState extends State<AttemptPlayerScreen> {
     _schedulePersist();
   }
 
-  Future<void> _addImages() async {
+  Future<void> _openAnswerUpload() async {
     final question = _current;
     final snapshot = _snapshot;
-    if (question == null || snapshot == null || _uploadingImages) return;
-
-    final source = await showModalBottomSheet<ImageSource>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.photo_library_outlined),
-                title: const Text('Choose from gallery'),
-                onTap: () => Navigator.pop(context, ImageSource.gallery),
-              ),
-              ListTile(
-                leading: const Icon(Icons.photo_camera_outlined),
-                title: const Text('Take a photo'),
-                onTap: () => Navigator.pop(context, ImageSource.camera),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-    if (source == null || !mounted) return;
-
-    List<XFile> files;
-    if (source == ImageSource.gallery) {
-      files = await _picker.pickMultiImage(imageQuality: 85);
-    } else {
-      final photo = await _picker.pickImage(
-        source: ImageSource.camera,
-        imageQuality: 85,
-      );
-      files = photo == null ? const [] : [photo];
-    }
-    if (files.isEmpty || !mounted) return;
-
-    final batch = files.take(12).toList(growable: false);
-    setState(() {
-      _uploadingImages = true;
-      _uploadProgress = 0;
-    });
+    if (question == null || snapshot == null) return;
 
     final current = _answers[question.answerKey] ?? const StudentAnswerValue();
-    final uploaded = <AnswerImageAttachment>[...current.images];
-    final startPage = uploaded.length + 1;
+    final result = await Navigator.of(context).pushNamed(
+      AppRoutes.aiAnswerUpload,
+      arguments: AiAnswerUploadArgs(
+        submissionId: snapshot.submissionId,
+        assessmentId: snapshot.assessment.id,
+        question: question,
+        questionIndex: _index,
+        questionTotal: snapshot.questions.length,
+        assessmentTitle: snapshot.assessment.title,
+        existingImages: current.images,
+        existingText: current.text,
+        finalizeOnSubmit: snapshot.questions.length == 1 &&
+            snapshot.questions.every((q) => q.allowsImageUpload),
+      ),
+    );
+    if (!mounted || result is! AiAnswerUploadResult) return;
 
-    try {
-      for (var i = 0; i < batch.length; i++) {
-        final file = batch[i];
-        final bytes = await file.readAsBytes();
-        final attachment = await _tests.uploadAnswerImage(
-          submissionId: snapshot.submissionId,
-          bytes: bytes,
-          fileName: file.name.isNotEmpty ? file.name : 'answer-${i + 1}.jpg',
-          mimeType: file.mimeType ?? 'image/jpeg',
-          pageNumber: startPage + i,
-        );
-        uploaded.add(attachment);
-        if (!mounted) return;
-        setState(() {
-          _uploadProgress = (((i + 1) / batch.length) * 100).round();
-        });
-      }
-
-      setState(() {
-        _answers[question.answerKey] = current.copyWith(images: uploaded);
-        _uploadingImages = false;
-        _uploadProgress = 0;
-      });
-      _schedulePersist();
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            batch.length == 1
-                ? 'Answer image uploaded.'
-                : '${batch.length} answer images uploaded.',
-          ),
-          behavior: SnackBarBehavior.floating,
-        ),
+    setState(() {
+      _answers[question.answerKey] = current.copyWith(
+        images: result.images,
+        text: result.text ?? current.text,
       );
-    } catch (error) {
-      if (!mounted) return;
-      setState(() {
-        _uploadingImages = false;
-        _uploadProgress = 0;
-        if (uploaded.isNotEmpty) {
-          _answers[question.answerKey] = current.copyWith(images: uploaded);
-        }
-      });
-      if (uploaded.isNotEmpty) _schedulePersist();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            error is ApiException
-                ? error.message
-                : 'Unable to upload answer image.',
-          ),
-          behavior: SnackBarBehavior.floating,
+    });
+    _schedulePersist();
+
+    if (result.finalized) {
+      setState(() => _finalized = true);
+      await Navigator.of(context).pushReplacementNamed(
+        AppRoutes.submissionStatus,
+        arguments: SubmissionStatusArgs(
+          submissionId: snapshot.submissionId,
+          assessmentId: snapshot.assessment.id,
+          title: snapshot.assessment.title,
+          initialStatus: result.submissionStatus ?? 'ready_for_evaluation',
+          includesMedia: true,
         ),
       );
     }
@@ -427,6 +360,29 @@ class _AttemptPlayerScreenState extends State<AttemptPlayerScreen> {
           await _tests.finalizeSubmission(snapshot.submissionId);
       if (!mounted) return;
       setState(() => _finalized = true);
+      if (mounted) {
+        await showDialog<void>(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) {
+            return AlertDialog(
+              title: const Text('Answer submitted'),
+              content: const Text(
+                'Your answer was submitted successfully. '
+                'Evaluation is processing in the background. '
+                'We will notify you in the app (and by email, SMS, and WhatsApp when enabled) once it is ready.',
+              ),
+              actions: [
+                FilledButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('OK'),
+                ),
+              ],
+            );
+          },
+        );
+      }
+      if (!mounted) return;
       await Navigator.of(context).pushReplacementNamed(
         AppRoutes.submissionStatus,
         arguments: SubmissionStatusArgs(
@@ -587,11 +543,16 @@ class _AttemptPlayerScreenState extends State<AttemptPlayerScreen> {
                 answer: _answers[question.answerKey],
                 onChoice: _selectChoice,
                 onTextChanged: _setText,
-                onAddImages: question.allowsImageUpload ? _addImages : null,
+                onAddImages:
+                    question.allowsImageUpload ? _openAnswerUpload : null,
+                onTakePhoto:
+                    question.allowsImageUpload ? _openAnswerUpload : null,
+                onPickFromGallery:
+                    question.allowsImageUpload ? _openAnswerUpload : null,
                 onRemoveImage:
                     question.allowsImageUpload ? _removeImage : null,
-                isUploading: _uploadingImages,
-                uploadProgress: _uploadProgress,
+                isUploading: false,
+                uploadProgress: 0,
                 markedForReview: marked,
                 onReviewLater: () => _toggleMark(advance: false),
                 padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
@@ -678,7 +639,7 @@ class _AttemptHeader extends StatelessWidget {
             onPressed: onBack,
             icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF1A2B4C)),
           ),
-          const PragyuLogo(height: 28),
+          const PragyuLogo(height: 40),
           if (!narrow) ...[
             const SizedBox(width: 8),
             const Flexible(

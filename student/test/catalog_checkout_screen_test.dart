@@ -86,7 +86,7 @@ class _FakeCatalog implements CatalogGateway {
   final CatalogListing listing;
 
   @override
-  Future<CatalogSnapshot> loadCatalog({String? query}) async =>
+  Future<CatalogSnapshot> loadCatalog({String? query, int offset = 0}) async =>
       CatalogSnapshot(items: [listing]);
 
   @override

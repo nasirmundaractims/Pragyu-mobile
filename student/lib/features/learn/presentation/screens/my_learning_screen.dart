@@ -7,6 +7,7 @@ import 'package:student_mobile/app/widgets/pragyu_logo.dart';
 import 'package:student_mobile/core/session/session_service.dart';
 import 'package:student_mobile/features/alerts/data/alerts_repository.dart';
 import 'package:student_mobile/features/auth/domain/auth_models.dart';
+import 'package:student_mobile/features/catalog/data/marketplace_access_service.dart';
 import 'package:student_mobile/features/home/domain/greeting.dart';
 import 'package:student_mobile/features/home/presentation/screens/home_screen.dart';
 import 'package:student_mobile/features/learn/data/learn_repository.dart';
@@ -48,6 +49,8 @@ class _MyLearningScreenState extends State<MyLearningScreen> {
       widget.sessionService ?? SessionService();
   late final AlertsGateway _alerts =
       widget.alertsRepository ?? AlertsRepository();
+  final MarketplaceAccessService _marketplace =
+      MarketplaceAccessService.instance;
 
   TextEditingController? _searchController;
   final _coursesKey = GlobalKey();
@@ -81,13 +84,25 @@ class _MyLearningScreenState extends State<MyLearningScreen> {
   @override
   void initState() {
     super.initState();
+    _marketplace.addListener(_onMarketplaceChanged);
+    _marketplace.ensureLoaded();
     _search; // ensure controller exists for this State instance
     _load();
     _loadSessionChrome();
   }
 
+  void _onMarketplaceChanged() {
+    if (mounted) setState(() {});
+  }
+
+  void _openCatalog() {
+    if (!_marketplace.available) return;
+    Navigator.of(context).pushNamed(AppRoutes.catalog);
+  }
+
   @override
   void dispose() {
+    _marketplace.removeListener(_onMarketplaceChanged);
     final controller = _searchController;
     if (controller != null) {
       controller.removeListener(_onSearchChanged);
@@ -154,7 +169,7 @@ class _MyLearningScreenState extends State<MyLearningScreen> {
         setState(() => _tab = tab);
         _scrollTo(_subjectsKey);
       case _LearnTab.explore:
-        Navigator.of(context).pushNamed(AppRoutes.catalog);
+        _openCatalog();
       case _LearnTab.studyMaterial:
         Navigator.of(context).pushNamed(AppRoutes.studyMaterials);
     }
@@ -380,6 +395,7 @@ class _MyLearningScreenState extends State<MyLearningScreen> {
         const SizedBox(height: 14),
         _LearnTabs(
           selected: _tab,
+          showExplore: _marketplace.available,
           onSelected: _onTabSelected,
         ),
         if (_error != null) ...[
@@ -392,8 +408,7 @@ class _MyLearningScreenState extends State<MyLearningScreen> {
         SizedBox(height: short ? 16 : 20),
         if (snapshot.isEmpty)
           _EmptyState(
-            onBrowse: () =>
-                Navigator.of(context).pushNamed(AppRoutes.catalog),
+            onBrowse: _marketplace.available ? _openCatalog : null,
             onLectures: () =>
                 Navigator.of(context).pushNamed(AppRoutes.lecturesList),
           )
@@ -405,8 +420,7 @@ class _MyLearningScreenState extends State<MyLearningScreen> {
               children: [
                 _SectionHeader(
                   title: 'My Courses',
-                  onSeeAll: () =>
-                      Navigator.of(context).pushNamed(AppRoutes.catalog),
+                  onSeeAll: _marketplace.available ? _openCatalog : null,
                 ),
                 const SizedBox(height: 12),
                 if (courses.isEmpty)
@@ -437,8 +451,7 @@ class _MyLearningScreenState extends State<MyLearningScreen> {
             children: [
               _SectionHeader(
                 title: 'Explore Subjects',
-                onSeeAll: () =>
-                    Navigator.of(context).pushNamed(AppRoutes.catalog),
+                onSeeAll: _marketplace.available ? _openCatalog : null,
               ),
               const SizedBox(height: 12),
               _SubjectsGrid(
@@ -521,7 +534,7 @@ class _TopBar extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              PragyuLogo(height: 34),
+              PragyuLogo(height: PragyuLogo.headerHeight),
               SizedBox(height: 4),
               Text(
                 'Learn • Practice • Grow',
@@ -895,16 +908,18 @@ class _LearnTabs extends StatelessWidget {
   const _LearnTabs({
     required this.selected,
     required this.onSelected,
+    this.showExplore = true,
   });
 
   final _LearnTab selected;
   final ValueChanged<_LearnTab> onSelected;
+  final bool showExplore;
 
   @override
   Widget build(BuildContext context) {
-    const items = <(_LearnTab, String)>[
+    final items = <(_LearnTab, String)>[
       (_LearnTab.myCourses, 'My Courses'),
-      (_LearnTab.explore, 'Explore'),
+      if (showExplore) (_LearnTab.explore, 'Explore'),
       (_LearnTab.subjects, 'Subjects'),
       (_LearnTab.studyMaterial, 'Study Material'),
     ];
@@ -968,11 +983,11 @@ class _TabPill extends StatelessWidget {
 class _SectionHeader extends StatelessWidget {
   const _SectionHeader({
     required this.title,
-    required this.onSeeAll,
+    this.onSeeAll,
   });
 
   final String title;
-  final VoidCallback onSeeAll;
+  final VoidCallback? onSeeAll;
 
   @override
   Widget build(BuildContext context) {
@@ -990,30 +1005,31 @@ class _SectionHeader extends StatelessWidget {
             ),
           ),
         ),
-        TextButton(
-          onPressed: onSeeAll,
-          style: TextButton.styleFrom(
-            foregroundColor: _MyLearningScreenState._blue,
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            minimumSize: const Size(0, 36),
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          ),
-          child: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'See All',
-                style: TextStyle(
-                  fontFamily: AppTheme.fontFamily,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 13,
+        if (onSeeAll != null)
+          TextButton(
+            onPressed: onSeeAll,
+            style: TextButton.styleFrom(
+              foregroundColor: _MyLearningScreenState._blue,
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              minimumSize: const Size(0, 36),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'See All',
+                  style: TextStyle(
+                    fontFamily: AppTheme.fontFamily,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
                 ),
-              ),
-              SizedBox(width: 2),
-              Icon(Icons.chevron_right_rounded, size: 18),
-            ],
+                SizedBox(width: 2),
+                Icon(Icons.chevron_right_rounded, size: 18),
+              ],
+            ),
           ),
-        ),
       ],
     );
   }
@@ -1703,11 +1719,11 @@ class _RecommendedCard extends StatelessWidget {
 
 class _EmptyState extends StatelessWidget {
   const _EmptyState({
-    required this.onBrowse,
+    this.onBrowse,
     required this.onLectures,
   });
 
-  final VoidCallback onBrowse;
+  final VoidCallback? onBrowse;
   final VoidCallback onLectures;
 
   @override
@@ -1766,22 +1782,23 @@ class _EmptyState extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 18),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: onBrowse,
-              style: FilledButton.styleFrom(
-                backgroundColor: _MyLearningScreenState._blue,
-                foregroundColor: Colors.white,
-                minimumSize: const Size.fromHeight(48),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
+          if (onBrowse != null)
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: onBrowse,
+                style: FilledButton.styleFrom(
+                  backgroundColor: _MyLearningScreenState._blue,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size.fromHeight(48),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                 ),
+                child: const Text('Browse catalog'),
               ),
-              child: const Text('Browse catalog'),
             ),
-          ),
-          const SizedBox(height: 8),
+          if (onBrowse != null) const SizedBox(height: 8),
           TextButton(
             onPressed: onLectures,
             child: const Text('Open lectures'),

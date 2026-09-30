@@ -10,7 +10,7 @@ abstract class PaymentsGateway {
     required String paymentId,
     required List<String> channels,
   });
-  Future<void> purchaseCreditPack(String packageId);
+  Future<PaymentCheckoutResult> purchaseCreditPack(String packageId);
 }
 
 class PaymentsRepository implements PaymentsGateway {
@@ -85,13 +85,25 @@ class PaymentsRepository implements PaymentsGateway {
   }
 
   @override
-  Future<void> purchaseCreditPack(String packageId) async {
+  Future<PaymentCheckoutResult> purchaseCreditPack(String packageId) async {
     final session = await _requireSession();
-    await _api.post(
+    final envelope = await _api.post(
       '/credits/purchase',
       body: {'package_id': packageId},
       accessToken: session.accessToken,
       organizationId: session.organizationId,
+    );
+    final data = _asMap(envelope['data']);
+    final checkout = _asMap(data['checkout_session']);
+    final url = (data['checkout_url'] ??
+            data['url'] ??
+            checkout['checkout_url'] ??
+            checkout['url'])
+        ?.toString();
+    return PaymentCheckoutResult(
+      paymentId: (data['id'] ?? data['purchase_id'] ?? packageId).toString(),
+      status: (data['status'] ?? 'pending').toString(),
+      checkoutUrl: (url != null && url.isNotEmpty) ? url : null,
     );
   }
 

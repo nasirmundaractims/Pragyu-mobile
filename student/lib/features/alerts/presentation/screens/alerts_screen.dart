@@ -46,7 +46,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
       _error = null;
     });
     try {
-      final snapshot = await _alerts.loadAlerts();
+      final snapshot = await _alerts.loadAlerts(page: 1);
       if (!mounted) return;
       setState(() {
         _snapshot = snapshot;
@@ -61,6 +61,25 @@ class _AlertsScreenState extends State<AlertsScreen> {
             ? error.message
             : 'Unable to load alerts. Pull to retry.';
       });
+    }
+  }
+
+  Future<void> _loadMore() async {
+    final current = _snapshot;
+    if (current == null || !current.hasMore || _loading) return;
+    setState(() => _loading = true);
+    try {
+      final next = await _alerts.loadAlerts(page: current.page + 1);
+      if (!mounted) return;
+      final merged = current.append(next);
+      setState(() {
+        _snapshot = merged;
+        _loading = false;
+      });
+      widget.onUnreadChanged?.call(merged.unreadCount);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loading = false);
     }
   }
 
@@ -246,6 +265,13 @@ class _AlertsScreenState extends State<AlertsScreen> {
               ),
             const SizedBox(height: 8),
           ],
+        ],
+        if (snapshot.hasMore) ...[
+          const SizedBox(height: 8),
+          OutlinedButton(
+            onPressed: _loading ? null : _loadMore,
+            child: Text(_loading ? 'Loading…' : 'Load more alerts'),
+          ),
         ],
       ],
     );

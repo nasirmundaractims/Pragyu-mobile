@@ -6,7 +6,7 @@ import 'package:student_mobile/core/config/app_config.dart';
 import 'package:student_mobile/features/catalog/domain/catalog_models.dart';
 
 abstract class CatalogGateway {
-  Future<CatalogSnapshot> loadCatalog({String? query});
+  Future<CatalogSnapshot> loadCatalog({String? query, int offset = 0});
   Future<CatalogListing> loadListing(String slug);
 }
 
@@ -21,12 +21,16 @@ class CatalogRepository implements CatalogGateway {
   final String _baseUrl;
 
   @override
-  Future<CatalogSnapshot> loadCatalog({String? query}) async {
+  Future<CatalogSnapshot> loadCatalog({
+    String? query,
+    int offset = 0,
+  }) async {
     final q = query?.trim() ?? '';
+    const limit = 50;
     final uri = Uri.parse(_join(_baseUrl, '/public/marketplace/catalog')).replace(
       queryParameters: {
-        'limit': '50',
-        'offset': '0',
+        'limit': '$limit',
+        'offset': '$offset',
         if (q.isNotEmpty) 'q': q,
       },
     );
@@ -37,7 +41,7 @@ class CatalogRepository implements CatalogGateway {
     final decoded = _decode(response);
     final data = decoded['data'];
     if (data is! List) {
-      return CatalogSnapshot(query: q);
+      return CatalogSnapshot(query: q, offset: offset);
     }
     final items = data
         .whereType<Map>()
@@ -48,7 +52,12 @@ class CatalogRepository implements CatalogGateway {
         )
         .where((item) => item.slug.isNotEmpty || item.id.isNotEmpty)
         .toList(growable: false);
-    return CatalogSnapshot(items: items, query: q);
+    return CatalogSnapshot(
+      items: items,
+      query: q,
+      offset: offset,
+      hasMore: items.length >= limit,
+    );
   }
 
   @override

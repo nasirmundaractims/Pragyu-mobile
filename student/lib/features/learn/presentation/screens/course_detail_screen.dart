@@ -5,29 +5,34 @@ import 'package:student_mobile/app/router/app_router.dart';
 import 'package:student_mobile/app/theme/app_theme.dart';
 import 'package:student_mobile/core/session/session_service.dart';
 import 'package:student_mobile/features/home/domain/greeting.dart';
+import 'package:student_mobile/features/home/presentation/screens/home_screen.dart';
 import 'package:student_mobile/features/learn/data/learn_repository.dart';
 import 'package:student_mobile/features/learn/domain/learn_models.dart';
+import 'package:student_mobile/features/lectures/data/lectures_repository.dart';
 import 'package:student_mobile/features/lectures/domain/lecture_models.dart';
+import 'package:student_mobile/features/lectures/presentation/widgets/course_lectures_section.dart';
 import 'package:student_mobile/features/materials/domain/material_models.dart';
 
-/// S-21 Course detail — modules, progress, Continue CTA (Pragyu redesign).
+/// S-21 Course detail — modules, lectures, progress, Continue CTA.
 class CourseDetailScreen extends StatefulWidget {
   const CourseDetailScreen({
     super.key,
     required this.args,
     this.learnRepository,
+    this.lecturesRepository,
     this.sessionService,
   });
 
   final CourseDetailArgs args;
   final LearnGateway? learnRepository;
+  final LecturesGateway? lecturesRepository;
   final SessionService? sessionService;
 
   @override
   State<CourseDetailScreen> createState() => _CourseDetailScreenState();
 }
 
-enum _CourseTab { overview, content, instructors, reviews, faqs }
+enum _CourseTab { overview, content }
 
 class _CourseDetailScreenState extends State<CourseDetailScreen> {
   static const _ink = Color(0xFF1A2B4C);
@@ -40,18 +45,35 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
 
   late final LearnGateway _learn =
       widget.learnRepository ?? LearnRepository();
+  late final LecturesGateway _lectures =
+      widget.lecturesRepository ?? LecturesRepository();
   late final SessionService _session =
       widget.sessionService ?? SessionService();
 
-  final _contentKey = GlobalKey();
+  /// Lazy keys — web hot-reload can leave new `final` fields unset/null.
+  GlobalKey? _contentKeyStore;
+  GlobalKey? _lecturesKeyStore;
+
+  GlobalKey get _contentKey => _contentKeyStore ??= GlobalKey();
+  GlobalKey get _lecturesKey => _lecturesKeyStore ??= GlobalKey();
+
   final Set<String> _expandedModules = <String>{};
 
   bool _loading = true;
+  bool? _lecturesLoading;
   bool _expandAll = true;
   String? _error;
+  String? _lecturesError;
   CourseDetailSnapshot? _snapshot;
+  /// Nullable so web hot-reload does not leave an unset field.
+  LecturesSnapshot? _lecturesSnapshot;
   String _firstName = 'Student';
   _CourseTab _tab = _CourseTab.overview;
+
+  LecturesSnapshot get _lecturesOrEmpty =>
+      _lecturesSnapshot ?? const LecturesSnapshot();
+
+  bool get _isLecturesLoading => _lecturesLoading == true;
 
   @override
   void initState() {
@@ -78,6 +100,8 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
     setState(() {
       _loading = true;
       _error = null;
+      _lecturesError = null;
+      _lecturesLoading = true;
     });
     try {
       final snapshot = await _learn.loadCourseDetail(widget.args);
@@ -90,11 +114,31 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
           ..addAll(snapshot.modules.map((m) => m.id));
         _expandAll = snapshot.modules.isNotEmpty;
       });
+      await _loadLectures(snapshot.courseId);
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _error = 'Unable to load this course. Pull to retry.';
         _loading = false;
+        _lecturesLoading = false;
+      });
+    }
+  }
+
+  Future<void> _loadLectures(String courseId) async {
+    try {
+      final lectures = await _lectures.loadLectures(courseId: courseId);
+      if (!mounted) return;
+      setState(() {
+        _lecturesSnapshot = lectures;
+        _lecturesLoading = false;
+        _lecturesError = null;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _lecturesLoading = false;
+        _lecturesError = 'Unable to load lectures for this course.';
       });
     }
   }
@@ -110,16 +154,19 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
     );
   }
 
-  void _openLectures() {
-    final snapshot = _snapshot;
-    if (snapshot == null) return;
-    Navigator.of(context).pushNamed(
-      AppRoutes.lecturesList,
-      arguments: LecturesListArgs(
-        courseId: snapshot.courseId,
-        courseTitle: snapshot.displayTitle,
-      ),
-    );
+  void _scrollToLectures() {
+    setState(() => _tab = _CourseTab.content);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final target = _lecturesKey.currentContext;
+      if (target == null) return;
+      Scrollable.ensureVisible(
+        target,
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeOutCubic,
+        alignment: 0.05,
+      );
+    });
   }
 
   void _openMaterials() {
@@ -136,14 +183,17 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
 
   void _scrollToContent() {
     setState(() => _tab = _CourseTab.content);
-    final target = _contentKey.currentContext;
-    if (target == null) return;
-    Scrollable.ensureVisible(
-      target,
-      duration: const Duration(milliseconds: 280),
-      curve: Curves.easeOutCubic,
-      alignment: 0.05,
-    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final target = _contentKey.currentContext;
+      if (target == null) return;
+      Scrollable.ensureVisible(
+        target,
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeOutCubic,
+        alignment: 0.05,
+      );
+    });
   }
 
   void _toggleExpandAll() {
@@ -267,6 +317,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                 const SizedBox(height: 12),
               ],
               if (_tab == _CourseTab.overview || _tab == _CourseTab.content) ...[
+
                 _ProgressPanel(
                   progress: progress,
                   firstName: _firstName,
@@ -285,10 +336,19 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                           0,
                           (sum, m) => sum + m.lessons.length,
                         ),
+                  lectureCount: _lecturesOrEmpty.live.length +
+                      _lecturesOrEmpty.upcoming.length +
+                      _lecturesOrEmpty.recorded.length,
                   onModules: _scrollToContent,
-                  onLectures: _openLectures,
+                  onLectures: _scrollToLectures,
                   onMaterials: _openMaterials,
-                  onPractice: () =>
+                  onPractice: () {
+                    Navigator.of(context).popUntil(
+                      (route) => route.isFirst,
+                    );
+                    StudentShell.of(context)?.goToTab(2);
+                  },
+                  onWeakTopics: () =>
                       Navigator.of(context).pushNamed(AppRoutes.weakTopics),
                   onAi: () =>
                       Navigator.of(context).pushNamed(AppRoutes.aiMentor),
@@ -388,11 +448,29 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                             ),
                           );
                         }),
+                      const SizedBox(height: 22),
+                      KeyedSubtree(
+                        key: _lecturesKey,
+                        child: CourseLecturesSection(
+                          snapshot: _lecturesOrEmpty,
+                          loading: _isLecturesLoading,
+                          error: _lecturesError,
+                          onRetry: () {
+                            final id = _snapshot?.courseId;
+                            if (id == null) return;
+                            setState(() {
+                              _lecturesLoading = true;
+                              _lecturesError = null;
+                            });
+                            _loadLectures(id);
+                          },
+                          embedded: true,
+                        ),
+                      ),
                     ],
                   ),
                 ),
-              ] else
-                _PlaceholderTab(tab: _tab),
+              ],
               ],
             ),
           ),
@@ -725,9 +803,6 @@ class _TabStrip extends StatelessWidget {
     const items = <(_CourseTab, String)>[
       (_CourseTab.overview, 'Overview'),
       (_CourseTab.content, 'Content'),
-      (_CourseTab.instructors, 'Instructors'),
-      (_CourseTab.reviews, 'Reviews'),
-      (_CourseTab.faqs, 'FAQs'),
     ];
 
     return Material(
@@ -1019,32 +1094,39 @@ class _FeatureStrip extends StatelessWidget {
   const _FeatureStrip({
     required this.moduleCount,
     required this.lessonCount,
+    required this.lectureCount,
     required this.onModules,
     required this.onLectures,
     required this.onMaterials,
     required this.onPractice,
+    required this.onWeakTopics,
     required this.onAi,
     required this.onNotes,
   });
 
   final int moduleCount;
   final int lessonCount;
+  final int lectureCount;
   final VoidCallback onModules;
   final VoidCallback onLectures;
   final VoidCallback onMaterials;
   final VoidCallback onPractice;
+  final VoidCallback onWeakTopics;
   final VoidCallback onAi;
   final VoidCallback onNotes;
 
   @override
   Widget build(BuildContext context) {
+    final lectureLabel =
+        lectureCount > 0 ? '$lectureCount Lectures' : 'Lectures';
     final items = <(IconData, String, VoidCallback)>[
       (Icons.description_outlined, '$moduleCount Modules', onModules),
-      (Icons.play_circle_outline_rounded, 'Lectures', onLectures),
+      (Icons.play_circle_outline_rounded, lectureLabel, onLectures),
       (Icons.picture_as_pdf_outlined, 'Materials', onMaterials),
-      (Icons.help_outline_rounded, 'Practice', onPractice),
+      (Icons.track_changes_outlined, 'Practice', onPractice),
+      (Icons.trending_down_rounded, 'Weak Topics', onWeakTopics),
       (Icons.auto_awesome_rounded, 'AI Mentor', onAi),
-      (Icons.download_outlined, 'Notes', onNotes),
+      (Icons.bookmark_border_rounded, 'Notes', onNotes),
     ];
 
     return SingleChildScrollView(
@@ -1360,40 +1442,6 @@ class _EmptyModules extends StatelessWidget {
         'No modules published in this course yet.',
         softWrap: true,
         style: TextStyle(
-          fontFamily: AppTheme.fontFamily,
-          color: _CourseDetailScreenState._muted,
-          height: 1.45,
-        ),
-      ),
-    );
-  }
-}
-
-class _PlaceholderTab extends StatelessWidget {
-  const _PlaceholderTab({required this.tab});
-
-  final _CourseTab tab;
-
-  @override
-  Widget build(BuildContext context) {
-    final label = switch (tab) {
-      _CourseTab.instructors => 'Instructor profiles will appear here soon.',
-      _CourseTab.reviews => 'Reviews will appear here soon.',
-      _CourseTab.faqs => 'FAQs will appear here soon.',
-      _ => 'Content coming soon.',
-    };
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE4EAF2)),
-      ),
-      child: Text(
-        label,
-        softWrap: true,
-        style: const TextStyle(
           fontFamily: AppTheme.fontFamily,
           color: _CourseDetailScreenState._muted,
           height: 1.45,

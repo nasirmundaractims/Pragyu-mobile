@@ -122,7 +122,7 @@ class NotesBookmarksRepository implements NotesBookmarksGateway {
         '/submissions',
         query: {
           'page': '1',
-          'per_page': '50',
+          'per_page': '100',
           if (profileId != null) 'student_profile_id': profileId,
           'sort': '-submitted_at',
         },
@@ -154,7 +154,7 @@ class NotesBookmarksRepository implements NotesBookmarksGateway {
     try {
       final envelope = await _api.get(
         '/assessments',
-        query: {'page': '1', 'per_page': '50'},
+        query: {'page': '1', 'per_page': '100'},
         accessToken: session.accessToken,
         organizationId: session.organizationId,
       );

@@ -5,6 +5,8 @@ import 'package:student_mobile/core/config/app_config.dart';
 import 'package:student_mobile/features/learn/data/learn_repository.dart';
 import 'package:student_mobile/features/learn/domain/learn_models.dart';
 import 'package:student_mobile/features/learn/presentation/screens/course_detail_screen.dart';
+import 'package:student_mobile/features/lectures/data/lectures_repository.dart';
+import 'package:student_mobile/features/lectures/domain/lecture_models.dart';
 
 class _FakeLearn implements LearnGateway {
   @override
@@ -73,6 +75,83 @@ class _FakeLearn implements LearnGateway {
   }
 }
 
+class _FakeLectures implements LecturesGateway {
+  @override
+  Future<LecturesSnapshot> loadLectures({String? courseId}) async {
+    return LecturesSnapshot(
+      upcoming: [
+        LectureItem(
+          id: 'lec1',
+          title: 'Polity Live Class',
+          courseId: courseId,
+          lectureType: 'live',
+          startsAt: DateTime.now().add(const Duration(days: 1)),
+        ),
+      ],
+      recorded: const [
+        LectureItem(
+          id: 'lec2',
+          title: 'Constitution Recorded',
+          lectureType: 'recorded',
+          hasVideo: true,
+          durationSeconds: 1800,
+        ),
+      ],
+    );
+  }
+
+  @override
+  Future<LiveLobbySnapshot> loadLiveLobby(String lectureId) async {
+    return LiveLobbySnapshot(lectureId: lectureId, title: 'Lobby');
+  }
+
+  @override
+  Future<LiveJoinResult> joinLive(String lectureId) async {
+    return const LiveJoinResult(inWaitingRoom: true);
+  }
+
+  @override
+  Future<List<LiveChatMessage>> listLiveChat(String lectureId) async =>
+      const [];
+
+  @override
+  Future<LiveChatMessage> postLiveChat(String lectureId, String body) async {
+    return LiveChatMessage(
+      id: 'm1',
+      body: body,
+      createdAt: DateTime.now(),
+    );
+  }
+
+  @override
+  Future<void> sendAttendanceHeartbeat(String lectureId) async {}
+
+  @override
+  Future<RecordedLectureSnapshot> loadRecordedLecture(String lectureId) async {
+    return RecordedLectureSnapshot(lectureId: lectureId, title: 'Recorded');
+  }
+
+  @override
+  Future<LecturePlaybackInfo> loadPlayback(String lectureId) async {
+    return const LecturePlaybackInfo();
+  }
+
+  @override
+  Future<RecordedLectureSnapshot> completeRecordedLecture(
+    String lectureId,
+  ) async {
+    return RecordedLectureSnapshot(lectureId: lectureId, title: 'Recorded');
+  }
+
+  @override
+  Future<void> reportPlaybackProgress({
+    required String lectureId,
+    required int positionSeconds,
+    int? deltaSeconds,
+    int? progressPercent,
+  }) async {}
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -80,7 +159,9 @@ void main() {
     await AppConfig.load();
   });
 
-  testWidgets('S-21 shows progress, continue, and modules', (tester) async {
+  testWidgets('S-21 shows progress, modules, and inline lectures', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light(),
@@ -91,6 +172,7 @@ void main() {
             programName: 'UPSC CSE',
           ),
           learnRepository: _FakeLearn(),
+          lecturesRepository: _FakeLectures(),
         ),
       ),
     );
@@ -101,12 +183,17 @@ void main() {
     expect(find.text('40% complete'), findsOneWidget);
     expect(find.text('2/5 lessons'), findsOneWidget);
     expect(find.textContaining('Continue: Preamble'), findsOneWidget);
-    expect(find.text('Lectures'), findsOneWidget);
+    expect(find.textContaining('Lectures'), findsWidgets);
     expect(find.text('Materials'), findsOneWidget);
     expect(find.text('Modules'), findsOneWidget);
     expect(find.text('Polity Basics'), findsOneWidget);
     expect(find.text('Constitution'), findsOneWidget);
     expect(find.text('Preamble'), findsWidgets);
+    expect(find.text('Live, upcoming & recorded classes'), findsOneWidget);
+    expect(find.text('Polity Live Class'), findsOneWidget);
+    expect(find.text('Constitution Recorded'), findsOneWidget);
+    expect(find.text('Upcoming'), findsWidgets);
+    expect(find.text('Recorded'), findsWidgets);
   });
 
   testWidgets('S-21 empty modules state', (tester) async {
@@ -116,6 +203,7 @@ void main() {
         home: CourseDetailScreen(
           args: const CourseDetailArgs(courseId: 'empty'),
           learnRepository: _EmptyLearn(),
+          lecturesRepository: _EmptyLectures(),
         ),
       ),
     );
@@ -123,6 +211,10 @@ void main() {
 
     expect(find.text('No modules published in this course yet.'), findsOneWidget);
     expect(find.textContaining('Continue:'), findsNothing);
+    expect(
+      find.text('No lectures published for this course yet.'),
+      findsOneWidget,
+    );
   });
 }
 
@@ -153,4 +245,62 @@ class _EmptyLearn implements LearnGateway {
   Future<LessonProgressState> completeLesson(String lessonId) async {
     return const LessonProgressState(status: 'completed', progressPercent: 100);
   }
+}
+
+class _EmptyLectures implements LecturesGateway {
+  @override
+  Future<LecturesSnapshot> loadLectures({String? courseId}) async {
+    return const LecturesSnapshot();
+  }
+
+  @override
+  Future<LiveLobbySnapshot> loadLiveLobby(String lectureId) async {
+    return LiveLobbySnapshot(lectureId: lectureId, title: 'Lobby');
+  }
+
+  @override
+  Future<LiveJoinResult> joinLive(String lectureId) async {
+    return const LiveJoinResult(inWaitingRoom: true);
+  }
+
+  @override
+  Future<List<LiveChatMessage>> listLiveChat(String lectureId) async =>
+      const [];
+
+  @override
+  Future<LiveChatMessage> postLiveChat(String lectureId, String body) async {
+    return LiveChatMessage(
+      id: 'm1',
+      body: body,
+      createdAt: DateTime.now(),
+    );
+  }
+
+  @override
+  Future<void> sendAttendanceHeartbeat(String lectureId) async {}
+
+  @override
+  Future<RecordedLectureSnapshot> loadRecordedLecture(String lectureId) async {
+    return RecordedLectureSnapshot(lectureId: lectureId, title: 'Recorded');
+  }
+
+  @override
+  Future<LecturePlaybackInfo> loadPlayback(String lectureId) async {
+    return const LecturePlaybackInfo();
+  }
+
+  @override
+  Future<RecordedLectureSnapshot> completeRecordedLecture(
+    String lectureId,
+  ) async {
+    return RecordedLectureSnapshot(lectureId: lectureId, title: 'Recorded');
+  }
+
+  @override
+  Future<void> reportPlaybackProgress({
+    required String lectureId,
+    required int positionSeconds,
+    int? deltaSeconds,
+    int? progressPercent,
+  }) async {}
 }

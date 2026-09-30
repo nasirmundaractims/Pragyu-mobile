@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:student_mobile/app/router/app_router.dart';
 import 'package:student_mobile/app/theme/app_theme.dart';
+import 'package:student_mobile/features/alerts/data/alerts_repository.dart';
+import 'package:student_mobile/features/alerts/domain/alerts_models.dart';
 import 'package:student_mobile/features/auth/domain/auth_models.dart';
 import 'package:student_mobile/features/home/data/home_repository.dart';
 import 'package:student_mobile/features/home/domain/home_models.dart';
@@ -65,11 +67,30 @@ class _FakeMe implements MeGateway {
   }
 }
 
+class _FakeAlerts implements AlertsGateway {
+  @override
+  Future<AlertsSnapshot> loadAlerts({int page = 1}) async => const AlertsSnapshot();
+
+  @override
+  Future<int> unreadCount() async => 0;
+
+  @override
+  Future<void> markRead(AlertItem item) async {}
+
+  @override
+  Future<void> markAllRead() async {}
+}
+
 class _FakeHome implements HomeGateway {
   @override
   Future<HomeSnapshot> loadHome() async {
     return const HomeSnapshot(
       user: AuthUser(id: '1', email: 'a@b.com', firstName: 'Alex'),
+      progress: HomeProgressSummary(
+        coursesEnrolled: 2,
+        testsAttempted: 3,
+        overallPercent: 80,
+      ),
     );
   }
 
@@ -122,7 +143,11 @@ void main() {
           }
           return null;
         },
-        home: MeScreen(meRepository: fake),
+        home: MeScreen(
+          meRepository: fake,
+          homeRepository: _FakeHome(),
+          alertsRepository: _FakeAlerts(),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -138,6 +163,8 @@ void main() {
     expect(find.text('Switch institute'), findsOneWidget);
     expect(find.text('Logout'), findsWidgets);
 
+    await tester.ensureVisible(find.text('Notification preferences'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Notification preferences'));
     await tester.pumpAndSettle();
     expect(find.text('Notification preferences page'), findsOneWidget);
@@ -149,11 +176,17 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light(),
-        home: MeScreen(meRepository: fake),
+        home: MeScreen(
+          meRepository: fake,
+          homeRepository: _FakeHome(),
+          alertsRepository: _FakeAlerts(),
+        ),
       ),
     );
     await tester.pumpAndSettle();
 
+    await tester.ensureVisible(find.text('Edit'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Edit'));
     await tester.pumpAndSettle();
 
@@ -177,7 +210,11 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light(),
-        home: MeScreen(meRepository: fake),
+        home: MeScreen(
+          meRepository: fake,
+          homeRepository: _FakeHome(),
+          alertsRepository: _FakeAlerts(),
+        ),
         onGenerateRoute: (settings) {
           loggedOutRoute = settings.name;
           if (settings.name == AppRoutes.welcome) {
@@ -193,7 +230,11 @@ void main() {
     await tester.pumpAndSettle();
 
     final logout = find.widgetWithText(OutlinedButton, 'Logout');
-    await tester.scrollUntilVisible(logout, 120);
+    await tester.scrollUntilVisible(
+      logout,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.pumpAndSettle();
     await tester.tap(logout);
     await tester.pumpAndSettle();
@@ -217,6 +258,7 @@ void main() {
           initialIndex: 4,
           homeRepository: _FakeHome(),
           meRepository: fake,
+          alertsRepository: _FakeAlerts(),
         ),
       ),
     );

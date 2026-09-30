@@ -24,19 +24,20 @@ void main() {
     await tester.pumpWidget(const PragyuApp());
 
     expect(find.text('Pragyu'), findsWidgets);
-    expect(find.textContaining('Learn'), findsWidgets);
-    expect(find.text('Classes'), findsOneWidget);
-    expect(find.text('Schools'), findsOneWidget);
-    expect(find.text('Learn'), findsWidgets);
-    expect(find.text('Practice'), findsWidgets);
-    expect(find.text('Loading your learning journey...'), findsOneWidget);
-    expect(find.text('BUILT FOR BRIGHTER FUTURES'), findsOneWidget);
+    expect(find.text('Learn'), findsOneWidget);
+    expect(find.text('Practice'), findsOneWidget);
+    expect(find.text('Grow'), findsOneWidget);
+    expect(find.text('Building a Brighter Tomorrow'), findsOneWidget);
     expect(
-      find.image(const AssetImage('assets/images/splash/hero_student.png')),
+      find.image(const AssetImage('assets/images/brand/pragyu-mark.png')),
       findsOneWidget,
     );
     expect(
       find.image(const AssetImage('assets/images/splash/splash_screen.png')),
+      findsNothing,
+    );
+    expect(
+      find.image(const AssetImage('assets/images/splash/hero_student.png')),
       findsNothing,
     );
 

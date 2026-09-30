@@ -113,11 +113,25 @@ class TestListItem {
 }
 
 class TestsSnapshot {
-  const TestsSnapshot({this.items = const []});
+  const TestsSnapshot({
+    this.items = const [],
+    this.hasMore = false,
+    this.page = 1,
+  });
 
   final List<TestListItem> items;
+  final bool hasMore;
+  final int page;
 
   bool get isEmpty => items.isEmpty;
+
+  TestsSnapshot append(TestsSnapshot next) {
+    return TestsSnapshot(
+      items: [...items, ...next.items],
+      hasMore: next.hasMore,
+      page: next.page,
+    );
+  }
 
   List<TestListItem> filtered(TestsFilter filter) {
     switch (filter) {

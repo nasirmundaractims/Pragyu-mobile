@@ -41,7 +41,7 @@ class AttemptInstructionsArgs {
   }
 }
 
-/// Route args for S-43 Attempt player (stub until CBT ships).
+/// Route args for S-43 Attempt player (CBT).
 class AttemptPlayerArgs {
   const AttemptPlayerArgs({
     required this.assessmentId,

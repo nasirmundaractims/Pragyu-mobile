@@ -1,3 +1,5 @@
+import 'package:student_mobile/features/tests/domain/cbt_player_models.dart';
+
 /// Route args for S-47 Deep feedback (suggestions + AI rewrite).
 class DeepFeedbackArgs {
   const DeepFeedbackArgs({
@@ -318,6 +320,48 @@ String? extractOriginalAnswerText(Map<String, dynamic> metadata) {
 
   if (chunks.isEmpty) return null;
   return chunks.join('\n\n');
+}
+
+/// Collect answer-sheet images from submission metadata.
+List<AnswerImageAttachment> extractAnswerImages(Map<String, dynamic> metadata) {
+  final collected = <AnswerImageAttachment>[];
+  final seen = <String>{};
+
+  void addRaw(Object? raw) {
+    if (raw is! Map) return;
+    final attachment = AnswerImageAttachment.fromJson(
+      raw.map((k, v) => MapEntry(k.toString(), v)),
+    );
+    final key = attachment.mediaFileId.isNotEmpty
+        ? attachment.mediaFileId
+        : (attachment.url ?? attachment.fileName);
+    if (key.isEmpty || !seen.add(key)) return;
+    collected.add(attachment);
+  }
+
+  final mediaFiles = metadata['media_files'];
+  if (mediaFiles is List) {
+    for (final item in mediaFiles) {
+      addRaw(item);
+    }
+  }
+
+  final answers = metadata['answers'];
+  if (answers is Map) {
+    answers.forEach((_, value) {
+      if (value is! Map) return;
+      final images = value['images'];
+      if (images is! List) return;
+      for (final item in images) {
+        addRaw(item);
+      }
+    });
+  }
+
+  collected.sort(
+    (a, b) => (a.pageNumber ?? 0).compareTo(b.pageNumber ?? 0),
+  );
+  return collected;
 }
 
 Map<String, dynamic> _asMap(Object? raw) {

@@ -16,6 +16,8 @@ class AppConfig {
     this.supportEmail,
     this.privacyUrl,
     this.termsUrl,
+    this.androidStoreUrl,
+    this.iosStoreUrl,
   });
 
   final AppEnvironment environment;
@@ -26,6 +28,8 @@ class AppConfig {
   final String? supportEmail;
   final String? privacyUrl;
   final String? termsUrl;
+  final String? androidStoreUrl;
+  final String? iosStoreUrl;
 
   static AppConfig? _instance;
 
@@ -49,6 +53,10 @@ class AppConfig {
         String.fromEnvironment('PRIVACY_URL', defaultValue: '');
     const termsFromDefine =
         String.fromEnvironment('TERMS_URL', defaultValue: '');
+    const androidStoreFromDefine =
+        String.fromEnvironment('ANDROID_STORE_URL', defaultValue: '');
+    const iosStoreFromDefine =
+        String.fromEnvironment('IOS_STORE_URL', defaultValue: '');
 
     final environment = AppEnvironment.fromString(
       envFromDefine.isEmpty ? null : envFromDefine,
@@ -83,6 +91,16 @@ class AppConfig {
       ),
       termsUrl: _nullableUrl(
         termsFromDefine.isNotEmpty ? termsFromDefine : fileValues['TERMS_URL'],
+      ),
+      androidStoreUrl: _nullableUrl(
+        androidStoreFromDefine.isNotEmpty
+            ? androidStoreFromDefine
+            : fileValues['ANDROID_STORE_URL'],
+      ),
+      iosStoreUrl: _nullableUrl(
+        iosStoreFromDefine.isNotEmpty
+            ? iosStoreFromDefine
+            : fileValues['IOS_STORE_URL'],
       ),
     );
 

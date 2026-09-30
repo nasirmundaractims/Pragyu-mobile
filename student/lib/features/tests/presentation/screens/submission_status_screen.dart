@@ -135,6 +135,7 @@ class _SubmissionStatusScreenState extends State<SubmissionStatusScreen> {
                     stage: stage,
                     includesMedia: widget.args.includesMedia,
                     isOcr: _payload.isOcrStage,
+                    failureReason: _payload.failureReason,
                   ),
                   style: const TextStyle(color: AppColors.muted, height: 1.4),
                 ),
@@ -190,23 +191,47 @@ class _SubmissionStatusScreenState extends State<SubmissionStatusScreen> {
                       child: const Text('Check again'),
                     )
                   else
-                    Row(
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: AppColors.brand,
+                        Row(
+                          children: [
+                            const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppColors.brand,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                _payload.failureReason != null &&
+                                        _payload.failureReason!.isNotEmpty
+                                    ? 'Waiting on a fix before AI can continue…'
+                                    : (_payload.isPending
+                                        ? 'Checking for updates…'
+                                        : 'Waiting…'),
+                                softWrap: true,
+                                style: const TextStyle(color: AppColors.muted),
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (_payload.failureReason != null &&
+                            _payload.failureReason!.isNotEmpty) ...[
+                          const SizedBox(height: 12),
+                          OutlinedButton(
+                            onPressed: () => _refresh(initial: true),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.ink,
+                              minimumSize: const Size.fromHeight(44),
+                              side: const BorderSide(color: AppColors.brandSoft),
+                            ),
+                            child: const Text('Check again'),
                           ),
-                        ),
-                        const SizedBox(width: 10),
-                        Text(
-                          _payload.isPending
-                              ? 'Checking for updates…'
-                              : 'Waiting…',
-                          style: const TextStyle(color: AppColors.muted),
-                        ),
+                        ],
                       ],
                     ),
                   const SizedBox(height: 12),
@@ -227,16 +252,26 @@ class _SubmissionStatusScreenState extends State<SubmissionStatusScreen> {
     required SubmissionPipelineStage stage,
     required bool includesMedia,
     required bool isOcr,
+    String? failureReason,
   }) {
+    if (stage == SubmissionPipelineStage.ready) {
+      return 'Your AI evaluation is ready. Open the result to review scores and feedback.';
+    }
+    if (stage == SubmissionPipelineStage.failed) {
+      return 'We could not finish evaluating this attempt. Please try again or contact support.';
+    }
+    if (failureReason != null && failureReason.trim().isNotEmpty) {
+      return 'Evaluation could not start yet. Pull to refresh after the issue is resolved, or contact your institute.';
+    }
     if (includesMedia || isOcr) {
       if (stage == SubmissionPipelineStage.processing) {
-        return 'Your handwritten pages are being read with OCR before AI scoring.';
+        return 'Your answer was submitted successfully. Handwritten pages are being read with OCR in the background. We will notify you when evaluation is ready.';
       }
       if (stage == SubmissionPipelineStage.evaluating) {
-        return 'OCR finished. AI is evaluating your answers now.';
+        return 'OCR finished. AI evaluation is processing in the background. You will be notified when it completes.';
       }
     }
-    return 'Your answers were submitted. We are preparing feedback.';
+    return 'Your answer was submitted successfully. Evaluation is processing in the background and we will notify you when it is ready.';
   }
 }
 

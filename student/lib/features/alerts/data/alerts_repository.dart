@@ -4,7 +4,7 @@ import 'package:student_mobile/core/session/session_service.dart';
 import 'package:student_mobile/features/alerts/domain/alerts_models.dart';
 
 abstract class AlertsGateway {
-  Future<AlertsSnapshot> loadAlerts();
+  Future<AlertsSnapshot> loadAlerts({int page = 1});
 
   Future<int> unreadCount();
 
@@ -24,10 +24,11 @@ class AlertsRepository implements AlertsGateway {
   final SessionService _session;
 
   @override
-  Future<AlertsSnapshot> loadAlerts() async {
+  Future<AlertsSnapshot> loadAlerts({int page = 1}) async {
     final session = await _requireSession();
-    final notificationsFuture = _loadNotifications(session);
-    final inboxFuture = _loadInbox(session);
+    const perPage = 50;
+    final notificationsFuture = _loadNotifications(session, page: page);
+    final inboxFuture = _loadInbox(session, page: page);
     final unreadFuture = unreadCount();
 
     final notifications = await notificationsFuture;
@@ -56,6 +57,8 @@ class AlertsRepository implements AlertsGateway {
     return AlertsSnapshot(
       items: merged,
       unreadCount: unread > 0 ? unread : pageUnread,
+      page: page,
+      hasMore: notifications.length >= perPage || inbox.length >= perPage,
     );
   }
 
@@ -108,12 +111,15 @@ class AlertsRepository implements AlertsGateway {
     );
   }
 
-  Future<List<AlertItem>> _loadNotifications(SessionContext session) async {
+  Future<List<AlertItem>> _loadNotifications(
+    SessionContext session, {
+    int page = 1,
+  }) async {
     try {
       final envelope = await _api.get(
         '/notifications',
-        query: const {
-          'page': '1',
+        query: {
+          'page': '$page',
           'per_page': '50',
         },
         accessToken: session.accessToken,
@@ -131,12 +137,15 @@ class AlertsRepository implements AlertsGateway {
     }
   }
 
-  Future<List<AlertItem>> _loadInbox(SessionContext session) async {
+  Future<List<AlertItem>> _loadInbox(
+    SessionContext session, {
+    int page = 1,
+  }) async {
     try {
       final envelope = await _api.get(
         '/engagement/inbox',
-        query: const {
-          'page': '1',
+        query: {
+          'page': '$page',
           'per_page': '50',
         },
         accessToken: session.accessToken,

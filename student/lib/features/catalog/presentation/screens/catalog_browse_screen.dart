@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 
 import 'package:student_mobile/app/router/app_router.dart';
 import 'package:student_mobile/app/theme/app_theme.dart';
+import 'package:student_mobile/app/widgets/app_network_image.dart';
 import 'package:student_mobile/app/widgets/pragyu_logo.dart';
 import 'package:student_mobile/core/session/session_service.dart';
 import 'package:student_mobile/features/alerts/data/alerts_repository.dart';
@@ -88,7 +89,10 @@ class _CatalogBrowseScreenState extends State<CatalogBrowseScreen> {
       _error = null;
     });
     try {
-      final snapshot = await _catalog.loadCatalog(query: query);
+      final snapshot = await _catalog.loadCatalog(
+        query: query,
+        offset: 0,
+      );
       if (!mounted) return;
       setState(() {
         _snapshot = snapshot;
@@ -100,6 +104,25 @@ class _CatalogBrowseScreenState extends State<CatalogBrowseScreen> {
         _error = 'Unable to load catalog. Pull to retry.';
         _loading = false;
       });
+    }
+  }
+
+  Future<void> _loadMore() async {
+    if (!_snapshot.hasMore || _loading) return;
+    setState(() => _loading = true);
+    try {
+      final next = await _catalog.loadCatalog(
+        query: _searchController.text,
+        offset: _snapshot.offset + _snapshot.items.length,
+      );
+      if (!mounted) return;
+      setState(() {
+        _snapshot = _snapshot.append(next);
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loading = false);
     }
   }
 
@@ -370,20 +393,32 @@ class _CatalogBrowseScreenState extends State<CatalogBrowseScreen> {
           ),
           if (_tab != _MarketTab.all ||
               (_searchController.text.trim().isNotEmpty))
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 28),
-              sliver: SliverList.separated(
-                itemCount: filtered.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 10),
-                itemBuilder: (context, index) {
-                  final item = filtered[index];
-                  return _ListRow(
-                    item: item,
-                    onTap: () => _openListing(item),
-                  );
-                },
+            ...[
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                sliver: SliverList.separated(
+                  itemCount: filtered.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 10),
+                  itemBuilder: (context, index) {
+                    final item = filtered[index];
+                    return _ListRow(
+                      item: item,
+                      onTap: () => _openListing(item),
+                    );
+                  },
+                ),
               ),
-            ),
+              if (_snapshot.hasMore)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 28),
+                    child: OutlinedButton(
+                      onPressed: _loading ? null : _loadMore,
+                      child: Text(_loading ? 'Loading…' : 'Load more'),
+                    ),
+                  ),
+                ),
+            ],
         ],
       ],
     );
@@ -522,7 +557,7 @@ class _MarketHeader extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                PragyuLogo(height: 30, semanticsLabel: 'Pragyu'),
+                PragyuLogo(height: PragyuLogo.headerHeight, semanticsLabel: 'Pragyu'),
                 SizedBox(height: 2),
                 Text(
                   'Learn • Practice • Grow',
@@ -1078,12 +1113,7 @@ class _CourseCard extends StatelessWidget {
                     fit: StackFit.expand,
                     children: [
                       if (thumb != null && thumb.isNotEmpty)
-                        Image.network(
-                          thumb,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) =>
-                              _thumbFallback(),
-                        )
+                        AppNetworkImage(url: thumb, fit: BoxFit.cover)
                       else
                         _thumbFallback(),
                       Positioned(

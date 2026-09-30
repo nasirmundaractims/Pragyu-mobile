@@ -336,7 +336,7 @@ class _SentState extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const PragyuLogo(height: 40),
+        const PragyuLogo(height: 64),
         const SizedBox(height: 4),
         const Text(
           'Learn • Practice • Grow',
@@ -474,7 +474,7 @@ class _HeroHeader extends StatelessWidget {
     final copy = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const PragyuLogo(height: 40),
+        const PragyuLogo(height: 64),
         const SizedBox(height: 4),
         const Text(
           'Learn • Practice • Grow',

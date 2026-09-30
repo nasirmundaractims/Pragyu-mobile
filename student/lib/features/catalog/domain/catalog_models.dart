@@ -139,10 +139,26 @@ class CatalogListing {
 }
 
 class CatalogSnapshot {
-  const CatalogSnapshot({this.items = const [], this.query = ''});
+  const CatalogSnapshot({
+    this.items = const [],
+    this.query = '',
+    this.hasMore = false,
+    this.offset = 0,
+  });
 
   final List<CatalogListing> items;
   final String query;
+  final bool hasMore;
+  final int offset;
 
   bool get isEmpty => items.isEmpty;
+
+  CatalogSnapshot append(CatalogSnapshot next) {
+    return CatalogSnapshot(
+      items: [...items, ...next.items],
+      query: next.query,
+      hasMore: next.hasMore,
+      offset: next.offset,
+    );
+  }
 }

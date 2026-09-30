@@ -18,7 +18,7 @@ class _FakeTests implements TestsGateway {
   final SubmissionStatusPayload payload;
 
   @override
-  Future<TestsSnapshot> loadTests() async => const TestsSnapshot();
+  Future<TestsSnapshot> loadTests({int page = 1}) async => const TestsSnapshot();
 
   @override
   Future<AssessmentDetailSnapshot> loadAssessmentDetail(

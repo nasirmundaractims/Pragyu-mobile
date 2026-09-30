@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:student_mobile/app/router/app_router.dart';
 import 'package:student_mobile/app/theme/app_colors.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
+import 'package:student_mobile/features/catalog/data/marketplace_access_service.dart';
 import 'package:student_mobile/features/exam_series/data/exam_series_repository.dart';
 import 'package:student_mobile/features/exam_series/domain/exam_series_models.dart';
 
@@ -23,6 +24,8 @@ class ExamSeriesScreen extends StatefulWidget {
 class _ExamSeriesScreenState extends State<ExamSeriesScreen> {
   late final ExamSeriesGateway _repo =
       widget.seriesRepository ?? ExamSeriesRepository();
+  final MarketplaceAccessService _marketplace =
+      MarketplaceAccessService.instance;
 
   bool _loading = true;
   bool _opening = false;
@@ -32,7 +35,24 @@ class _ExamSeriesScreenState extends State<ExamSeriesScreen> {
   @override
   void initState() {
     super.initState();
+    _marketplace.addListener(_onMarketplaceChanged);
+    _marketplace.ensureLoaded();
     _load();
+  }
+
+  @override
+  void dispose() {
+    _marketplace.removeListener(_onMarketplaceChanged);
+    super.dispose();
+  }
+
+  void _onMarketplaceChanged() {
+    if (mounted) setState(() {});
+  }
+
+  void _openCatalog() {
+    if (!_marketplace.available) return;
+    Navigator.of(context).pushNamed(AppRoutes.catalog);
   }
 
   Future<void> _load() async {
@@ -135,8 +155,9 @@ class _ExamSeriesScreenState extends State<ExamSeriesScreen> {
                         padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
                         child: _snapshot.isEmpty
                             ? _EmptyHub(
-                                onBrowseCatalog: () => Navigator.of(context)
-                                    .pushNamed(AppRoutes.catalog),
+                                onBrowseCatalog: _marketplace.available
+                                    ? _openCatalog
+                                    : null,
                                 onBrowseTests: () => Navigator.of(context)
                                     .pushNamed(AppRoutes.home),
                               )
@@ -145,8 +166,9 @@ class _ExamSeriesScreenState extends State<ExamSeriesScreen> {
                                 children: [
                                   _HubHeader(
                                     packCount: _snapshot.packs.length,
-                                    onFindMore: () => Navigator.of(context)
-                                        .pushNamed(AppRoutes.catalog),
+                                    onFindMore: _marketplace.available
+                                        ? _openCatalog
+                                        : null,
                                   ),
                                   const SizedBox(height: 14),
                                   for (final pack in _snapshot.packs) ...[
@@ -172,11 +194,11 @@ class _ExamSeriesScreenState extends State<ExamSeriesScreen> {
 class _HubHeader extends StatelessWidget {
   const _HubHeader({
     required this.packCount,
-    required this.onFindMore,
+    this.onFindMore,
   });
 
   final int packCount;
-  final VoidCallback onFindMore;
+  final VoidCallback? onFindMore;
 
   @override
   Widget build(BuildContext context) {
@@ -213,14 +235,16 @@ class _HubHeader extends StatelessWidget {
             'Open a pack to take the included tests. Purchased packs open in the seller workspace when needed.',
             style: TextStyle(fontSize: 13, color: AppColors.muted, height: 1.35),
           ),
-          const SizedBox(height: 10),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: OutlinedButton(
-              onPressed: onFindMore,
-              child: const Text('Find more packs'),
+          if (onFindMore != null) ...[
+            const SizedBox(height: 10),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: OutlinedButton(
+                onPressed: onFindMore,
+                child: const Text('Find more packs'),
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );
@@ -391,11 +415,11 @@ class _StatTile extends StatelessWidget {
 
 class _EmptyHub extends StatelessWidget {
   const _EmptyHub({
-    required this.onBrowseCatalog,
+    this.onBrowseCatalog,
     required this.onBrowseTests,
   });
 
-  final VoidCallback onBrowseCatalog;
+  final VoidCallback? onBrowseCatalog;
   final VoidCallback onBrowseTests;
 
   @override
@@ -440,12 +464,13 @@ class _EmptyHub extends StatelessWidget {
             style: TextStyle(fontSize: 13, color: AppColors.muted, height: 1.4),
           ),
           const SizedBox(height: 18),
-          FilledButton(
-            onPressed: onBrowseCatalog,
-            style: FilledButton.styleFrom(backgroundColor: AppColors.brand),
-            child: const Text('Browse exam series'),
-          ),
-          const SizedBox(height: 8),
+          if (onBrowseCatalog != null)
+            FilledButton(
+              onPressed: onBrowseCatalog,
+              style: FilledButton.styleFrom(backgroundColor: AppColors.brand),
+              child: const Text('Browse exam series'),
+            ),
+          if (onBrowseCatalog != null) const SizedBox(height: 8),
           OutlinedButton(
             onPressed: onBrowseTests,
             child: const Text('Browse individual tests'),

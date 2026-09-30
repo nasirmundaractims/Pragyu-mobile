@@ -56,6 +56,7 @@ class _TestsHubScreenState extends State<TestsHubScreen> {
       widget.alertsRepository ?? AlertsRepository();
 
   final _modesKey = GlobalKey();
+  final _topicsKey = GlobalKey();
 
   bool _loading = true;
   String? _error;
@@ -80,7 +81,7 @@ class _TestsHubScreenState extends State<TestsHubScreen> {
       _error = null;
     });
     try {
-      final snapshot = await _tests.loadTests();
+      final snapshot = await _tests.loadTests(page: 1);
       if (!mounted) return;
       setState(() {
         _snapshot = snapshot;
@@ -93,6 +94,25 @@ class _TestsHubScreenState extends State<TestsHubScreen> {
         _error = 'Unable to load tests. Pull to retry.';
         _loading = false;
       });
+    }
+  }
+
+  Future<void> _loadMore() async {
+    final current = _snapshot;
+    if (current == null || !current.hasMore || _loading) return;
+    setState(() => _loading = true);
+    try {
+      final next = await _tests.loadTests(page: current.page + 1);
+      if (!mounted) return;
+      final merged = current.append(next);
+      setState(() {
+        _snapshot = merged;
+        _loading = false;
+        _syncSelection(merged);
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loading = false);
     }
   }
 
@@ -132,13 +152,27 @@ class _TestsHubScreenState extends State<TestsHubScreen> {
   }
 
   List<TestListItem> _visibleItems(TestsSnapshot snapshot) {
-    var items = snapshot.filtered(_filter);
-    if (_typeKey != null && _typeKey!.isNotEmpty) {
+    return _itemsForMode(
+      snapshot,
+      mode: _mode,
+      filter: _filter,
+      typeKey: _typeKey,
+    );
+  }
+
+  static List<TestListItem> _itemsForMode(
+    TestsSnapshot snapshot, {
+    required _PracticeMode mode,
+    required TestsFilter filter,
+    String? typeKey,
+  }) {
+    var items = snapshot.filtered(filter);
+    if (typeKey != null && typeKey.isNotEmpty) {
       items = items
-          .where((item) => item.typeLabel == _typeKey)
+          .where((item) => item.typeLabel == typeKey)
           .toList(growable: false);
     }
-    switch (_mode) {
+    switch (mode) {
       case _PracticeMode.byTopic:
         items = items.where((item) => item.isPractice).toList(growable: false);
       case _PracticeMode.mock:
@@ -149,10 +183,7 @@ class _TestsHubScreenState extends State<TestsHubScreen> {
         break;
       case _PracticeMode.previousYear:
         items = items
-            .where(
-              (item) =>
-                  item.type == TestKind.exam || _looksLikePastYear(item.title),
-            )
+            .where((item) => _looksLikePastYear(item.title))
             .toList(growable: false);
     }
     return items;
@@ -162,7 +193,46 @@ class _TestsHubScreenState extends State<TestsHubScreen> {
     final lower = title.toLowerCase();
     return RegExp(r'\b(19|20)\d{2}\b').hasMatch(title) ||
         lower.contains('previous year') ||
-        lower.contains('pyq');
+        lower.contains('pyq') ||
+        lower.contains('past paper');
+  }
+
+  static String _modeTitle(_PracticeMode mode) {
+    switch (mode) {
+      case _PracticeMode.byTopic:
+        return 'Topic practice';
+      case _PracticeMode.mock:
+        return 'Mock tests';
+      case _PracticeMode.mixed:
+        return 'All practice';
+      case _PracticeMode.previousYear:
+        return 'Previous year';
+    }
+  }
+
+  static String _modeEmptyMessage(_PracticeMode mode) {
+    switch (mode) {
+      case _PracticeMode.byTopic:
+        return 'No topic practice tests yet. Try Mixed or open Exam Series.';
+      case _PracticeMode.mock:
+        return 'No mock exams assigned yet.';
+      case _PracticeMode.mixed:
+        return 'No tests match this filter.';
+      case _PracticeMode.previousYear:
+        return 'No previous-year papers here yet. Open Exam Series for packs.';
+    }
+  }
+
+  Map<_PracticeMode, int> _modeCounts(TestsSnapshot snapshot) {
+    return {
+      for (final mode in _PracticeMode.values)
+        mode: _itemsForMode(
+          snapshot,
+          mode: mode,
+          filter: _filter,
+          typeKey: _typeKey,
+        ).length,
+    };
   }
 
   List<String> _typeOptions(TestsSnapshot snapshot) {
@@ -190,14 +260,34 @@ class _TestsHubScreenState extends State<TestsHubScreen> {
   }
 
   void _scrollToModes() {
-    final target = _modesKey.currentContext;
-    if (target == null) return;
+    _scrollToKey(_modesKey);
+  }
+
+  void _scrollToTopics() {
+    _scrollToKey(_topicsKey, alignment: 0.05);
+  }
+
+  void _scrollToKey(GlobalKey? key, {double alignment = 0.08}) {
+    // Guard null key (common after hot reload when a new field was added).
+    final target = key?.currentContext;
+    if (target == null || !mounted) return;
     Scrollable.ensureVisible(
       target,
       duration: const Duration(milliseconds: 280),
       curve: Curves.easeOutCubic,
-      alignment: 0.08,
+      alignment: alignment,
     );
+  }
+
+  void _selectMode(_PracticeMode mode, TestsSnapshot snapshot) {
+    setState(() {
+      _mode = mode;
+      _syncSelection(snapshot);
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _scrollToTopics();
+    });
   }
 
   @override
@@ -274,18 +364,19 @@ class _TestsHubScreenState extends State<TestsHubScreen> {
         ),
         SizedBox(height: short ? 12 : 16),
         _PracticeHero(narrow: narrow, short: short),
+        SizedBox(height: short ? 12 : 14),
+        _ExamSeriesBanner(
+          onTap: () =>
+              Navigator.of(context).pushNamed(AppRoutes.examSeries),
+        ),
         SizedBox(height: short ? 14 : 18),
         KeyedSubtree(
           key: _modesKey,
           child: _ModeRow(
             selected: _mode,
             narrow: narrow,
-            onChanged: (mode) {
-              setState(() {
-                _mode = mode;
-                _syncSelection(snapshot);
-              });
-            },
+            counts: _modeCounts(snapshot),
+            onChanged: (mode) => _selectMode(mode, snapshot),
           ),
         ),
         SizedBox(height: short ? 14 : 18),
@@ -307,16 +398,20 @@ class _TestsHubScreenState extends State<TestsHubScreen> {
           },
         ),
         SizedBox(height: short ? 16 : 20),
-        _SectionHeader(
-          title: 'Select a Topic',
-          actionLabel: 'View Syllabus >',
-          onAction: () => Navigator.of(context).pushNamed(AppRoutes.catalog),
+        KeyedSubtree(
+          key: _topicsKey,
+          child: _SectionHeader(
+            title: '${_modeTitle(_mode)} · ${visible.length}',
+            actionLabel: 'Exam Series',
+            onAction: () =>
+                Navigator.of(context).pushNamed(AppRoutes.examSeries),
+          ),
         ),
         const SizedBox(height: 12),
         if (snapshot.isEmpty)
           const _InlineEmpty(message: 'No tests assigned yet.')
         else if (visible.isEmpty)
-          const _InlineEmpty(message: 'No tests match this filter.')
+          _InlineEmpty(message: _modeEmptyMessage(_mode))
         else
           _TopicGrid(
             items: visible,
@@ -326,7 +421,7 @@ class _TestsHubScreenState extends State<TestsHubScreen> {
           ),
         SizedBox(height: short ? 16 : 22),
         _SectionHeader(
-          title: 'Questions',
+          title: 'Selected test',
           actionLabel: 'Change Mode',
           onAction: _scrollToModes,
           actionIcon: Icons.tune_rounded,
@@ -348,6 +443,13 @@ class _TestsHubScreenState extends State<TestsHubScreen> {
             onStart: () => _openTest(selected),
             onOpen: () => _openTest(selected),
           ),
+        if (snapshot.hasMore) ...[
+          const SizedBox(height: 16),
+          OutlinedButton(
+            onPressed: _loading ? null : _loadMore,
+            child: Text(_loading ? 'Loading…' : 'Load more tests'),
+          ),
+        ],
       ],
     );
   }
@@ -381,7 +483,7 @@ class _TopBar extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              PragyuLogo(height: 34),
+              PragyuLogo(height: PragyuLogo.headerHeight),
               SizedBox(height: 4),
               Text(
                 'Learn • Practice • Grow',
@@ -615,15 +717,96 @@ class _PracticeHero extends StatelessWidget {
   }
 }
 
+class _ExamSeriesBanner extends StatelessWidget {
+  const _ExamSeriesBanner({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Ink(
+          padding: const EdgeInsets.fromLTRB(16, 14, 14, 14),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFFE8F1FF), Color(0xFFF3F7FF)],
+            ),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFD6E4FF)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.library_books_rounded,
+                  color: _TestsHubScreenState._blue,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Exam Series',
+                      style: TextStyle(
+                        fontFamily: AppTheme.fontFamily,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: _TestsHubScreenState._ink,
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'Full packs, prelims, and question banks',
+                      softWrap: true,
+                      style: TextStyle(
+                        fontFamily: AppTheme.fontFamily,
+                        fontSize: 12.5,
+                        height: 1.35,
+                        color: _TestsHubScreenState._muted,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: _TestsHubScreenState._blue,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _ModeRow extends StatelessWidget {
   const _ModeRow({
     required this.selected,
     required this.narrow,
+    required this.counts,
     required this.onChanged,
   });
 
   final _PracticeMode selected;
   final bool narrow;
+  final Map<_PracticeMode, int> counts;
   final ValueChanged<_PracticeMode> onChanged;
 
   @override
@@ -633,25 +816,25 @@ class _ModeRow extends StatelessWidget {
         _PracticeMode.byTopic,
         Icons.description_outlined,
         'Practice by Topic',
-        'Target specific topics',
+        'Practice & quiz tests',
       ),
       (
         _PracticeMode.mock,
         Icons.timer_outlined,
         'Mock Test',
-        'Full length test experience',
+        'Full exams only',
       ),
       (
         _PracticeMode.mixed,
         Icons.shuffle_rounded,
         'Mixed Practice',
-        'Random questions from all topics',
+        'Everything assigned',
       ),
       (
         _PracticeMode.previousYear,
         Icons.history_edu_outlined,
         'Previous Year',
-        'Practice past year questions',
+        'PYQ / year papers',
       ),
     ];
 
@@ -678,6 +861,7 @@ class _ModeRow extends StatelessWidget {
                   icon: card.$2,
                   title: card.$3,
                   subtitle: card.$4,
+                  count: counts[card.$1] ?? 0,
                   selected: card.$1 == selected,
                   compact: narrow || columns > 2,
                   onTap: () => onChanged(card.$1),
@@ -695,6 +879,7 @@ class _ModeCard extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.subtitle,
+    required this.count,
     required this.selected,
     required this.compact,
     required this.onTap,
@@ -703,6 +888,7 @@ class _ModeCard extends StatelessWidget {
   final IconData icon;
   final String title;
   final String subtitle;
+  final int count;
   final bool selected;
   final bool compact;
   final VoidCallback onTap;
@@ -743,12 +929,40 @@ class _ModeCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                icon,
-                size: 22,
-                color: selected
-                    ? _TestsHubScreenState._blue
-                    : _TestsHubScreenState._ink,
+              Row(
+                children: [
+                  Icon(
+                    icon,
+                    size: 22,
+                    color: selected
+                        ? _TestsHubScreenState._blue
+                        : _TestsHubScreenState._ink,
+                  ),
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: selected
+                          ? _TestsHubScreenState._blue
+                          : const Color(0xFFF0F3F8),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      '$count',
+                      style: TextStyle(
+                        fontFamily: AppTheme.fontFamily,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: selected
+                            ? Colors.white
+                            : _TestsHubScreenState._muted,
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 8),
               Text(

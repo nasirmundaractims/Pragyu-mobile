@@ -305,10 +305,14 @@ class AlertsSnapshot {
   const AlertsSnapshot({
     this.items = const [],
     this.unreadCount = 0,
+    this.hasMore = false,
+    this.page = 1,
   });
 
   final List<AlertItem> items;
   final int unreadCount;
+  final bool hasMore;
+  final int page;
 
   int get pageUnreadCount => items.where((item) => !item.isRead).length;
 
@@ -329,13 +333,39 @@ class AlertsSnapshot {
         .map((item) => item.id == id ? item.copyWith(isRead: true) : item)
         .toList(growable: false);
     final unread = next.where((item) => !item.isRead).length;
-    return AlertsSnapshot(items: next, unreadCount: unread);
+    return AlertsSnapshot(
+      items: next,
+      unreadCount: unread,
+      hasMore: hasMore,
+      page: page,
+    );
   }
 
   AlertsSnapshot markAllRead() {
     final next =
         items.map((item) => item.copyWith(isRead: true)).toList(growable: false);
-    return AlertsSnapshot(items: next, unreadCount: 0);
+    return AlertsSnapshot(
+      items: next,
+      unreadCount: 0,
+      hasMore: hasMore,
+      page: page,
+    );
+  }
+
+  AlertsSnapshot append(AlertsSnapshot next) {
+    final seen = <String>{for (final item in items) item.id};
+    final merged = [...items];
+    for (final item in next.items) {
+      if (item.id.isNotEmpty && seen.contains(item.id)) continue;
+      if (item.id.isNotEmpty) seen.add(item.id);
+      merged.add(item);
+    }
+    return AlertsSnapshot(
+      items: merged,
+      unreadCount: next.unreadCount > 0 ? next.unreadCount : unreadCount,
+      hasMore: next.hasMore,
+      page: next.page,
+    );
   }
 }
 

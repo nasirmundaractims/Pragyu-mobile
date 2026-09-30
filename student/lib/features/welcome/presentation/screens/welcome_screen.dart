@@ -52,7 +52,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   }
 
   void _goGetStarted() {
-    Navigator.of(context).pushNamed(AppRoutes.createAccountStub);
+    Navigator.of(context).pushNamed(AppRoutes.register);
   }
 
   void _next() {
@@ -738,7 +738,7 @@ class _BrandHeader extends StatelessWidget {
     return const Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        PragyuLogo(height: 44),
+        PragyuLogo(height: PragyuLogo.heroHeight),
         SizedBox(height: 6),
         Text(
           'Learn • Practice • Grow',

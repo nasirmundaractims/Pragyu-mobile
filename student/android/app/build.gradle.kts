@@ -6,6 +6,7 @@ plugins {
 
 import java.util.Properties
 import java.io.FileInputStream
+import org.gradle.api.GradleException
 
 val keystoreProperties = Properties()
 val keystorePropertiesFile = rootProject.file("key.properties")
@@ -45,13 +46,15 @@ android {
 
     buildTypes {
         release {
-            // Prefer android/key.properties + upload keystore for Play/App distribution.
-            // Falls back to debug signing so local `flutter run --release` still works.
-            signingConfig = if (hasReleaseKeystore) {
-                signingConfigs.getByName("release")
-            } else {
-                signingConfigs.getByName("debug")
+            // Require android/key.properties for Play/App distribution.
+            // Do not silently fall back to the debug keystore.
+            if (!hasReleaseKeystore) {
+                throw GradleException(
+                    "Missing android/key.properties. Copy key.properties.example " +
+                        "and configure a release keystore before assembleRelease/bundleRelease.",
+                )
             }
+            signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(

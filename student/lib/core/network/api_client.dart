@@ -1,22 +1,39 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
 import 'package:student_mobile/core/config/app_config.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
+import 'package:student_mobile/core/session/auth_session_events.dart';
+import 'package:student_mobile/core/storage/platform_stores.dart';
+import 'package:student_mobile/features/auth/data/token_store.dart';
+import 'package:student_mobile/features/catalog/data/marketplace_access_service.dart';
+import 'package:student_mobile/features/organization/data/tenant_store.dart';
 
 typedef JsonMap = Map<String, dynamic>;
 
 /// Thin HTTP client for Pragyu `/api/v1` JSON envelope responses.
+///
+/// On `401` / `AUTH_002`, tries one refresh via stored refresh token, then retries.
+/// If refresh fails, clears tokens and notifies [AuthSessionEvents].
 class ApiClient {
+  final http.Client _http;
+  final String _baseUrl;
+  final TokenStore _tokens;
+  final TenantStore _tenant;
+
   ApiClient({
     http.Client? httpClient,
     String? baseUrl,
+    TokenStore? tokenStore,
+    TenantStore? tenantStore,
   })  : _http = httpClient ?? http.Client(),
-        _baseUrl = baseUrl ?? AppConfig.instance.apiBaseUrl;
+        _baseUrl = baseUrl ?? AppConfig.instance.apiBaseUrl,
+        _tokens = tokenStore ?? createTokenStore(),
+        _tenant = tenantStore ?? createTenantStore();
 
-  final http.Client _http;
-  final String _baseUrl;
+  static Future<String?>? _refreshInFlight;
 
   Future<JsonMap> post(
     String path, {
@@ -98,6 +115,51 @@ class ApiClient {
     Map<String, String>? query,
     String? accessToken,
     String? organizationId,
+    bool allowRefresh = true,
+  }) async {
+    try {
+      return await _sendOnce(
+        method,
+        path,
+        body: body,
+        query: query,
+        accessToken: accessToken,
+        organizationId: organizationId,
+      );
+    } on ApiException catch (error) {
+      if (!allowRefresh ||
+          !error.isUnauthorized ||
+          _isAuthBootstrapPath(path)) {
+        rethrow;
+      }
+
+      final refreshed = await _refreshAccessToken();
+      if (refreshed == null || refreshed.isEmpty) {
+        await _tokens.clear();
+        await _tenant.clear();
+        MarketplaceAccessService.instance.reset();
+        AuthSessionEvents.notifyExpired();
+        rethrow;
+      }
+
+      return _sendOnce(
+        method,
+        path,
+        body: body,
+        query: query,
+        accessToken: refreshed,
+        organizationId: organizationId,
+      );
+    }
+  }
+
+  Future<JsonMap> _sendOnce(
+    String method,
+    String path, {
+    JsonMap? body,
+    Map<String, String>? query,
+    String? accessToken,
+    String? organizationId,
   }) async {
     final uri = Uri.parse(_join(_baseUrl, path)).replace(
       queryParameters: (query == null || query.isEmpty) ? null : query,
@@ -153,6 +215,69 @@ class ApiClient {
     return _decodeEnvelope(response);
   }
 
+  Future<String?> _refreshAccessToken() async {
+    if (_refreshInFlight != null) {
+      return _refreshInFlight;
+    }
+
+    final completer = Completer<String?>();
+    _refreshInFlight = completer.future;
+    try {
+      final refresh = await _tokens.readRefreshToken();
+      final userJson = await _tokens.readUserJson();
+      if (refresh == null || refresh.isEmpty) {
+        completer.complete(null);
+        return null;
+      }
+
+      final envelope = await _send(
+        'POST',
+        '/auth/refresh',
+        body: {
+          'refresh_token': refresh,
+          'device_name': 'pragyu-student-mobile',
+        },
+        allowRefresh: false,
+      );
+
+      final data = envelope['data'];
+      final dataMap = data is Map
+          ? data.map((k, v) => MapEntry(k.toString(), v))
+          : const <String, dynamic>{};
+      final tokenRaw = dataMap['token'];
+      final tokenMap = tokenRaw is Map
+          ? tokenRaw.map((k, v) => MapEntry(k.toString(), v))
+          : const <String, dynamic>{};
+      final access = tokenMap['access_token']?.toString() ?? '';
+      final nextRefresh = tokenMap['refresh_token']?.toString() ?? refresh;
+      if (access.isEmpty) {
+        completer.complete(null);
+        return null;
+      }
+
+      await _tokens.saveSession(
+        accessToken: access,
+        refreshToken: nextRefresh,
+        userJson: userJson ?? '{}',
+      );
+      completer.complete(access);
+      return access;
+    } catch (_) {
+      completer.complete(null);
+      return null;
+    } finally {
+      _refreshInFlight = null;
+    }
+  }
+
+  static bool _isAuthBootstrapPath(String path) {
+    final normalized = path.toLowerCase();
+    return normalized.contains('/auth/login') ||
+        normalized.contains('/auth/refresh') ||
+        normalized.contains('/auth/register') ||
+        normalized.contains('/auth/forgot-password');
+  }
+
   JsonMap _decodeEnvelope(http.Response response) {
     JsonMap? decoded;
     Object? bareList;
@@ -178,12 +303,6 @@ class ApiClient {
     final code = decoded?['code'] as String?;
     final data = decoded?['data'];
 
-    // Accept any HTTP 2xx unless the Pragyu envelope explicitly says success:false.
-    // Covers:
-    // - { success: true, data: ... }
-    // - Laravel JsonResource { data: ... } (no success flag)
-    // - empty 200/204 bodies
-    // - bare JSON arrays
     if (status >= 200 && status < 300) {
       if (hasSuccessFlag && !successFlag) {
         throw ApiException(
@@ -217,40 +336,30 @@ class ApiClient {
   }
 
   static Map<String, String> _fieldErrors(JsonMap? decoded) {
-    final fieldErrors = <String, String>{};
     final errors = decoded?['errors'];
-    if (errors is List) {
-      for (final item in errors) {
-        if (item is Map) {
-          final field = item['field']?.toString();
-          final errMessage = item['message']?.toString();
-          if (field != null &&
-              field.isNotEmpty &&
-              errMessage != null &&
-              errMessage.isNotEmpty) {
-            fieldErrors[field] = errMessage;
-          }
-        }
+    if (errors is! Map) return const {};
+    final out = <String, String>{};
+    errors.forEach((key, value) {
+      if (value is List && value.isNotEmpty) {
+        out[key.toString()] = value.first.toString();
+      } else if (value != null) {
+        out[key.toString()] = value.toString();
       }
-    }
-    return fieldErrors;
+    });
+    return out;
   }
 
   static JsonMap? _asDataMap(Object? data) {
     if (data is Map<String, dynamic>) return data;
     if (data is Map) {
-      return data.map((k, v) => MapEntry(k.toString(), v));
+      return data.map((key, value) => MapEntry(key.toString(), value));
     }
     return null;
   }
 
   static String _join(String base, String path) {
-    final normalizedBase = base.endsWith('/')
-        ? base.substring(0, base.length - 1)
-        : base;
-    final normalizedPath = path.startsWith('/') ? path : '/$path';
-    return '$normalizedBase$normalizedPath';
+    final b = base.endsWith('/') ? base.substring(0, base.length - 1) : base;
+    final p = path.startsWith('/') ? path : '/$path';
+    return '$b$p';
   }
-
-  void close() => _http.close();
 }

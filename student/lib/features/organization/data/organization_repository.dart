@@ -2,6 +2,7 @@ import 'package:student_mobile/core/network/api_client.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/core/storage/platform_stores.dart';
 import 'package:student_mobile/features/auth/data/token_store.dart';
+import 'package:student_mobile/features/catalog/data/marketplace_access_service.dart';
 import 'package:student_mobile/features/organization/data/tenant_store.dart';
 import 'package:student_mobile/features/organization/domain/organization_summary.dart';
 
@@ -56,12 +57,14 @@ class OrganizationRepository implements OrganizationGateway {
   }
 
   @override
-  Future<void> selectOrganization(OrganizationSummary organization) {
-    return _tenant.saveActiveOrganization(
+  Future<void> selectOrganization(OrganizationSummary organization) async {
+    await _tenant.saveActiveOrganization(
       id: organization.id,
       name: organization.name,
       type: organization.type,
     );
+    MarketplaceAccessService.instance.reset();
+    await MarketplaceAccessService.instance.refresh(force: true);
   }
 
   @override

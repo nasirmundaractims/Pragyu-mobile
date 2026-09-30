@@ -100,16 +100,22 @@ class ResultFeedbackArgs {
     required this.submissionId,
     this.assessmentId,
     this.title,
+    this.initialScoreIndex = 0,
   });
 
   final String submissionId;
   final String? assessmentId;
   final String? title;
+  final int initialScoreIndex;
 
   factory ResultFeedbackArgs.fromObject(Object? raw) {
     if (raw is ResultFeedbackArgs) return raw;
     if (raw is Map) {
       final map = raw.map((k, v) => MapEntry(k.toString(), v));
+      final indexRaw = map['initialScoreIndex'] ?? map['initial_score_index'];
+      final parsedIndex = indexRaw is num
+          ? indexRaw.round()
+          : int.tryParse(indexRaw?.toString() ?? '') ?? 0;
       return ResultFeedbackArgs(
         submissionId: map['submissionId']?.toString() ??
             map['submission_id']?.toString() ??
@@ -118,6 +124,7 @@ class ResultFeedbackArgs {
         assessmentId: map['assessmentId']?.toString() ??
             map['assessment_id']?.toString(),
         title: map['title']?.toString(),
+        initialScoreIndex: parsedIndex < 0 ? 0 : parsedIndex,
       );
     }
     if (raw is String && raw.isNotEmpty) {

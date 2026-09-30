@@ -27,7 +27,7 @@ class _FakePastResults implements TestsGateway {
   Future<PastResultsSnapshot> loadPastResults() async => snapshot;
 
   @override
-  Future<TestsSnapshot> loadTests() async => const TestsSnapshot();
+  Future<TestsSnapshot> loadTests({int page = 1}) async => const TestsSnapshot();
 
   @override
   Future<AssessmentDetailSnapshot> loadAssessmentDetail(
@@ -145,7 +145,7 @@ class _FakeAlerts implements AlertsGateway {
   int? lastUnreadReported;
 
   @override
-  Future<AlertsSnapshot> loadAlerts() async => snapshot;
+  Future<AlertsSnapshot> loadAlerts({int page = 1}) async => snapshot;
 
   @override
   Future<int> unreadCount() async => snapshot.unreadCount;

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import 'package:student_mobile/app/router/app_router.dart';
 import 'package:student_mobile/app/theme/app_theme.dart';
+import 'package:student_mobile/features/home/presentation/screens/home_screen.dart';
 import 'package:student_mobile/features/learn/data/learn_repository.dart';
 import 'package:student_mobile/features/learn/domain/learn_models.dart';
 import 'package:student_mobile/features/materials/domain/material_models.dart';
@@ -24,7 +25,7 @@ class LessonPlayerScreen extends StatefulWidget {
   State<LessonPlayerScreen> createState() => _LessonPlayerScreenState();
 }
 
-enum _LessonTab { video, notes, resources, practice, discussion }
+enum _LessonTab { video, notes, resources, practice }
 
 class _LessonPlayerScreenState extends State<LessonPlayerScreen> {
   static const _ink = Color(0xFF1A2B4C);
@@ -97,9 +98,26 @@ class _LessonPlayerScreenState extends State<LessonPlayerScreen> {
           _completing = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Lesson marked complete.'),
+          SnackBar(
+            content: Text(
+              (snapshot.assessmentId?.trim().isNotEmpty ?? false)
+                  ? 'Lesson marked complete. Practice this lesson?'
+                  : 'Lesson marked complete.',
+            ),
             behavior: SnackBarBehavior.floating,
+            action: (snapshot.assessmentId?.trim().isNotEmpty ?? false)
+                ? SnackBarAction(
+                    label: 'Practice',
+                    onPressed: () {
+                      Navigator.of(context).pushNamed(
+                        AppRoutes.assessmentDetail,
+                        arguments: AssessmentDetailArgs(
+                          assessmentId: snapshot.assessmentId!.trim(),
+                        ),
+                      );
+                    },
+                  )
+                : null,
           ),
         );
       } catch (_) {
@@ -548,7 +566,8 @@ class _LessonPlayerScreenState extends State<LessonPlayerScreen> {
             onOpenAssessment: () {
               final id = snapshot.assessmentId?.trim();
               if (id == null || id.isEmpty) {
-                Navigator.of(context).pushNamed(AppRoutes.weakTopics);
+                Navigator.of(context).popUntil((route) => route.isFirst);
+                StudentShell.of(context)?.goToTab(2);
                 return;
               }
               Navigator.of(context).pushNamed(
@@ -556,9 +575,7 @@ class _LessonPlayerScreenState extends State<LessonPlayerScreen> {
                 arguments: AssessmentDetailArgs(assessmentId: id),
               );
             },
-          )
-        else
-          const _DiscussionPane(),
+          ),
         ],
       ),
     );
@@ -709,7 +726,6 @@ class _LessonTabs extends StatelessWidget {
       (_LessonTab.notes, 'Notes'),
       (_LessonTab.resources, 'Resources'),
       (_LessonTab.practice, 'Practice'),
-      (_LessonTab.discussion, 'Discussion'),
     ];
 
     return SingleChildScrollView(
@@ -1464,7 +1480,7 @@ class _PracticePane extends StatelessWidget {
           Text(
             hasAssessment
                 ? 'Practice questions are available for this lesson.'
-                : 'Practice related weak topics to reinforce this lesson.',
+                : 'Open Practice tests for this course, or ask your mentor for related drills.',
             softWrap: true,
             style: const TextStyle(
               fontFamily: AppTheme.fontFamily,
@@ -1483,35 +1499,9 @@ class _PracticePane extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
-            child: Text(hasAssessment ? 'Open practice' : 'Open weak topics'),
+            child: Text(hasAssessment ? 'Open practice' : 'Open Practice tests'),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _DiscussionPane extends StatelessWidget {
-  const _DiscussionPane();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE4EAF2)),
-      ),
-      child: const Text(
-        'Discussion for this lesson will appear here soon.',
-        softWrap: true,
-        style: TextStyle(
-          fontFamily: AppTheme.fontFamily,
-          color: _LessonPlayerScreenState._muted,
-          height: 1.45,
-        ),
       ),
     );
   }

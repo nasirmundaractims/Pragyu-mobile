@@ -3,10 +3,13 @@ import 'package:flutter/services.dart';
 
 import 'package:student_mobile/app/router/app_router.dart';
 import 'package:student_mobile/app/theme/app_colors.dart';
+import 'package:student_mobile/core/config/app_config.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
+import 'package:student_mobile/features/catalog/data/marketplace_access_service.dart';
 import 'package:student_mobile/features/payments/data/payments_repository.dart';
 import 'package:student_mobile/features/payments/domain/payments_models.dart';
 import 'package:student_mobile/features/payments/presentation/payment_handoff.dart';
+import 'package:student_mobile/features/payments/presentation/payment_url_allowlist.dart';
 
 /// S-72 Payments — fees, billing history, and AI credit balance.
 class PaymentsScreen extends StatefulWidget {
@@ -32,7 +35,9 @@ class _PaymentsScreenState extends State<PaymentsScreen>
   bool _paying = false;
   bool _purchasing = false;
   bool _awaitingFeeHandoff = false;
+  bool _awaitingCreditHandoff = false;
   Uri? _feeHandoffUri;
+  Uri? _creditHandoffUri;
   String? _receiptBusyId;
   String? _error;
   String? _selectedPackageId;
@@ -183,10 +188,49 @@ class _PaymentsScreenState extends State<PaymentsScreen>
     if (packageId == null || _purchasing) return;
     setState(() => _purchasing = true);
     try {
-      await _repo.purchaseCreditPack(packageId);
+      final result = await _repo.purchaseCreditPack(packageId);
       if (!mounted) return;
-      _toast('AI credits added to your wallet.');
-      setState(() => _selectedPackageId = null);
+
+      Uri? handoff;
+      if (result.checkoutUrl != null && result.checkoutUrl!.isNotEmpty) {
+        handoff = Uri.tryParse(result.checkoutUrl!);
+      }
+      handoff ??= _webCreditCheckoutUri(packageId);
+
+      if (handoff != null) {
+        if (!isAllowedPaymentHandoffUri(handoff)) {
+          _toast('Payment link host is not allowed.');
+          return;
+        }
+        final confirmed = await confirmPaymentHandoff(context);
+        if (!confirmed || !mounted) return;
+        final opened = await launchPaymentHandoff(handoff);
+        if (!mounted) return;
+        if (!opened) {
+          _toast('Could not open payment page.');
+          return;
+        }
+        setState(() {
+          _creditHandoffUri = handoff;
+          _awaitingCreditHandoff = true;
+        });
+        _toast('Complete payment in the browser, then confirm here.');
+        return;
+      }
+
+      if (result.isCompleted ||
+          result.status.toLowerCase() == 'completed' ||
+          result.status.toLowerCase() == 'succeeded') {
+        _toast('AI credits added to your wallet.');
+        setState(() => _selectedPackageId = null);
+        await _load();
+        return;
+      }
+
+      _toast(
+        'Purchase started. If payment is required, configure '
+        'STUDENT_WEB_BASE_URL or ensure the API returns checkout_url.',
+      );
       await _load();
     } catch (error) {
       if (!mounted) return;
@@ -195,6 +239,36 @@ class _PaymentsScreenState extends State<PaymentsScreen>
       );
     } finally {
       if (mounted) setState(() => _purchasing = false);
+    }
+  }
+
+  Uri? _webCreditCheckoutUri(String packageId) {
+    final base = AppConfig.instance.studentWebBaseUrl;
+    if (base == null || base.isEmpty) return null;
+    return Uri.parse('$base/payments?view=balance&package_id=$packageId');
+  }
+
+  Future<void> _confirmCreditHandoff() async {
+    setState(() => _awaitingCreditHandoff = false);
+    await _load();
+    if (!mounted) return;
+    _toast('Wallet refreshed. If credits are missing, finish checkout and try again.');
+  }
+
+  Future<void> _openCreditHandoffAgain() async {
+    final uri = _creditHandoffUri;
+    if (uri == null) {
+      _toast('No payment link available. Purchase again to start.');
+      return;
+    }
+    if (!isAllowedPaymentHandoffUri(uri)) {
+      _toast('Payment link host is not allowed.');
+      return;
+    }
+    final opened = await launchPaymentHandoff(uri);
+    if (!mounted) return;
+    if (!opened) {
+      _toast('Could not open payment page.');
     }
   }
 
@@ -250,6 +324,19 @@ class _PaymentsScreenState extends State<PaymentsScreen>
                               ),
                               const SizedBox(height: 14),
                             ],
+                            if (_awaitingCreditHandoff &&
+                                _view == PaymentsViewId.balance) ...[
+                              PaymentWaitingBanner(
+                                confirming: _loading,
+                                confirmLabel: 'I’ve paid — refresh wallet',
+                                onConfirm: _confirmCreditHandoff,
+                                onOpenAgain: _openCreditHandoffAgain,
+                                onDismiss: () => setState(
+                                  () => _awaitingCreditHandoff = false,
+                                ),
+                              ),
+                              const SizedBox(height: 14),
+                            ],
                             if (_view == PaymentsViewId.fees)
                               _FeesPanel(
                                 fees: _snapshot.fees,
@@ -261,8 +348,11 @@ class _PaymentsScreenState extends State<PaymentsScreen>
                             else if (_view == PaymentsViewId.billing)
                               _BillingPanel(
                                 billing: _snapshot.billing,
-                                onCatalog: () => Navigator.of(context)
-                                    .pushNamed(AppRoutes.catalog),
+                                onCatalog: MarketplaceAccessService
+                                        .instance.available
+                                    ? () => Navigator.of(context)
+                                        .pushNamed(AppRoutes.catalog)
+                                    : null,
                                 onCourses: () => Navigator.of(context)
                                     .pushNamed(AppRoutes.home),
                               )
@@ -560,12 +650,12 @@ class _AssignmentCard extends StatelessWidget {
 class _BillingPanel extends StatelessWidget {
   const _BillingPanel({
     required this.billing,
-    required this.onCatalog,
+    this.onCatalog,
     required this.onCourses,
   });
 
   final BillingTabSnapshot billing;
-  final VoidCallback onCatalog;
+  final VoidCallback? onCatalog;
   final VoidCallback onCourses;
 
   @override
@@ -580,10 +670,11 @@ class _BillingPanel extends StatelessWidget {
               onPressed: onCourses,
               child: const Text('Purchased courses'),
             ),
-            OutlinedButton(
-              onPressed: onCatalog,
-              child: const Text('Browse catalog'),
-            ),
+            if (onCatalog != null)
+              OutlinedButton(
+                onPressed: onCatalog,
+                child: const Text('Browse catalog'),
+              ),
           ],
         ),
         const SizedBox(height: 14),

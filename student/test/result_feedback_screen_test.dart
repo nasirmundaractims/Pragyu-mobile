@@ -19,7 +19,7 @@ class _FakeTests implements TestsGateway {
   final ResultFeedbackSnapshot snapshot;
 
   @override
-  Future<TestsSnapshot> loadTests() async => const TestsSnapshot();
+  Future<TestsSnapshot> loadTests({int page = 1}) async => const TestsSnapshot();
 
   @override
   Future<AssessmentDetailSnapshot> loadAssessmentDetail(
@@ -132,7 +132,7 @@ void main() {
     await AppConfig.load();
   });
 
-  testWidgets('S-46 shows score breakdown and AI feedback', (tester) async {
+  testWidgets('S-46 shows overall score and detailed feedback', (tester) async {
     final fake = _FakeTests(
       ResultFeedbackSnapshot(
         submission: const SubmissionSummary(
@@ -196,53 +196,17 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    expect(find.text('AI Evaluation'), findsWidgets);
     expect(find.text('Polity Weekly Quiz'), findsWidgets);
-    expect(find.text('Your score'), findsOneWidget);
+    expect(find.text('Overall Score'), findsOneWidget);
     expect(find.text('14 / 20'), findsOneWidget);
     expect(find.textContaining('Attempt 2'), findsWidgets);
     expect(find.textContaining('70%'), findsWidgets);
     expect(find.textContaining('Grade B'), findsWidgets);
-
-    await tester.scrollUntilVisible(
-      find.text('Score breakdown'),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    expect(find.text('Score breakdown'), findsOneWidget);
-    expect(find.text('Question 1 · 7 / 10'), findsOneWidget);
-    expect(find.text('Clear structure and relevant examples.'), findsOneWidget);
-    expect(find.text('accuracy'), findsWidgets);
-
-    await tester.scrollUntilVisible(
-      find.text('Overall feedback'),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    expect(find.text('Overall feedback'), findsOneWidget);
-    expect(
-      find.text('Solid attempt with room to deepen concepts.'),
-      findsOneWidget,
-    );
-
-    Future<void> reveal(String label) async {
-      final finder = find.text(label, skipOffstage: false);
-      await tester.ensureVisible(finder);
-      await tester.pumpAndSettle();
-      expect(finder, findsOneWidget);
-    }
-
-    await reveal('Strengths');
-    expect(find.text('Structured answers', skipOffstage: false), findsOneWidget);
-    await reveal('Weaknesses');
-    await reveal('Improvement areas');
-    expect(find.text('federalism', skipOffstage: false), findsOneWidget);
-    await reveal('Actionable tips');
-    expect(
-      find.text('Define terms before arguing', skipOffstage: false),
-      findsOneWidget,
-    );
-    await reveal('Improve answer with AI');
-    expect(find.text('Done', skipOffstage: false), findsOneWidget);
+    expect(find.text('Solid attempt with room to deepen concepts.'), findsOneWidget);
+    expect(find.text('Accuracy'), findsOneWidget);
+    expect(find.text('Clear structure and relevant examples.'), findsWidgets);
+    expect(find.text('Practice Again'), findsOneWidget);
   });
 
   testWidgets('S-46 shows empty-state when feedback missing', (tester) async {
@@ -267,17 +231,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Your score'), findsOneWidget);
+    expect(find.text('Overall Score'), findsOneWidget);
     expect(find.text('—'), findsOneWidget);
-    await tester.scrollUntilVisible(
-      find.text('Question scores appear when AI evaluation finishes.'),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    expect(
-      find.text('Question scores appear when AI evaluation finishes.'),
-      findsOneWidget,
-    );
     await tester.scrollUntilVisible(
       find.text('Detailed feedback appears after AI scoring completes.'),
       300,

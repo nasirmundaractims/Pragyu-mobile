@@ -64,4 +64,8 @@ class SessionService {
     final access = await _tokens.readAccessToken();
     return access != null && access.isNotEmpty;
   }
+
+  Future<void> clear() async {
+    await _tokens.clear();
+  }
 }

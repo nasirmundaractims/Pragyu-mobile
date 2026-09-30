@@ -1,10 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:student_mobile/app/router/app_router.dart';
 import 'package:student_mobile/app/theme/app_theme.dart';
+import 'package:student_mobile/app/widgets/app_network_image.dart';
 import 'package:student_mobile/app/widgets/pragyu_logo.dart';
 import 'package:student_mobile/features/alerts/data/alerts_repository.dart';
+import 'package:student_mobile/features/catalog/data/marketplace_access_service.dart';
 import 'package:student_mobile/features/home/data/home_repository.dart';
 import 'package:student_mobile/features/home/domain/greeting.dart';
 import 'package:student_mobile/features/home/domain/home_models.dart';
@@ -39,6 +43,8 @@ class _HomeScreenState extends State<HomeScreen> {
   static const _heroAsset = 'assets/images/auth/hero_home.png';
 
   late final HomeGateway _home = widget.homeRepository ?? HomeRepository();
+  final MarketplaceAccessService _marketplace =
+      MarketplaceAccessService.instance;
 
   bool _loading = true;
   String? _error;
@@ -47,7 +53,19 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _marketplace.addListener(_onMarketplaceChanged);
+    _marketplace.ensureLoaded();
     _load();
+  }
+
+  @override
+  void dispose() {
+    _marketplace.removeListener(_onMarketplaceChanged);
+    super.dispose();
+  }
+
+  void _onMarketplaceChanged() {
+    if (mounted) setState(() {});
   }
 
   Future<void> _load() async {
@@ -56,6 +74,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _error = null;
     });
     try {
+      unawaited(_marketplace.ensureLoaded(force: true));
       final snapshot = await _home.loadHome();
       if (!mounted) return;
       setState(() {
@@ -201,8 +220,9 @@ class _HomeScreenState extends State<HomeScreen> {
             onPractice: () => _openTab(2),
             onAiMentor: () =>
                 Navigator.of(context).pushNamed(AppRoutes.aiMentor),
-            onCatalog: () =>
-                Navigator.of(context).pushNamed(AppRoutes.catalog),
+            onCatalog: _marketplace.available
+                ? () => Navigator.of(context).pushNamed(AppRoutes.catalog)
+                : null,
           ),
           SizedBox(height: short ? 16 : 20),
           _SectionHeader(
@@ -281,7 +301,7 @@ class _TopBar extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              PragyuLogo(height: 34),
+              PragyuLogo(height: PragyuLogo.headerHeight),
               SizedBox(height: 4),
               Text(
                 'Learn • Practice • Grow',
@@ -348,19 +368,12 @@ class _TopBar extends StatelessWidget {
               color: _HomeScreenState._ink,
               alignment: Alignment.center,
               child: hasPhoto
-                  ? Image.network(
-                      photo,
+                  ? AppNetworkImage(
+                      url: photo,
                       width: 36,
                       height: 36,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, error, stackTrace) => Text(
-                        initials,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
+                      errorIcon: Icons.person_outline,
                     )
                   : Text(
                       initials,
@@ -665,7 +678,7 @@ class _TodaysPlanRow extends StatelessWidget {
     required this.onStudy,
     required this.onPractice,
     required this.onAiMentor,
-    required this.onCatalog,
+    this.onCatalog,
     this.continueTag,
     this.dueLabel,
     this.lectureLabel,
@@ -674,7 +687,7 @@ class _TodaysPlanRow extends StatelessWidget {
   final VoidCallback onStudy;
   final VoidCallback onPractice;
   final VoidCallback onAiMentor;
-  final VoidCallback onCatalog;
+  final VoidCallback? onCatalog;
   final String? continueTag;
   final String? dueLabel;
   final String? lectureLabel;
@@ -715,15 +728,16 @@ class _TodaysPlanRow extends StatelessWidget {
         background: const Color(0xFFFFF2E8),
         onTap: onAiMentor,
       ),
-      _PlanItem(
-        label: 'Catalog',
-        subtitle: 'Explore more',
-        meta: 'Browse',
-        icon: Icons.storefront_rounded,
-        color: const Color(0xFF2F7BFF),
-        background: const Color(0xFFEEF5FF),
-        onTap: onCatalog,
-      ),
+      if (onCatalog != null)
+        _PlanItem(
+          label: 'Catalog',
+          subtitle: 'Explore more',
+          meta: 'Browse',
+          icon: Icons.storefront_rounded,
+          color: const Color(0xFF2F7BFF),
+          background: const Color(0xFFEEF5FF),
+          onTap: onCatalog!,
+        ),
     ];
 
     return LayoutBuilder(
@@ -1457,6 +1471,9 @@ class StudentShell extends StatefulWidget {
   final AlertsGateway? alertsRepository;
   final MeGateway? meRepository;
 
+  /// Bumped when the AI Eval tab is selected so the hub can refresh safely.
+  static final ValueNotifier<int> aiEvalTabTicks = ValueNotifier<int>(0);
+
   static StudentShellState? of(BuildContext context) {
     return context.findAncestorStateOfType<StudentShellState>();
   }
@@ -1473,6 +1490,10 @@ class StudentShellState extends State<StudentShell> {
   void initState() {
     super.initState();
     _mountedTabs.add(_index);
+    if (_index == 3) {
+      StudentShell.aiEvalTabTicks.value++;
+    }
+    MarketplaceAccessService.instance.ensureLoaded();
   }
 
   void goToTab(int index) {
@@ -1481,6 +1502,9 @@ class StudentShellState extends State<StudentShell> {
       _index = index;
       _mountedTabs.add(index);
     });
+    if (index == 3) {
+      StudentShell.aiEvalTabTicks.value++;
+    }
   }
 
   Widget _tab(int index) {
@@ -1499,10 +1523,15 @@ class StudentShellState extends State<StudentShell> {
         return TestsHubScreen(testsRepository: widget.testsRepository);
       case 3:
         return AiEvaluationHubScreen(
+          key: const ValueKey('ai-eval-hub'),
           testsRepository: widget.testsRepository,
         );
       case 4:
-        return MeScreen(meRepository: widget.meRepository);
+        return MeScreen(
+          meRepository: widget.meRepository,
+          homeRepository: widget.homeRepository,
+          alertsRepository: widget.alertsRepository,
+        );
       default:
         return const SizedBox.shrink();
     }

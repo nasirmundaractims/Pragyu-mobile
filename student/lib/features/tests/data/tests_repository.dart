@@ -13,7 +13,7 @@ import 'package:student_mobile/features/tests/domain/submission_status_models.da
 import 'package:student_mobile/features/tests/domain/tests_models.dart';
 
 abstract class TestsGateway {
-  Future<TestsSnapshot> loadTests();
+  Future<TestsSnapshot> loadTests({int page = 1});
 
   Future<AssessmentDetailSnapshot> loadAssessmentDetail(
     AssessmentDetailArgs args,
@@ -78,13 +78,14 @@ class TestsRepository implements TestsGateway {
   final AnswerMediaGateway _media;
 
   @override
-  Future<TestsSnapshot> loadTests() async {
+  Future<TestsSnapshot> loadTests({int page = 1}) async {
     final session = await _requireSession();
+    const perPage = 50;
     final envelope = await _api.get(
       '/assessments',
-      query: const {
-        'page': '1',
-        'per_page': '50',
+      query: {
+        'page': '$page',
+        'per_page': '$perPage',
         'status': 'published',
         'sort': '-scheduled_at',
       },
@@ -94,7 +95,7 @@ class TestsRepository implements TestsGateway {
 
     final data = envelope['data'];
     if (data is! List) {
-      return const TestsSnapshot();
+      return TestsSnapshot(page: page);
     }
 
     final now = DateTime.now();
@@ -123,7 +124,11 @@ class TestsRepository implements TestsGateway {
       return da.compareTo(db);
     });
 
-    return TestsSnapshot(items: items);
+    return TestsSnapshot(
+      items: items,
+      page: page,
+      hasMore: items.length >= perPage,
+    );
   }
 
   @override
@@ -587,7 +592,9 @@ class TestsRepository implements TestsGateway {
     final session = await _requireSession();
     final profileId = await _loadStudentProfileId(session);
     if (profileId == null || profileId.isEmpty) {
-      return const PastResultsSnapshot();
+      throw StateError(
+        'Student profile not found for this institute. Switch institute and try again.',
+      );
     }
 
     final submissionsFuture = _loadAllSubmissions(
@@ -612,32 +619,28 @@ class TestsRepository implements TestsGateway {
     SessionContext session, {
     required String studentProfileId,
   }) async {
-    try {
-      final envelope = await _api.get(
-        '/submissions',
-        query: {
-          'page': '1',
-          'per_page': '50',
-          'student_profile_id': studentProfileId,
-          'sort': '-submitted_at',
-        },
-        accessToken: session.accessToken,
-        organizationId: session.organizationId,
-      );
-      final data = envelope['data'];
-      if (data is! List) return const [];
-      return data
-          .whereType<Map>()
-          .map(
-            (item) => SubmissionSummary.fromJson(
-              item.map((k, v) => MapEntry(k.toString(), v)),
-            ),
-          )
-          .where((item) => item.id.isNotEmpty && !item.isDraft)
-          .toList(growable: false);
-    } catch (_) {
-      return const [];
-    }
+    final envelope = await _api.get(
+      '/submissions',
+      query: {
+        'page': '1',
+        'per_page': '50',
+        'student_profile_id': studentProfileId,
+        'sort': '-submitted_at',
+      },
+      accessToken: session.accessToken,
+      organizationId: session.organizationId,
+    );
+    final data = envelope['data'];
+    if (data is! List) return const [];
+    return data
+        .whereType<Map>()
+        .map(
+          (item) => SubmissionSummary.fromJson(
+            item.map((k, v) => MapEntry(k.toString(), v)),
+          ),
+        )
+        .where((item) => item.id.isNotEmpty && !item.isDraft)
+        .toList(growable: false);
   }
 
   @override

@@ -12,6 +12,8 @@ class CbtSubjectiveAnswerPanel extends StatelessWidget {
     required this.answer,
     required this.onTextChanged,
     this.onAddImages,
+    this.onTakePhoto,
+    this.onPickFromGallery,
     this.onRemoveImage,
     this.isUploading = false,
     this.uploadProgress = 0,
@@ -22,6 +24,8 @@ class CbtSubjectiveAnswerPanel extends StatelessWidget {
   final StudentAnswerValue? answer;
   final ValueChanged<String> onTextChanged;
   final VoidCallback? onAddImages;
+  final VoidCallback? onTakePhoto;
+  final VoidCallback? onPickFromGallery;
   final ValueChanged<String>? onRemoveImage;
   final bool isUploading;
   final int uploadProgress;
@@ -90,7 +94,7 @@ class CbtSubjectiveAnswerPanel extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           const Text(
-            'Add photos of handwritten pages. AI OCR runs after you submit.',
+            'Upload photos of handwritten pages. Opens the answer-sheet upload screen (camera or gallery). AI OCR runs after you submit the attempt.',
             style: TextStyle(color: AppColors.muted, height: 1.4, fontSize: 13),
           ),
           const SizedBox(height: 10),
@@ -110,16 +114,24 @@ class CbtSubjectiveAnswerPanel extends StatelessWidget {
               ],
             ),
           if (images.isNotEmpty) const SizedBox(height: 10),
-          OutlinedButton.icon(
-            onPressed: isUploading ? null : onAddImages,
-            icon: const Icon(Icons.add_photo_alternate_outlined),
-            label: Text(isUploading ? 'Uploading…' : 'Add page photos'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.brand,
-              side: const BorderSide(color: AppColors.brandSoft),
-              minimumSize: const Size.fromHeight(44),
+          if (onTakePhoto != null || onPickFromGallery != null || onAddImages != null)
+            FilledButton.tonalIcon(
+              onPressed: isUploading
+                  ? null
+                  : (onAddImages ?? onTakePhoto ?? onPickFromGallery),
+              icon: const Icon(Icons.upload_file_outlined),
+              label: Text(
+                isUploading
+                    ? 'Uploading…'
+                    : images.isEmpty
+                        ? 'Upload answer sheet'
+                        : 'Manage answer pages (${images.length})',
+              ),
+              style: FilledButton.styleFrom(
+                foregroundColor: AppColors.brand,
+                minimumSize: const Size.fromHeight(48),
+              ),
             ),
-          ),
           if (isUploading) ...[
             const SizedBox(height: 10),
             ClipRRect(

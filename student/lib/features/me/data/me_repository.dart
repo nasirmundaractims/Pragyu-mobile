@@ -1,9 +1,11 @@
 import 'package:student_mobile/core/network/api_client.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
+import 'package:student_mobile/core/session/auth_session_events.dart';
 import 'package:student_mobile/core/session/session_service.dart';
 import 'package:student_mobile/core/storage/platform_stores.dart';
 import 'package:student_mobile/features/auth/data/token_store.dart';
 import 'package:student_mobile/features/auth/domain/auth_models.dart';
+import 'package:student_mobile/features/catalog/data/marketplace_access_service.dart';
 import 'package:student_mobile/features/me/domain/me_models.dart';
 import 'package:student_mobile/features/organization/data/tenant_store.dart';
 
@@ -164,6 +166,7 @@ class MeRepository implements MeGateway {
     }
     await _tokens.clear();
     await _tenant.clear();
+    MarketplaceAccessService.instance.reset();
   }
 
   Future<StudentProfileSummary?> _loadStudentProfile(
@@ -177,11 +180,27 @@ class MeRepository implements MeGateway {
       );
       final profile = StudentProfileSummary.fromJson(_asMap(envelope['data']));
       return profile.id.isEmpty ? null : profile;
-    } on ApiException {
+    } on ApiException catch (error) {
+      if (_isWrongAppAccess(error)) {
+        await _tokens.clear();
+        await _tenant.clear();
+        MarketplaceAccessService.instance.reset();
+        AuthSessionEvents.notifyExpired();
+        rethrow;
+      }
       return null;
     } catch (_) {
       return null;
     }
+  }
+
+  bool _isWrongAppAccess(ApiException error) {
+    if (error.statusCode == 403) return true;
+    final code = (error.code ?? '').toUpperCase();
+    return code.contains('FORBIDDEN') ||
+        code.contains('NOT_A_STUDENT') ||
+        code.contains('STUDENT_REQUIRED') ||
+        code.contains('WRONG_ROLE');
   }
 
   Future<UserProfileSummary?> _loadUserProfile(SessionContext session) async {

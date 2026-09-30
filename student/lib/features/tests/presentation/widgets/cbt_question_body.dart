@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:student_mobile/app/theme/app_theme.dart';
+import 'package:student_mobile/app/widgets/app_network_image.dart';
 import 'package:student_mobile/features/tests/domain/assessment_detail_models.dart';
 import 'package:student_mobile/features/tests/domain/cbt_player_models.dart';
 import 'package:student_mobile/features/tests/presentation/widgets/cbt_rich_content.dart';
@@ -16,6 +17,8 @@ class CbtQuestionBody extends StatelessWidget {
     required this.onChoice,
     required this.onTextChanged,
     this.onAddImages,
+    this.onTakePhoto,
+    this.onPickFromGallery,
     this.onRemoveImage,
     this.isUploading = false,
     this.uploadProgress = 0,
@@ -31,6 +34,8 @@ class CbtQuestionBody extends StatelessWidget {
   final ValueChanged<AnswerChoice> onChoice;
   final ValueChanged<String> onTextChanged;
   final VoidCallback? onAddImages;
+  final VoidCallback? onTakePhoto;
+  final VoidCallback? onPickFromGallery;
   final ValueChanged<String>? onRemoveImage;
   final bool isUploading;
   final int uploadProgress;
@@ -168,11 +173,9 @@ class CbtQuestionBody extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: 10),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: Image.network(
-                  url,
+                child: AppNetworkImage(
+                  url: url,
                   fit: BoxFit.contain,
-                  errorBuilder: (_, error, stackTrace) =>
-                      const SizedBox.shrink(),
                 ),
               ),
             ),
@@ -266,6 +269,8 @@ class CbtQuestionBody extends StatelessWidget {
             answer: answer,
             onTextChanged: onTextChanged,
             onAddImages: onAddImages,
+            onTakePhoto: onTakePhoto,
+            onPickFromGallery: onPickFromGallery,
             onRemoveImage: onRemoveImage,
             isUploading: isUploading,
             uploadProgress: uploadProgress,

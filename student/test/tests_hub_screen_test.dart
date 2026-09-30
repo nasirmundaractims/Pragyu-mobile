@@ -39,7 +39,7 @@ class _FakeTests implements TestsGateway {
   final TestsSnapshot snapshot;
 
   @override
-  Future<TestsSnapshot> loadTests() async => snapshot;
+  Future<TestsSnapshot> loadTests({int page = 1}) async => snapshot;
 
   @override
   Future<AssessmentDetailSnapshot> loadAssessmentDetail(

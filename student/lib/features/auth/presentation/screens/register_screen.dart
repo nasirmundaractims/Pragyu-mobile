@@ -665,15 +665,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               showArrow: !_submitting,
                               onPressed: _submitting ? null : _submit,
                             ),
-                            const SizedBox(height: 18),
-                            const _OrDivider(),
-                            const SizedBox(height: 14),
-                            _SocialRow(
-                              narrow: narrow,
-                              onGoogle: () => _socialStub('Google'),
-                              onApple: () => _socialStub('Apple'),
-                              onPhone: () => _socialStub('Phone'),
-                            ),
                             const SizedBox(height: 20),
                             Center(
                               child: Wrap(
@@ -886,7 +877,7 @@ class _HeroHeader extends StatelessWidget {
     final copy = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const PragyuLogo(height: 40),
+        const PragyuLogo(height: 64),
         const SizedBox(height: 4),
         const Text(
           'Learn • Practice • Grow',

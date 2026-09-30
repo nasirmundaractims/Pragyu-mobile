@@ -244,14 +244,18 @@ flutter run -d chrome \
 
 | Item | Status |
 | --- | --- |
-| Android release signing | Wire `android/key.properties` from `key.properties.example` (gitignored). Without it, release still signs with debug for local testing. |
+| Android release signing | **Required** `android/key.properties` (from `key.properties.example`). Release builds fail without it (no debug fallback). |
 | Android minify | Release `isMinifyEnabled` + `proguard-rules.pro` |
-| Cleartext HTTP | Debug/profile only — removed from main manifest |
-| Production env | Loads `assets/env/.env.production` (gitignored) or requires `--dart-define=API_BASE_URL=…` — no longer loads `.example` |
+| Cleartext HTTP | **Debug only** — main `network_security_config` denies cleartext; debug overlay allows local API HTTP |
+| Marketplace org gate | Calls `GET /students/me/marketplace-access`; hides catalog when `available: false` |
+| Production env | Loads `assets/env/.env.production` (gitignored) or requires `--dart-define=API_BASE_URL=…` |
 | Legal / support URLs | `SUPPORT_EMAIL`, `PRIVACY_URL`, `TERMS_URL` in env / dart-define |
+| Credit pack handoff | Uses API `checkout_url` or `STUDENT_WEB_BASE_URL/payments?view=balance&package_id=…` |
 | iOS | `ITSAppUsesNonExemptEncryption=false`, mic usage string, `PrivacyInfo.xcprivacy` |
 
-Still out of band for store listing: Play Console / App Store Connect assets, final counsel privacy text, FCM push registration.
+**Deferred (configure later):** FCM / OS push token registration, Google/Apple social login, native Razorpay SDK, Faculty/Parent apps.
+
+Still out of band for store listing: Play Console / App Store Connect assets, final counsel privacy text.
 
 ## Troubleshooting
 
@@ -260,5 +264,5 @@ Still out of band for store listing: Play Console / App Store Connect assets, fi
 | `No space left on device` | Free disk (Gradle/Flutter caches under `~/.gradle`, `student/build`). Aim for **≥5 GB** free before `flutter build` / emulator. |
 | Emulator slow / won’t start | Ensure KVM: `ls -l /dev/kvm`, then `sudo usermod -aG kvm $USER` and re-login. |
 | API calls fail on emulator | Confirm API on `:8000` and `API_BASE_URL=http://10.0.2.2:8000/api/v1`. |
-| Cleartext / network blocked | Android manifest allows cleartext for local hosts; rebuild after env changes. |
+| Cleartext / network blocked | Debug allows cleartext via `android/app/src/debug`. Release requires HTTPS `API_BASE_URL`. Rebuild after env changes. |
 | Multiple `adb` warnings | Prefer SDK adb: `source ~/development/pragyu-mobile-env.sh` (uses `~/Android/Sdk/platform-tools`). |

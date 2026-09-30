@@ -6,6 +6,8 @@ import 'package:student_mobile/app/theme/app_theme.dart';
 import 'package:student_mobile/app/widgets/pragyu_logo.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/features/tests/data/tests_repository.dart';
+import 'package:student_mobile/features/tests/domain/attempt_flow_models.dart';
+import 'package:student_mobile/features/tests/domain/cbt_player_models.dart';
 import 'package:student_mobile/features/tests/domain/deep_feedback_models.dart';
 import 'package:student_mobile/features/tests/domain/result_feedback_models.dart';
 
@@ -64,7 +66,9 @@ class _ResultFeedbackScreenState extends State<ResultFeedbackScreen> {
       setState(() {
         _snapshot = snapshot;
         _loading = false;
-        _scoreIndex = 0;
+        final maxIndex =
+            snapshot.scores.isEmpty ? 0 : snapshot.scores.length - 1;
+        _scoreIndex = widget.args.initialScoreIndex.clamp(0, maxIndex);
       });
     } catch (error) {
       if (!mounted) return;
@@ -87,6 +91,12 @@ class _ResultFeedbackScreenState extends State<ResultFeedbackScreen> {
     final snapshot = _snapshot;
     if (snapshot == null) return null;
     return extractOriginalAnswerText(snapshot.submission.metadata);
+  }
+
+  List<AnswerImageAttachment> get _answerImages {
+    final snapshot = _snapshot;
+    if (snapshot == null) return const [];
+    return extractAnswerImages(snapshot.submission.metadata);
   }
 
   Future<void> _shareSummary() async {
@@ -144,6 +154,26 @@ class _ResultFeedbackScreenState extends State<ResultFeedbackScreen> {
     });
   }
 
+  void _practiceAgain() {
+    final snapshot = _snapshot;
+    final assessmentId = (widget.args.assessmentId ??
+            snapshot?.evaluation?.assessmentId ??
+            snapshot?.submission.assessmentId)
+        ?.trim();
+    if (assessmentId == null || assessmentId.isEmpty) {
+      Navigator.of(context).maybePop();
+      return;
+    }
+
+    Navigator.of(context).pushNamed(
+      AppRoutes.attemptInstructions,
+      arguments: AttemptInstructionsArgs(
+        assessmentId: assessmentId,
+        title: widget.args.title ?? _title,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -167,36 +197,26 @@ class _ResultFeedbackScreenState extends State<ResultFeedbackScreen> {
                           child: RefreshIndicator(
                             color: _blue,
                             onRefresh: _load,
-                            child: ListView(
+                            child: SingleChildScrollView(
                               physics: const AlwaysScrollableScrollPhysics(),
                               padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                              children: [
-                                if (_error != null) ...[
-                                  Text(
-                                    _error!,
-                                    style: const TextStyle(
-                                      color: Color(0xFFC0392B),
-                                      height: 1.4,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  if (_error != null) ...[
+                                    Text(
+                                      _error!,
+                                      style: const TextStyle(
+                                        color: Color(0xFFC0392B),
+                                        height: 1.4,
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(height: 12),
+                                    const SizedBox(height: 12),
+                                  ],
+                                  if (_snapshot != null)
+                                    ..._buildBody(_snapshot!),
                                 ],
-                                if (_snapshot != null) ..._buildBody(_snapshot!),
-                                const SizedBox(height: 12),
-                                FilledButton(
-                                  onPressed: () =>
-                                      Navigator.of(context).maybePop(),
-                                  style: FilledButton.styleFrom(
-                                    backgroundColor: _blue,
-                                    foregroundColor: Colors.white,
-                                    minimumSize: const Size.fromHeight(48),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                  ),
-                                  child: const Text('Done'),
-                                ),
-                              ],
+                              ),
                             ),
                           ),
                         ),
@@ -209,8 +229,7 @@ class _ResultFeedbackScreenState extends State<ResultFeedbackScreen> {
                               setState(() => _mainTab = _MainTab.modelAnswer);
                             },
                             onDownload: _shareSummary,
-                            onPracticeAgain: () =>
-                                Navigator.of(context).maybePop(),
+                            onPracticeAgain: _practiceAgain,
                             onNext: _snapshot!.scores.isNotEmpty
                                 ? _nextScore
                                 : null,
@@ -227,9 +246,16 @@ class _ResultFeedbackScreenState extends State<ResultFeedbackScreen> {
     final feedback = snapshot.feedback;
     final evaluationSummary = snapshot.evaluation?.feedbackSummary;
     final answerText = _originalAnswer;
+    final answerImages = _answerImages;
     final scores = snapshot.scores;
     final selectedScore =
         scores.isEmpty ? null : scores[_scoreIndex.clamp(0, scores.length - 1)];
+    final summaryText = (feedback?.summary ?? evaluationSummary)?.trim();
+    final dimensions = _dimensionCards(
+      selectedScore: selectedScore,
+      scores: scores,
+      feedback: feedback,
+    );
 
     return [
       _QuestionMeta(
@@ -249,7 +275,10 @@ class _ResultFeedbackScreenState extends State<ResultFeedbackScreen> {
       ),
       const SizedBox(height: 14),
       if (_mainTab == _MainTab.yourAnswer)
-        _YourAnswerPanel(answerText: answerText)
+        _YourAnswerPanel(
+          answerText: answerText,
+          images: answerImages,
+        )
       else if (_mainTab == _MainTab.modelAnswer)
         _ModelAnswerPanel(
           canImprove: snapshot.evaluation != null &&
@@ -269,8 +298,13 @@ class _ResultFeedbackScreenState extends State<ResultFeedbackScreen> {
         _ScoreAndAnswerRow(
           snapshot: snapshot,
           answerText: answerText,
+          images: answerImages,
           selectedScore: selectedScore,
         ),
+        if (summaryText != null && summaryText.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          _QuoteSummaryCard(summary: summaryText),
+        ],
         const SizedBox(height: 16),
         _DetailTabBar(
           selected: _detailTab,
@@ -278,89 +312,48 @@ class _ResultFeedbackScreenState extends State<ResultFeedbackScreen> {
         ),
         const SizedBox(height: 12),
         if (_detailTab == _DetailTab.detailed) ...[
-          const _SectionTitle(title: 'Score breakdown'),
-          const SizedBox(height: 10),
-          if (scores.isEmpty)
-            _MutedCard(
+          if (dimensions.isEmpty && scores.isEmpty)
+            const _MutedCard(
               child: Text(
-                'Question scores appear when AI evaluation finishes.',
+                'Detailed feedback appears after AI scoring completes.',
                 style: TextStyle(color: Color(0xFF7A8499), height: 1.4),
               ),
             )
-          else
-            ...scores.asMap().entries.map((entry) {
-              final index = entry.key + 1;
-              final score = entry.value;
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: _ScoreTile(
-                  index: index,
-                  score: score,
-                  selected: entry.key == _scoreIndex,
-                  onTap: () => setState(() => _scoreIndex = entry.key),
-                ),
-              );
-            }),
-          const SizedBox(height: 12),
-          if (feedback == null || !feedback.hasContent)
-            _MutedCard(
-              child: Text(
-                evaluationSummary?.isNotEmpty == true
-                    ? evaluationSummary!
-                    : 'Detailed feedback appears after AI scoring completes.',
-                style: const TextStyle(color: Color(0xFF7A8499), height: 1.4),
-              ),
-            )
           else ...[
-            if (feedback.summary != null && feedback.summary!.isNotEmpty)
-              _OverallFeedbackCard(summary: feedback.summary!),
-            if (feedback.strengths.isNotEmpty) ...[
-              const SizedBox(height: 10),
-              _BulletCard(
-                title: 'Strengths',
-                items: feedback.strengths,
-                accent: _green,
-                soft: _greenSoft,
+            for (final card in dimensions)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: card,
               ),
-            ],
-            if (feedback.weaknesses.isNotEmpty) ...[
+            if (scores.length > 1) ...[
+              const SizedBox(height: 4),
+              const _SectionTitle(title: 'Question scores'),
               const SizedBox(height: 10),
-              _BulletCard(
-                title: 'Weaknesses',
-                items: feedback.weaknesses,
-                accent: const Color(0xFFE85D75),
-                soft: const Color(0xFFFDE8EC),
-              ),
-            ],
-            if (feedback.improvementAreas.isNotEmpty) ...[
-              const SizedBox(height: 10),
-              _BulletCard(
-                title: 'Improvement areas',
-                items: feedback.improvementAreas,
-                accent: _purple,
-                soft: _purpleSoft,
-              ),
-            ],
-            if (feedback.tips.isNotEmpty) ...[
-              const SizedBox(height: 10),
-              _BulletCard(
-                title: 'Actionable tips',
-                items: feedback.tips,
-                accent: _blue,
-                soft: _blueSoft,
-              ),
+              ...scores.asMap().entries.map((entry) {
+                final index = entry.key + 1;
+                final score = entry.value;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: _ScoreTile(
+                    index: index,
+                    score: score,
+                    selected: entry.key == _scoreIndex,
+                    onTap: () => setState(() => _scoreIndex = entry.key),
+                  ),
+                );
+              }),
             ],
           ],
         ] else if (_detailTab == _DetailTab.strengths) ...[
           if (feedback?.strengths.isNotEmpty == true)
             _BulletCard(
-              title: 'Strengths',
+              title: 'Key Strengths',
               items: feedback!.strengths,
               accent: _green,
               soft: _greenSoft,
             )
           else
-            _MutedCard(
+            const _MutedCard(
               child: Text(
                 'Strengths appear after AI scoring completes.',
                 style: TextStyle(color: Color(0xFF7A8499), height: 1.4),
@@ -372,7 +365,7 @@ class _ResultFeedbackScreenState extends State<ResultFeedbackScreen> {
                   feedback.improvementAreas.isNotEmpty)) ...[
             if (feedback.weaknesses.isNotEmpty)
               _BulletCard(
-                title: 'Weaknesses',
+                title: 'Areas for Improvement',
                 items: feedback.weaknesses,
                 accent: const Color(0xFFE85D75),
                 soft: const Color(0xFFFDE8EC),
@@ -380,14 +373,14 @@ class _ResultFeedbackScreenState extends State<ResultFeedbackScreen> {
             if (feedback.improvementAreas.isNotEmpty) ...[
               const SizedBox(height: 10),
               _BulletCard(
-                title: 'Improvement areas',
+                title: 'Missing concepts',
                 items: feedback.improvementAreas,
                 accent: _purple,
                 soft: _purpleSoft,
               ),
             ],
           ] else
-            _MutedCard(
+            const _MutedCard(
               child: Text(
                 'Improvement areas appear after AI scoring completes.',
                 style: TextStyle(color: Color(0xFF7A8499), height: 1.4),
@@ -396,13 +389,13 @@ class _ResultFeedbackScreenState extends State<ResultFeedbackScreen> {
         ] else ...[
           if (feedback?.tips.isNotEmpty == true)
             _BulletCard(
-              title: 'Actionable tips',
+              title: 'Suggested Answer tips',
               items: feedback!.tips,
               accent: _blue,
               soft: _blueSoft,
             )
           else
-            _MutedCard(
+            const _MutedCard(
               child: Text(
                 'Suggested improvements appear after AI scoring completes.',
                 style: TextStyle(color: Color(0xFF7A8499), height: 1.4),
@@ -422,22 +415,92 @@ class _ResultFeedbackScreenState extends State<ResultFeedbackScreen> {
             ),
           ],
         ],
-        if (_detailTab == _DetailTab.detailed &&
-            snapshot.evaluation != null &&
-            snapshot.evaluation!.id.isNotEmpty) ...[
-          const SizedBox(height: 16),
-          OutlinedButton(
-            onPressed: _openDeepFeedback,
-            style: OutlinedButton.styleFrom(
-              foregroundColor: _blue,
-              side: const BorderSide(color: _blue),
-              minimumSize: const Size.fromHeight(48),
-            ),
-            child: const Text('Improve answer with AI'),
-          ),
-        ],
       ],
     ];
+  }
+
+  List<_DimensionFeedbackCard> _dimensionCards({
+    required EvaluationScoreItem? selectedScore,
+    required List<EvaluationScoreItem> scores,
+    required EvaluationFeedbackReport? feedback,
+  }) {
+    final palette = <(Color, Color, IconData)>[
+      (const Color(0xFFE8F8EF), const Color(0xFF22A06B), Icons.menu_book_outlined),
+      (const Color(0xFFE8F1FF), const Color(0xFF2F7BFF), Icons.account_tree_outlined),
+      (const Color(0xFFF3E9FF), const Color(0xFF7B5CFF), Icons.insights_outlined),
+      (const Color(0xFFFFF1E0), const Color(0xFFC47A1A), Icons.edit_note_rounded),
+    ];
+
+    final rubric = selectedScore?.rubricBreakdown.entries.toList() ?? const [];
+    if (rubric.isNotEmpty) {
+      return [
+        for (var i = 0; i < rubric.length && i < 4; i++)
+          _DimensionFeedbackCard(
+            title: _prettyDimension(rubric[i].key),
+            scoreLabel: '${rubric[i].value}',
+            body: selectedScore?.feedback?.trim().isNotEmpty == true
+                ? selectedScore!.feedback!.trim()
+                : 'AI scored this dimension from your answer.',
+            soft: palette[i % palette.length].$1,
+            accent: palette[i % palette.length].$2,
+            icon: palette[i % palette.length].$3,
+          ),
+      ];
+    }
+
+    if (scores.isNotEmpty) {
+      return [
+        for (var i = 0; i < scores.length && i < 4; i++)
+          _DimensionFeedbackCard(
+            title: 'Question ${i + 1}',
+            scoreLabel: scores[i].scoreLabel,
+            body: (scores[i].feedback ?? '').trim().isNotEmpty
+                ? scores[i].feedback!.trim()
+                : 'Open this question score for more detail.',
+            soft: palette[i % palette.length].$1,
+            accent: palette[i % palette.length].$2,
+            icon: palette[i % palette.length].$3,
+          ),
+      ];
+    }
+
+    final cards = <_DimensionFeedbackCard>[];
+    if (feedback?.strengths.isNotEmpty == true) {
+      cards.add(
+        _DimensionFeedbackCard(
+          title: 'Content Analysis',
+          scoreLabel: 'Strengths',
+          body: feedback!.strengths.take(2).join(' '),
+          soft: palette[0].$1,
+          accent: palette[0].$2,
+          icon: palette[0].$3,
+        ),
+      );
+    }
+    if (feedback?.weaknesses.isNotEmpty == true) {
+      cards.add(
+        _DimensionFeedbackCard(
+          title: 'Areas to Improve',
+          scoreLabel: 'Focus',
+          body: feedback!.weaknesses.take(2).join(' '),
+          soft: palette[3].$1,
+          accent: palette[3].$2,
+          icon: palette[3].$3,
+        ),
+      );
+    }
+    return cards;
+  }
+
+  static String _prettyDimension(String raw) {
+    final cleaned = raw.replaceAll('_', ' ').trim();
+    if (cleaned.isEmpty) return 'Dimension';
+    return cleaned
+        .split(RegExp(r'\s+'))
+        .map((part) => part.isEmpty
+            ? part
+            : '${part[0].toUpperCase()}${part.substring(1)}')
+        .join(' ');
   }
 }
 
@@ -456,86 +519,91 @@ class _EvalHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final narrow = MediaQuery.sizeOf(context).width < 360;
+    final narrow = MediaQuery.sizeOf(context).width < 380;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 4, 12, 4),
-      child: Row(
+      padding: const EdgeInsets.fromLTRB(8, 4, 12, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          IconButton(
-            tooltip: 'Back',
-            onPressed: onBack,
-            icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF1A2B4C)),
-          ),
-          const PragyuLogo(height: 28, semanticsLabel: 'Pragyu'),
-          if (!narrow) ...[
-            const SizedBox(width: 8),
-            const Flexible(
-              child: Text(
-                'Learn • Practice • Grow',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontFamily: AppTheme.fontFamily,
-                  fontSize: 10,
-                  color: Color(0xFF7A8499),
-                  fontWeight: FontWeight.w500,
+          Row(
+            children: [
+              IconButton(
+                tooltip: 'Back',
+                onPressed: onBack,
+                icon: const Icon(
+                  Icons.arrow_back_rounded,
+                  color: Color(0xFF1A2B4C),
                 ),
               ),
-            ),
-          ],
-          const SizedBox(width: 8),
-          Expanded(
-            flex: 3,
+              const Expanded(
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: PragyuLogo(
+                    height: 36,
+                    semanticsLabel: 'Pragyu',
+                  ),
+                ),
+              ),
+              if (onShare != null)
+                narrow
+                    ? IconButton(
+                        tooltip: 'Share',
+                        onPressed: onShare,
+                        icon: const Icon(
+                          Icons.ios_share_rounded,
+                          color: Color(0xFF2F7BFF),
+                        ),
+                      )
+                    : OutlinedButton.icon(
+                        onPressed: onShare,
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF2F7BFF),
+                          side: const BorderSide(color: Color(0xFF2F7BFF)),
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          visualDensity: VisualDensity.compact,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        icon: const Icon(Icons.ios_share_rounded, size: 16),
+                        label: const Text('Share'),
+                      ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  softWrap: true,
+                  style: TextStyle(
                     fontFamily: AppTheme.fontFamily,
-                    fontSize: 15,
+                    fontSize: narrow ? 20 : 22,
                     fontWeight: FontWeight.w800,
-                    color: Color(0xFF1A2B4C),
+                    color: const Color(0xFF1A2B4C),
+                    height: 1.2,
                   ),
                 ),
+                const SizedBox(height: 2),
                 Text(
                   subtitle,
-                  maxLines: 1,
+                  softWrap: true,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontFamily: AppTheme.fontFamily,
-                    fontSize: 11,
+                    fontSize: 13,
                     color: Color(0xFF7A8499),
                     fontWeight: FontWeight.w500,
+                    height: 1.3,
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 6),
-          if (narrow)
-            IconButton(
-              tooltip: 'Share',
-              onPressed: onShare,
-              icon: const Icon(Icons.ios_share_rounded, color: Color(0xFF2F7BFF)),
-            )
-          else
-            OutlinedButton.icon(
-              onPressed: onShare,
-              style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFF2F7BFF),
-                side: const BorderSide(color: Color(0xFF2F7BFF)),
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                visualDensity: VisualDensity.compact,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-              icon: const Icon(Icons.ios_share_rounded, size: 16),
-              label: const Text('Share'),
-            ),
         ],
       ),
     );
@@ -760,11 +828,13 @@ class _ScoreAndAnswerRow extends StatelessWidget {
   const _ScoreAndAnswerRow({
     required this.snapshot,
     required this.answerText,
+    required this.images,
     required this.selectedScore,
   });
 
   final ResultFeedbackSnapshot snapshot;
   final String? answerText;
+  final List<AnswerImageAttachment> images;
   final EvaluationScoreItem? selectedScore;
 
   @override
@@ -772,7 +842,10 @@ class _ScoreAndAnswerRow extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final stack = constraints.maxWidth < 640;
-        final answerCard = _AnswerPreviewCard(answerText: answerText);
+        final answerCard = _AnswerPreviewCard(
+          answerText: answerText,
+          images: images,
+        );
         final scoreCard = _OverallScoreCard(
           snapshot: snapshot,
           selectedScore: selectedScore,
@@ -800,13 +873,22 @@ class _ScoreAndAnswerRow extends StatelessWidget {
 }
 
 class _AnswerPreviewCard extends StatelessWidget {
-  const _AnswerPreviewCard({required this.answerText});
+  const _AnswerPreviewCard({
+    required this.answerText,
+    this.images = const [],
+  });
 
   final String? answerText;
+  final List<AnswerImageAttachment> images;
 
   @override
   Widget build(BuildContext context) {
     final text = (answerText ?? '').trim();
+    final hasImage = images.any((img) => (img.url ?? '').trim().isNotEmpty);
+    final imageUrl = hasImage
+        ? images.firstWhere((img) => (img.url ?? '').trim().isNotEmpty).url!
+        : null;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
@@ -835,58 +917,144 @@ class _AnswerPreviewCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-          Container(
-            width: double.infinity,
-            constraints: const BoxConstraints(minHeight: 140),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF7F9FC),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFE6EAF2)),
-            ),
-            child: Text(
-              text.isEmpty
-                  ? 'Your written answer will appear here when available.'
-                  : text,
-              softWrap: true,
-              maxLines: 10,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontFamily: AppTheme.fontFamily,
-                fontSize: 13,
-                height: 1.45,
-                color: text.isEmpty
-                    ? const Color(0xFF7A8499)
-                    : const Color(0xFF1A2B4C),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: AspectRatio(
+              aspectRatio: 4 / 3,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  ColoredBox(
+                    color: const Color(0xFFF7F9FC),
+                    child: imageUrl != null
+                        ? Image.network(
+                            imageUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                _AnswerFallback(
+                              text: text,
+                            ),
+                          )
+                        : _AnswerFallback(text: text),
+                  ),
+                  Positioned(
+                    right: 10,
+                    bottom: 10,
+                    child: Material(
+                      color: const Color(0xCC1A2B4C),
+                      borderRadius: BorderRadius.circular(999),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(999),
+                        onTap: () => _openZoom(
+                          context,
+                          text: text,
+                          imageUrl: imageUrl,
+                        ),
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.zoom_in_rounded,
+                                size: 16,
+                                color: Colors.white,
+                              ),
+                              SizedBox(width: 6),
+                              Text(
+                                'Tap to Zoom',
+                                style: TextStyle(
+                                  fontFamily: AppTheme.fontFamily,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
-          const SizedBox(height: 10),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton.icon(
-              onPressed: text.isEmpty
-                  ? null
-                  : () {
-                      showDialog<void>(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          title: const Text('Your Answer'),
-                          content: SingleChildScrollView(child: Text(text)),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: const Text('Close'),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-              icon: const Icon(Icons.zoom_in_rounded, size: 18),
-              label: const Text('Tap to Zoom'),
+        ],
+      ),
+    );
+  }
+
+  void _openZoom(
+    BuildContext context, {
+    required String text,
+    required String? imageUrl,
+  }) {
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Your Answer'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (imageUrl != null)
+                  Image.network(
+                    imageUrl,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) =>
+                        const SizedBox.shrink(),
+                  ),
+                if (text.isNotEmpty) ...[
+                  if (imageUrl != null) const SizedBox(height: 12),
+                  Text(text),
+                ],
+                if (imageUrl == null && text.isEmpty)
+                  const Text('No answer content available.'),
+              ],
             ),
           ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
         ],
+      ),
+    );
+  }
+}
+
+class _AnswerFallback extends StatelessWidget {
+  const _AnswerFallback({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(12),
+      child: Text(
+        text.isEmpty
+            ? 'Your written answer will appear here when available.'
+            : text,
+        softWrap: true,
+        maxLines: 10,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          fontFamily: AppTheme.fontFamily,
+          fontSize: 13,
+          height: 1.45,
+          color: text.isEmpty
+              ? const Color(0xFF7A8499)
+              : const Color(0xFF1A2B4C),
+        ),
       ),
     );
   }
@@ -928,7 +1096,7 @@ class _OverallScoreCard extends StatelessWidget {
           const Align(
             alignment: Alignment.centerLeft,
             child: Text(
-              'Your score',
+              'Overall Score',
               style: TextStyle(
                 fontFamily: AppTheme.fontFamily,
                 fontWeight: FontWeight.w800,
@@ -997,18 +1165,37 @@ class _OverallScoreCard extends StatelessWidget {
                       color: Color(0xFF22A06B), size: 18),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: Text(
-                      pct >= 80
-                          ? 'Excellent work! Keep refining for full marks.'
-                          : pct >= 60
-                              ? 'Good Answer! You covered most key points with relevant examples.'
-                              : 'Keep practicing — focus on structure and key concepts.',
-                      softWrap: true,
-                      style: const TextStyle(
-                        fontFamily: AppTheme.fontFamily,
-                        fontSize: 12,
-                        height: 1.4,
-                        color: Color(0xFF1A2B4C),
+                    child: Text.rich(
+                      TextSpan(
+                        children: [
+                          TextSpan(
+                            text: pct >= 80
+                                ? 'Excellent work! '
+                                : pct >= 60
+                                    ? 'Good Answer! '
+                                    : 'Keep practicing — ',
+                            style: const TextStyle(
+                              fontFamily: AppTheme.fontFamily,
+                              fontSize: 12,
+                              height: 1.4,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF1A2B4C),
+                            ),
+                          ),
+                          TextSpan(
+                            text: pct >= 80
+                                ? 'Keep refining for full marks.'
+                                : pct >= 60
+                                    ? 'You covered most key points with relevant examples.'
+                                    : 'focus on structure and key concepts.',
+                            style: const TextStyle(
+                              fontFamily: AppTheme.fontFamily,
+                              fontSize: 12,
+                              height: 1.4,
+                              color: Color(0xFF1A2B4C),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -1097,13 +1284,167 @@ class _OverallScoreCard extends StatelessWidget {
 }
 
 class _YourAnswerPanel extends StatelessWidget {
-  const _YourAnswerPanel({required this.answerText});
+  const _YourAnswerPanel({
+    required this.answerText,
+    this.images = const [],
+  });
 
   final String? answerText;
+  final List<AnswerImageAttachment> images;
 
   @override
   Widget build(BuildContext context) {
-    return _AnswerPreviewCard(answerText: answerText);
+    return _AnswerPreviewCard(
+      answerText: answerText,
+      images: images,
+    );
+  }
+}
+
+class _QuoteSummaryCard extends StatelessWidget {
+  const _QuoteSummaryCard({required this.summary});
+
+  final String summary;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE8F1FF),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFD6E4FF)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.format_quote_rounded, color: Color(0xFF2F7BFF)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              summary,
+              softWrap: true,
+              style: const TextStyle(
+                fontFamily: AppTheme.fontFamily,
+                fontSize: 13,
+                height: 1.45,
+                color: Color(0xFF1A2B4C),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DimensionFeedbackCard extends StatelessWidget {
+  const _DimensionFeedbackCard({
+    required this.title,
+    required this.scoreLabel,
+    required this.body,
+    required this.soft,
+    required this.accent,
+    required this.icon,
+  });
+
+  final String title;
+  final String scoreLabel;
+  final String body;
+  final Color soft;
+  final Color accent;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE6EAF2)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: soft,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: accent, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        softWrap: true,
+                        style: const TextStyle(
+                          fontFamily: AppTheme.fontFamily,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 14,
+                          color: Color(0xFF1A2B4C),
+                        ),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: soft,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        scoreLabel,
+                        style: TextStyle(
+                          fontFamily: AppTheme.fontFamily,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 11,
+                          color: accent,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  body,
+                  softWrap: true,
+                  style: const TextStyle(
+                    fontFamily: AppTheme.fontFamily,
+                    fontSize: 12.5,
+                    height: 1.4,
+                    color: Color(0xFF7A8499),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 6),
+          Icon(Icons.chevron_right_rounded, color: accent.withValues(alpha: 0.7)),
+        ],
+      ),
+    );
   }
 }
 
@@ -1457,48 +1798,6 @@ class _ScoreTile extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _OverallFeedbackCard extends StatelessWidget {
-  const _OverallFeedbackCard({required this.summary});
-
-  final String summary;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFFE8F1FF),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Overall feedback',
-            style: TextStyle(
-              fontFamily: AppTheme.fontFamily,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF2F7BFF),
-              fontSize: 12,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            summary,
-            softWrap: true,
-            style: const TextStyle(
-              fontFamily: AppTheme.fontFamily,
-              color: Color(0xFF1A2B4C),
-              height: 1.45,
-            ),
-          ),
-        ],
       ),
     );
   }

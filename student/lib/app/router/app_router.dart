@@ -33,6 +33,7 @@ import '../../features/catalog/domain/catalog_checkout_models.dart';
 import '../../features/catalog/presentation/screens/catalog_browse_screen.dart';
 import '../../features/catalog/presentation/screens/catalog_checkout_screen.dart';
 import '../../features/catalog/presentation/screens/catalog_detail_screen.dart';
+import '../../features/catalog/presentation/widgets/marketplace_route_gate.dart';
 import '../../features/alerts/presentation/screens/alerts_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
 import '../../features/home/presentation/screens/today_detail_screen.dart';
@@ -50,10 +51,12 @@ import '../../features/materials/presentation/screens/study_materials_list_scree
 import '../../features/onboarding/presentation/screens/onboarding_screen.dart';
 import '../../features/organization/presentation/screens/org_picker_screen.dart';
 import '../../features/splash/presentation/screens/splash_screen.dart';
+import '../../features/tests/domain/ai_answer_upload_models.dart';
 import '../../features/tests/domain/assessment_detail_models.dart';
 import '../../features/tests/domain/attempt_flow_models.dart';
 import '../../features/tests/domain/deep_feedback_models.dart';
 import '../../features/tests/domain/submission_status_models.dart';
+import '../../features/tests/presentation/screens/ai_answer_upload_screen.dart';
 import '../../features/tests/presentation/screens/assessment_detail_screen.dart';
 import '../../features/tests/presentation/screens/attempt_instructions_screen.dart';
 import '../../features/tests/presentation/screens/attempt_player_screen.dart';
@@ -90,6 +93,7 @@ abstract final class AppRoutes {
   static const assessmentDetail = '/assessment-detail';
   static const attemptInstructions = '/attempt-instructions';
   static const attemptPlayer = '/attempt-player';
+  static const aiAnswerUpload = '/ai-answer-upload';
   static const submissionStatus = '/submission-status';
   static const resultFeedback = '/result-feedback';
   static const deepFeedback = '/deep-feedback';
@@ -114,7 +118,9 @@ abstract final class AppRoutes {
   static const tutorials = '/tutorials';
   static const tutorialsBrowse = '/tutorials-browse';
   static const tutorialsArticle = '/tutorials-article';
-  static const createAccountStub = '/create-account-stub';
+  static const register = '/register';
+  /// Legacy alias — prefer [register].
+  static const createAccountStub = register;
 }
 
 Route<dynamic> onGenerateRoute(RouteSettings settings) {
@@ -237,22 +243,28 @@ Route<dynamic> onGenerateRoute(RouteSettings settings) {
     case AppRoutes.catalog:
       return MaterialPageRoute<void>(
         settings: settings,
-        builder: (_) => const CatalogBrowseScreen(),
+        builder: (_) => const MarketplaceRouteGate(
+          child: CatalogBrowseScreen(),
+        ),
       );
     case AppRoutes.catalogDetail:
       return MaterialPageRoute<void>(
         settings: settings,
-        builder: (_) => CatalogDetailScreen(
-          slug: settings.arguments is String
-              ? settings.arguments as String
-              : settings.arguments?.toString() ?? '',
+        builder: (_) => MarketplaceRouteGate(
+          child: CatalogDetailScreen(
+            slug: settings.arguments is String
+                ? settings.arguments as String
+                : settings.arguments?.toString() ?? '',
+          ),
         ),
       );
     case AppRoutes.catalogCheckout:
       return MaterialPageRoute<void>(
         settings: settings,
-        builder: (_) => CatalogCheckoutScreen(
-          args: CatalogCheckoutArgs.fromObject(settings.arguments),
+        builder: (_) => MarketplaceRouteGate(
+          child: CatalogCheckoutScreen(
+            args: CatalogCheckoutArgs.fromObject(settings.arguments),
+          ),
         ),
       );
     case AppRoutes.assessmentDetail:
@@ -274,6 +286,13 @@ Route<dynamic> onGenerateRoute(RouteSettings settings) {
         settings: settings,
         builder: (_) => AttemptPlayerScreen(
           args: AttemptPlayerArgs.fromObject(settings.arguments),
+        ),
+      );
+    case AppRoutes.aiAnswerUpload:
+      return MaterialPageRoute<AiAnswerUploadResult>(
+        settings: settings,
+        builder: (_) => AiAnswerUploadScreen(
+          args: AiAnswerUploadArgs.fromObject(settings.arguments),
         ),
       );
     case AppRoutes.submissionStatus:
@@ -412,7 +431,7 @@ Route<dynamic> onGenerateRoute(RouteSettings settings) {
           path: TutorialPath.fromObject(settings.arguments),
         ),
       );
-    case AppRoutes.createAccountStub:
+    case AppRoutes.register:
       return MaterialPageRoute<void>(
         settings: settings,
         builder: (_) => const RegisterScreen(),
