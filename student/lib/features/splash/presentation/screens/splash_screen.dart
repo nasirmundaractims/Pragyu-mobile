@@ -5,13 +5,13 @@ import 'package:flutter/services.dart';
 
 import 'package:student_mobile/app/router/app_router.dart';
 import 'package:student_mobile/app/theme/app_theme.dart';
+import 'package:student_mobile/app/widgets/pragyu_logo.dart';
 import 'package:student_mobile/core/constants/app_constants.dart';
 import 'package:student_mobile/core/session/auth_navigation.dart';
 
-/// S-01 Splash — centered brand mark + tagline + session handoff.
+/// S-01 Splash — centered brand logo + tagline + session handoff.
 ///
-/// Recreated from the design reference with Flutter widgets only.
-/// Uses [pragyu-mark.png] as the individual brand illustration (not a screenshot).
+/// Uses the same [PragyuLogo] wordmark as the rest of the Student App.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -172,52 +172,19 @@ class _BrandBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final logoHeight = (markMax * 0.42).clamp(72.0, 112.0);
+
     return Semantics(
       label: 'Pragyu. Learn, Practice, Grow.',
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: markMax, maxHeight: markMax),
-            child: AspectRatio(
-              aspectRatio: 1,
-              child: Builder(
-                builder: (context) {
-                  final dpr = MediaQuery.devicePixelRatioOf(context);
-                  final cachePx = (markMax * dpr).round().clamp(256, 1024);
-                  return Image.asset(
-                    'assets/images/brand/pragyu-mark.png',
-                    fit: BoxFit.contain,
-                    filterQuality: FilterQuality.high,
-                    isAntiAlias: true,
-                    cacheWidth: cachePx,
-                    cacheHeight: cachePx,
-                    semanticLabel: 'Pragyu brand mark',
-                    errorBuilder: (_, error, stackTrace) => const Icon(
-                      Icons.school_rounded,
-                      size: 88,
-                      color: Color(0xFF3D7EFF),
-                    ),
-                  );
-                },
-              ),
-            ),
+          PragyuLogo(
+            height: logoHeight,
+            alignment: Alignment.center,
+            semanticsLabel: 'Pragyu',
           ),
-          const SizedBox(height: 22),
-          Text(
-            'Pragyu',
-            textAlign: TextAlign.center,
-            softWrap: true,
-            style: TextStyle(
-              fontFamily: AppTheme.fontFamily,
-              fontSize: markMax < 160 ? 38 : 48,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.6,
-              color: _SplashScreenState._ink,
-              height: 1.05,
-            ),
-          ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 18),
           const _TaglineRow(),
         ],
       ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:student_mobile/app/pragyu_app.dart';
+import 'package:student_mobile/app/widgets/pragyu_logo.dart';
 import 'package:student_mobile/core/config/app_config.dart';
 
 void main() {
@@ -23,7 +24,7 @@ void main() {
 
     await tester.pumpWidget(const PragyuApp());
 
-    expect(find.text('Pragyu'), findsWidgets);
+    expect(find.byType(PragyuLogo), findsOneWidget);
     expect(find.text('Learn'), findsOneWidget);
     expect(find.text('Practice'), findsOneWidget);
     expect(find.text('Grow'), findsOneWidget);
