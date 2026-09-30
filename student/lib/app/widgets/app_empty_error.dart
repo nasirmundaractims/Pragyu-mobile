@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'package:student_mobile/app/theme/app_colors.dart';
 import 'package:student_mobile/app/theme/app_theme.dart';
+import 'package:student_mobile/app/theme/student_hub_colors.dart';
 
 /// Shared empty-state block for data screens.
 class AppEmptyState extends StatelessWidget {
@@ -27,7 +27,15 @@ class AppEmptyState extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 40, color: AppColors.muted),
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: StudentHubColors.blueSoft,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(icon, size: 28, color: StudentHubColors.blue),
+          ),
           const SizedBox(height: 14),
           Text(
             title,
@@ -36,7 +44,7 @@ class AppEmptyState extends StatelessWidget {
               fontFamily: AppTheme.fontFamily,
               fontSize: 17,
               fontWeight: FontWeight.w800,
-              color: AppColors.ink,
+              color: StudentHubColors.ink,
             ),
           ),
           if (message != null && message!.trim().isNotEmpty) ...[
@@ -48,7 +56,7 @@ class AppEmptyState extends StatelessWidget {
                 fontFamily: AppTheme.fontFamily,
                 fontSize: 13.5,
                 height: 1.4,
-                color: AppColors.muted,
+                color: StudentHubColors.muted,
               ),
             ),
           ],
@@ -56,7 +64,13 @@ class AppEmptyState extends StatelessWidget {
             const SizedBox(height: 16),
             FilledButton(
               onPressed: onAction,
-              style: FilledButton.styleFrom(backgroundColor: AppColors.brand),
+              style: FilledButton.styleFrom(
+                backgroundColor: StudentHubColors.blue,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
               child: Text(actionLabel!),
             ),
           ],
@@ -89,7 +103,7 @@ class AppErrorState extends StatelessWidget {
             textAlign: TextAlign.center,
             style: const TextStyle(
               fontFamily: AppTheme.fontFamily,
-              color: Color(0xFFC0392B),
+              color: StudentHubColors.danger,
               height: 1.45,
             ),
           ),
@@ -97,6 +111,13 @@ class AppErrorState extends StatelessWidget {
             const SizedBox(height: 14),
             OutlinedButton(
               onPressed: onRetry,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: StudentHubColors.blue,
+                side: const BorderSide(color: StudentHubColors.border),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
               child: const Text('Try again'),
             ),
           ],

@@ -548,18 +548,6 @@ class _HeroHeader extends StatelessWidget {
                       },
                       tooltip: 'Favorite',
                     ),
-                    const SizedBox(width: 8),
-                    _RoundIconButton(
-                      icon: Icons.ios_share_rounded,
-                      onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Sharing coming soon.'),
-                          ),
-                        );
-                      },
-                      tooltip: 'Share',
-                    ),
                   ],
                 ),
                 SizedBox(height: short ? 14 : 18),

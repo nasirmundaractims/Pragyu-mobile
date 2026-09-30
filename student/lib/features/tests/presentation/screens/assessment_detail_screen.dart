@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:student_mobile/app/router/app_router.dart';
-import 'package:student_mobile/app/theme/app_colors.dart';
+import 'package:student_mobile/app/theme/student_hub_colors.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/features/home/domain/due_state.dart';
 import 'package:student_mobile/features/tests/data/tests_repository.dart';
@@ -124,14 +124,14 @@ class _AssessmentDetailScreenState extends State<AssessmentDetailScreen> {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
       child: Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: StudentHubColors.pageBg,
         appBar: AppBar(
-          backgroundColor: AppColors.background,
+          backgroundColor: StudentHubColors.pageBg,
           title: Text(title),
         ),
         body: SafeArea(
           child: RefreshIndicator(
-            color: AppColors.brand,
+            color: StudentHubColors.blue,
             onRefresh: _load,
             child: _buildBody(),
           ),
@@ -146,7 +146,7 @@ class _AssessmentDetailScreenState extends State<AssessmentDetailScreen> {
         physics: const AlwaysScrollableScrollPhysics(),
         children: const [
           SizedBox(height: 140),
-          Center(child: CircularProgressIndicator(color: AppColors.brand)),
+          Center(child: CircularProgressIndicator(color: StudentHubColors.blue)),
         ],
       );
     }
@@ -158,7 +158,7 @@ class _AssessmentDetailScreenState extends State<AssessmentDetailScreen> {
         children: [
           Text(
             _error!,
-            style: const TextStyle(color: AppColors.danger, height: 1.45),
+            style: const TextStyle(color: StudentHubColors.danger, height: 1.45),
           ),
         ],
       );
@@ -176,7 +176,7 @@ class _AssessmentDetailScreenState extends State<AssessmentDetailScreen> {
           assessment.metaLine,
           style: const TextStyle(
             fontSize: 14,
-            color: AppColors.muted,
+            color: StudentHubColors.muted,
             height: 1.4,
           ),
         ),
@@ -196,7 +196,7 @@ class _AssessmentDetailScreenState extends State<AssessmentDetailScreen> {
             'About',
             style: TextStyle(
               fontWeight: FontWeight.w700,
-              color: AppColors.ink,
+              color: StudentHubColors.ink,
               fontSize: 16,
             ),
           ),
@@ -204,7 +204,7 @@ class _AssessmentDetailScreenState extends State<AssessmentDetailScreen> {
           Text(
             assessment.description!,
             style: const TextStyle(
-              color: AppColors.muted,
+              color: StudentHubColors.muted,
               height: 1.45,
               fontSize: 14,
             ),
@@ -216,7 +216,7 @@ class _AssessmentDetailScreenState extends State<AssessmentDetailScreen> {
             'Instructions',
             style: TextStyle(
               fontWeight: FontWeight.w700,
-              color: AppColors.ink,
+              color: StudentHubColors.ink,
               fontSize: 16,
             ),
           ),
@@ -224,7 +224,7 @@ class _AssessmentDetailScreenState extends State<AssessmentDetailScreen> {
           Text(
             assessment.instructions!,
             style: const TextStyle(
-              color: AppColors.ink,
+              color: StudentHubColors.ink,
               height: 1.45,
               fontSize: 14,
             ),
@@ -245,13 +245,13 @@ class _AssessmentDetailScreenState extends State<AssessmentDetailScreen> {
         if (snapshot.studentProfileId == null)
           const Text(
             'Student profile is required before you can start this test.',
-            style: TextStyle(color: AppColors.danger, height: 1.45),
+            style: TextStyle(color: StudentHubColors.danger, height: 1.45),
           )
         else if (snapshot.canStart)
           FilledButton(
             onPressed: () => _openInstructions(),
             style: FilledButton.styleFrom(
-              backgroundColor: AppColors.brand,
+              backgroundColor: StudentHubColors.blue,
               foregroundColor: Colors.white,
               minimumSize: const Size.fromHeight(48),
             ),
@@ -261,7 +261,7 @@ class _AssessmentDetailScreenState extends State<AssessmentDetailScreen> {
           FilledButton(
             onPressed: () => _openInstructions(continueSession: true),
             style: FilledButton.styleFrom(
-              backgroundColor: AppColors.brand,
+              backgroundColor: StudentHubColors.blue,
               foregroundColor: Colors.white,
               minimumSize: const Size.fromHeight(48),
             ),
@@ -271,9 +271,9 @@ class _AssessmentDetailScreenState extends State<AssessmentDetailScreen> {
           OutlinedButton(
             onPressed: _actionBusy ? null : _submit,
             style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.ink,
+              foregroundColor: StudentHubColors.ink,
               minimumSize: const Size.fromHeight(48),
-              side: const BorderSide(color: AppColors.brandSoft),
+              side: const BorderSide(color: StudentHubColors.border),
             ),
             child: Text(_actionBusy ? 'Submitting…' : 'Submit attempt'),
           ),
@@ -284,7 +284,7 @@ class _AssessmentDetailScreenState extends State<AssessmentDetailScreen> {
             'Question preview (${assessment.questions.length})',
             style: const TextStyle(
               fontWeight: FontWeight.w700,
-              color: AppColors.ink,
+              color: StudentHubColors.ink,
               fontSize: 16,
             ),
           ),
@@ -292,7 +292,7 @@ class _AssessmentDetailScreenState extends State<AssessmentDetailScreen> {
           const Text(
             'Full answering opens after you accept instructions (S-42 → S-43).',
             style: TextStyle(
-              color: AppColors.muted,
+              color: StudentHubColors.muted,
               height: 1.4,
               fontSize: 13,
             ),
@@ -337,7 +337,7 @@ class _DueChip extends StatelessWidget {
         style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w700,
-          color: urgent ? AppColors.danger : AppColors.success,
+          color: urgent ? StudentHubColors.danger : StudentHubColors.success,
         ),
       ),
     );
@@ -355,9 +355,9 @@ class _ResultsCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.brandSoft),
+        color: StudentHubColors.surface,
+        borderRadius: BorderRadius.circular(StudentHubColors.cardRadius),
+        border: Border.all(color: StudentHubColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -366,7 +366,7 @@ class _ResultsCard extends StatelessWidget {
             'Your result',
             style: TextStyle(
               fontWeight: FontWeight.w700,
-              color: AppColors.ink,
+              color: StudentHubColors.ink,
               fontSize: 16,
             ),
           ),
@@ -376,7 +376,7 @@ class _ResultsCard extends StatelessWidget {
             style: const TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.w700,
-              color: AppColors.brand,
+              color: StudentHubColors.blue,
             ),
           ),
           if (result.rank != null || result.percentile != null) ...[
@@ -387,7 +387,7 @@ class _ResultsCard extends StatelessWidget {
                 if (result.percentile != null)
                   'Percentile ${result.percentile!.toStringAsFixed(0)}',
               ].join(' · '),
-              style: const TextStyle(color: AppColors.muted, fontSize: 13),
+              style: const TextStyle(color: StudentHubColors.muted, fontSize: 13),
             ),
           ],
         ],
@@ -411,9 +411,9 @@ class _SessionCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.brandSoft),
+        color: StudentHubColors.surface,
+        borderRadius: BorderRadius.circular(StudentHubColors.cardRadius),
+        border: Border.all(color: StudentHubColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -422,18 +422,18 @@ class _SessionCard extends StatelessWidget {
             'Open attempt',
             style: TextStyle(
               fontWeight: FontWeight.w700,
-              color: AppColors.ink,
+              color: StudentHubColors.ink,
               fontSize: 16,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             'Attempt #${attempt.attemptNumber} · ${attempt.statusLabel}',
-            style: const TextStyle(color: AppColors.muted, height: 1.4),
+            style: const TextStyle(color: StudentHubColors.muted, height: 1.4),
           ),
           Text(
             'Submission · ${submission.statusLabel}',
-            style: const TextStyle(color: AppColors.muted, height: 1.4),
+            style: const TextStyle(color: StudentHubColors.muted, height: 1.4),
           ),
         ],
       ),
@@ -457,9 +457,9 @@ class _QuestionTile extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.brandSoft),
+        color: StudentHubColors.surface,
+        borderRadius: BorderRadius.circular(StudentHubColors.cardRadius),
+        border: Border.all(color: StudentHubColors.border),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -469,14 +469,14 @@ class _QuestionTile extends StatelessWidget {
             height: 28,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: AppColors.brandSoft,
+              color: StudentHubColors.blueSoft,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
               '$index',
               style: const TextStyle(
                 fontWeight: FontWeight.w700,
-                color: AppColors.brand,
+                color: StudentHubColors.blue,
                 fontSize: 12,
               ),
             ),
@@ -491,7 +491,7 @@ class _QuestionTile extends StatelessWidget {
                   maxLines: 4,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    color: AppColors.ink,
+                    color: StudentHubColors.ink,
                     height: 1.4,
                     fontSize: 14,
                   ),
@@ -501,7 +501,7 @@ class _QuestionTile extends StatelessWidget {
                   Text(
                     '${question.maxMarks == question.maxMarks!.roundToDouble() ? question.maxMarks!.round() : question.maxMarks} marks',
                     style: const TextStyle(
-                      color: AppColors.muted,
+                      color: StudentHubColors.muted,
                       fontSize: 12,
                     ),
                   ),

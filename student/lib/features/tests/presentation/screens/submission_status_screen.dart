@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:student_mobile/app/router/app_router.dart';
-import 'package:student_mobile/app/theme/app_colors.dart';
+import 'package:student_mobile/app/theme/student_hub_colors.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/features/tests/data/tests_repository.dart';
 import 'package:student_mobile/features/tests/domain/submission_status_models.dart';
@@ -108,14 +108,14 @@ class _SubmissionStatusScreenState extends State<SubmissionStatusScreen> {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
       child: Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: StudentHubColors.pageBg,
         appBar: AppBar(
-          backgroundColor: AppColors.background,
+          backgroundColor: StudentHubColors.pageBg,
           title: const Text('Submission status'),
         ),
         body: SafeArea(
           child: RefreshIndicator(
-            color: AppColors.brand,
+            color: StudentHubColors.blue,
             onRefresh: () => _refresh(initial: true),
             child: ListView(
               physics: const AlwaysScrollableScrollPhysics(),
@@ -126,7 +126,7 @@ class _SubmissionStatusScreenState extends State<SubmissionStatusScreen> {
                   style: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w700,
-                    color: AppColors.ink,
+                    color: StudentHubColors.ink,
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -137,14 +137,14 @@ class _SubmissionStatusScreenState extends State<SubmissionStatusScreen> {
                     isOcr: _payload.isOcrStage,
                     failureReason: _payload.failureReason,
                   ),
-                  style: const TextStyle(color: AppColors.muted, height: 1.4),
+                  style: const TextStyle(color: StudentHubColors.muted, height: 1.4),
                 ),
                 const SizedBox(height: 20),
                 if (_loading && widget.args.initialStatus == null)
                   const Padding(
                     padding: EdgeInsets.symmetric(vertical: 40),
                     child: Center(
-                      child: CircularProgressIndicator(color: AppColors.brand),
+                      child: CircularProgressIndicator(color: StudentHubColors.blue),
                     ),
                   )
                 else ...[
@@ -164,7 +164,7 @@ class _SubmissionStatusScreenState extends State<SubmissionStatusScreen> {
                     Text(
                       _error!,
                       style: const TextStyle(
-                        color: AppColors.danger,
+                        color: StudentHubColors.danger,
                         height: 1.4,
                       ),
                     ),
@@ -174,7 +174,7 @@ class _SubmissionStatusScreenState extends State<SubmissionStatusScreen> {
                     FilledButton(
                       onPressed: _openResults,
                       style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.brand,
+                        backgroundColor: StudentHubColors.blue,
                         foregroundColor: Colors.white,
                         minimumSize: const Size.fromHeight(48),
                       ),
@@ -184,9 +184,9 @@ class _SubmissionStatusScreenState extends State<SubmissionStatusScreen> {
                     OutlinedButton(
                       onPressed: () => _refresh(initial: true),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.ink,
+                        foregroundColor: StudentHubColors.ink,
                         minimumSize: const Size.fromHeight(48),
-                        side: const BorderSide(color: AppColors.brandSoft),
+                        side: const BorderSide(color: StudentHubColors.border),
                       ),
                       child: const Text('Check again'),
                     )
@@ -201,7 +201,7 @@ class _SubmissionStatusScreenState extends State<SubmissionStatusScreen> {
                               height: 18,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                color: AppColors.brand,
+                                color: StudentHubColors.blue,
                               ),
                             ),
                             const SizedBox(width: 10),
@@ -214,7 +214,7 @@ class _SubmissionStatusScreenState extends State<SubmissionStatusScreen> {
                                         ? 'Checking for updates…'
                                         : 'Waiting…'),
                                 softWrap: true,
-                                style: const TextStyle(color: AppColors.muted),
+                                style: const TextStyle(color: StudentHubColors.muted),
                               ),
                             ),
                           ],
@@ -225,9 +225,9 @@ class _SubmissionStatusScreenState extends State<SubmissionStatusScreen> {
                           OutlinedButton(
                             onPressed: () => _refresh(initial: true),
                             style: OutlinedButton.styleFrom(
-                              foregroundColor: AppColors.ink,
+                              foregroundColor: StudentHubColors.ink,
                               minimumSize: const Size.fromHeight(44),
-                              side: const BorderSide(color: AppColors.brandSoft),
+                              side: const BorderSide(color: StudentHubColors.border),
                             ),
                             child: const Text('Check again'),
                           ),
@@ -291,22 +291,22 @@ class _StatusHero extends StatelessWidget {
     final colors = switch (stage) {
       SubmissionPipelineStage.ready => (
           const Color(0xFFE6F5EE),
-          AppColors.success,
+          StudentHubColors.success,
           Icons.check_circle_outline,
         ),
       SubmissionPipelineStage.failed => (
           const Color(0xFFFDECEC),
-          AppColors.danger,
+          StudentHubColors.danger,
           Icons.error_outline,
         ),
       SubmissionPipelineStage.evaluating => (
-          AppColors.brandSoft,
-          AppColors.brand,
+          StudentHubColors.blueSoft,
+          StudentHubColors.blue,
           Icons.auto_awesome_outlined,
         ),
       SubmissionPipelineStage.processing => (
-          AppColors.brandSoft,
-          AppColors.brand,
+          StudentHubColors.blueSoft,
+          StudentHubColors.blue,
           Icons.hourglass_top_rounded,
         ),
     };
@@ -316,8 +316,8 @@ class _StatusHero extends StatelessWidget {
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: colors.$1,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.brandSoft),
+        borderRadius: BorderRadius.circular(StudentHubColors.cardRadius),
+        border: Border.all(color: StudentHubColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -336,7 +336,7 @@ class _StatusHero extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               failureReason!,
-              style: const TextStyle(color: AppColors.danger, height: 1.4),
+              style: const TextStyle(color: StudentHubColors.danger, height: 1.4),
             ),
           ],
         ],
@@ -401,7 +401,7 @@ class _PipelineSteps extends StatelessWidget {
     if (stage == SubmissionPipelineStage.failed) {
       return const Text(
         'Evaluation could not finish. You can check again or return later.',
-        style: TextStyle(color: AppColors.muted, height: 1.4),
+        style: TextStyle(color: StudentHubColors.muted, height: 1.4),
       );
     }
 
@@ -448,7 +448,7 @@ class _StepRow extends StatelessWidget {
       children: [
         Icon(
           done ? Icons.check_circle : Icons.radio_button_unchecked,
-          color: done || active ? AppColors.brand : AppColors.muted,
+          color: done || active ? StudentHubColors.blue : StudentHubColors.muted,
           size: 22,
         ),
         const SizedBox(width: 10),
@@ -456,7 +456,7 @@ class _StepRow extends StatelessWidget {
           label,
           style: TextStyle(
             fontWeight: active || done ? FontWeight.w700 : FontWeight.w500,
-            color: done || active ? AppColors.ink : AppColors.muted,
+            color: done || active ? StudentHubColors.ink : StudentHubColors.muted,
           ),
         ),
       ],

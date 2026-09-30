@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:student_mobile/app/share/pragyu_copy.dart';
 import 'package:student_mobile/app/theme/app_colors.dart';
 import 'package:student_mobile/features/materials/data/materials_repository.dart';
 import 'package:student_mobile/features/materials/domain/material_models.dart';
@@ -67,13 +68,10 @@ class _MaterialViewerScreenState extends State<MaterialViewerScreen> {
   Future<void> _copyLink() async {
     final url = _snapshot?.openUrl?.trim();
     if (url == null || url.isEmpty) return;
-    await Clipboard.setData(ClipboardData(text: url));
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Link copied.'),
-        behavior: SnackBarBehavior.floating,
-      ),
+    await copyPragyuText(
+      context,
+      text: url,
+      message: PragyuCopyMessages.linkCopied,
     );
   }
 

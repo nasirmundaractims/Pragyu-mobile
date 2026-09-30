@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:student_mobile/app/router/app_router.dart';
+import 'package:student_mobile/app/share/pragyu_copy.dart';
 import 'package:student_mobile/app/theme/app_theme.dart';
 import 'package:student_mobile/app/widgets/pragyu_logo.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
@@ -117,13 +118,14 @@ class _ResultFeedbackScreenState extends State<ResultFeedbackScreen> {
         ..writeln()
         ..writeln(snapshot.feedback!.summary!.trim());
     }
-    await Clipboard.setData(ClipboardData(text: buffer.toString()));
+    buffer
+      ..writeln()
+      ..writeln('— via Pragyu');
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Evaluation summary copied.'),
-        behavior: SnackBarBehavior.floating,
-      ),
+    await copyPragyuText(
+      context,
+      text: buffer.toString().trim(),
+      message: PragyuCopyMessages.summaryCopied,
     );
   }
 
@@ -547,10 +549,10 @@ class _EvalHeader extends StatelessWidget {
               if (onShare != null)
                 narrow
                     ? IconButton(
-                        tooltip: 'Share',
+                        tooltip: 'Copy summary',
                         onPressed: onShare,
                         icon: const Icon(
-                          Icons.ios_share_rounded,
+                          Icons.copy_rounded,
                           color: Color(0xFF2F7BFF),
                         ),
                       )
@@ -565,8 +567,8 @@ class _EvalHeader extends StatelessWidget {
                             borderRadius: BorderRadius.circular(10),
                           ),
                         ),
-                        icon: const Icon(Icons.ios_share_rounded, size: 16),
-                        label: const Text('Share'),
+                        icon: const Icon(Icons.copy_rounded, size: 16),
+                        label: const Text('Copy summary'),
                       ),
             ],
           ),
@@ -1592,8 +1594,8 @@ class _BottomActions extends StatelessWidget {
                 ),
                 OutlinedButton.icon(
                   onPressed: onDownload,
-                  icon: const Icon(Icons.download_rounded, size: 16),
-                  label: const Text('Download Report'),
+                  icon: const Icon(Icons.copy_rounded, size: 16),
+                  label: const Text('Copy report'),
                 ),
                 OutlinedButton.icon(
                   onPressed: onPracticeAgain,

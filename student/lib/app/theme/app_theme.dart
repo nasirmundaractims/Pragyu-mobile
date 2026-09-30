@@ -32,7 +32,7 @@ abstract final class AppTheme {
       textTheme: scaled,
       primaryTextTheme: scaled.apply(fontFamily: fontFamily),
       appBarTheme: AppBarTheme(
-        backgroundColor: AppColors.surface,
+        backgroundColor: AppColors.background,
         foregroundColor: AppColors.ink,
         elevation: 0,
         centerTitle: false,
@@ -43,6 +43,27 @@ abstract final class AppTheme {
           color: AppColors.ink,
           fontSize: (scaled.titleLarge?.fontSize ?? 22),
         ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: AppColors.brand,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.brand,
+          side: const BorderSide(color: AppColors.brandSoft),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      ),
+      progressIndicatorTheme: const ProgressIndicatorThemeData(
+        color: AppColors.brand,
       ),
     );
   }

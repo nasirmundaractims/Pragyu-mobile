@@ -1,14 +1,17 @@
-import 'package:flutter/material.dart';
+import 'package:student_mobile/app/theme/student_hub_colors.dart';
 
-/// Pragyu Student brand colors (calm education — not generic purple glow).
+/// Pragyu Student brand colors — aligned to the hub palette (Phase 3).
+///
+/// Prefer [StudentHubColors] for new polished screens; [AppColors] remains for
+/// legacy call sites and shared widgets.
 abstract final class AppColors {
-  static const brand = Color(0xFF1F3A5F);
-  static const brandSoft = Color(0xFFE8EEF6);
-  static const accent = Color(0xFF2F6FED);
-  static const background = Color(0xFFF7F8FB);
-  static const surface = Color(0xFFFFFFFF);
-  static const ink = Color(0xFF142033);
-  static const muted = Color(0xFF5B6B7C);
-  static const success = Color(0xFF1F8A5B);
-  static const danger = Color(0xFFC0392B);
+  static const brand = StudentHubColors.blue;
+  static const brandSoft = StudentHubColors.blueSoft;
+  static const accent = StudentHubColors.blue;
+  static const background = StudentHubColors.pageBg;
+  static const surface = StudentHubColors.surface;
+  static const ink = StudentHubColors.ink;
+  static const muted = StudentHubColors.muted;
+  static const success = StudentHubColors.success;
+  static const danger = StudentHubColors.danger;
 }

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:student_mobile/app/router/app_router.dart';
-import 'package:student_mobile/app/theme/app_colors.dart';
+import 'package:student_mobile/app/theme/student_hub_colors.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/features/tests/data/tests_repository.dart';
 import 'package:student_mobile/features/tests/domain/assessment_detail_models.dart';
@@ -94,18 +94,18 @@ class _PastResultsScreenState extends State<PastResultsScreen> {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
       child: Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: StudentHubColors.pageBg,
         appBar: AppBar(
-          backgroundColor: AppColors.background,
+          backgroundColor: StudentHubColors.pageBg,
           title: const Text('My attempts'),
         ),
         body: SafeArea(
           child: _loading && _snapshot == null
               ? const Center(
-                  child: CircularProgressIndicator(color: AppColors.brand),
+                  child: CircularProgressIndicator(color: StudentHubColors.blue),
                 )
               : RefreshIndicator(
-                  color: AppColors.brand,
+                  color: StudentHubColors.blue,
                   onRefresh: _load,
                   child: ListView(
                     physics: const AlwaysScrollableScrollPhysics(),
@@ -115,7 +115,7 @@ class _PastResultsScreenState extends State<PastResultsScreen> {
                         Text(
                           _error!,
                           style: const TextStyle(
-                            color: AppColors.danger,
+                            color: StudentHubColors.danger,
                             height: 1.4,
                           ),
                         ),
@@ -123,7 +123,7 @@ class _PastResultsScreenState extends State<PastResultsScreen> {
                       ],
                       const Text(
                         'Track uploaded answers and open score reports.',
-                        style: TextStyle(color: AppColors.muted, height: 1.4),
+                        style: TextStyle(color: StudentHubColors.muted, height: 1.4),
                       ),
                       const SizedBox(height: 16),
                       _SegmentSwitch(
@@ -187,14 +187,14 @@ class _PastResultsScreenState extends State<PastResultsScreen> {
           hintText: 'Search attempts',
           prefixIcon: const Icon(Icons.search_rounded),
           filled: true,
-          fillColor: AppColors.surface,
+          fillColor: StudentHubColors.surface,
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: AppColors.brandSoft),
+            borderRadius: BorderRadius.circular(StudentHubColors.cardRadius),
+            borderSide: const BorderSide(color: StudentHubColors.border),
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: AppColors.brandSoft),
+            borderRadius: BorderRadius.circular(StudentHubColors.cardRadius),
+            borderSide: const BorderSide(color: StudentHubColors.border),
           ),
         ),
       ),
@@ -261,7 +261,7 @@ class _PastResultsScreenState extends State<PastResultsScreen> {
           style: TextStyle(
             fontWeight: FontWeight.w700,
             fontSize: 17,
-            color: AppColors.ink,
+            color: StudentHubColors.ink,
           ),
         ),
         const SizedBox(height: 10),
@@ -294,9 +294,9 @@ class _SegmentSwitch extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.brandSoft),
+        color: StudentHubColors.surface,
+        borderRadius: BorderRadius.circular(StudentHubColors.cardRadius),
+        border: Border.all(color: StudentHubColors.border),
       ),
       child: Row(
         children: [
@@ -334,7 +334,7 @@ class _SegmentButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: selected ? AppColors.brand : Colors.transparent,
+      color: selected ? StudentHubColors.blue : Colors.transparent,
       borderRadius: BorderRadius.circular(10),
       child: InkWell(
         borderRadius: BorderRadius.circular(10),
@@ -346,7 +346,7 @@ class _SegmentButton extends StatelessWidget {
               label,
               style: TextStyle(
                 fontWeight: FontWeight.w700,
-                color: selected ? Colors.white : AppColors.muted,
+                color: selected ? Colors.white : StudentHubColors.muted,
               ),
             ),
           ),
@@ -387,18 +387,18 @@ class _SummaryTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: active ? AppColors.brandSoft : AppColors.surface,
-      borderRadius: BorderRadius.circular(14),
+      color: active ? StudentHubColors.blueSoft : StudentHubColors.surface,
+      borderRadius: BorderRadius.circular(StudentHubColors.cardRadius),
       child: InkWell(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(StudentHubColors.cardRadius),
         onTap: onTap,
         child: Container(
           width: 150,
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(StudentHubColors.cardRadius),
             border: Border.all(
-              color: active ? AppColors.brand : AppColors.brandSoft,
+              color: active ? StudentHubColors.blue : StudentHubColors.border,
             ),
           ),
           child: Column(
@@ -409,7 +409,7 @@ class _SummaryTile extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 10,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.muted,
+                  color: StudentHubColors.muted,
                   letterSpacing: 0.4,
                 ),
               ),
@@ -419,7 +419,7 @@ class _SummaryTile extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.ink,
+                  color: StudentHubColors.ink,
                 ),
               ),
             ],
@@ -446,26 +446,26 @@ class _AttemptTile extends StatelessWidget {
     final stamp = item.submittedAt ?? item.updatedAt;
     final bucket = bucketSubmission(item);
     final badge = switch (bucket) {
-      SubmissionHistoryBucket.processing => ('Processing', AppColors.accent),
-      SubmissionHistoryBucket.feedback => ('Feedback ready', AppColors.success),
-      SubmissionHistoryBucket.completed => ('Completed', AppColors.brand),
+      SubmissionHistoryBucket.processing => ('Processing', StudentHubColors.blue),
+      SubmissionHistoryBucket.feedback => ('Feedback ready', StudentHubColors.success),
+      SubmissionHistoryBucket.completed => ('Completed', StudentHubColors.blue),
       SubmissionHistoryBucket.other =>
         SubmissionPipeline.isFailed(item.status)
-            ? ('Needs attention', AppColors.danger)
-            : (item.statusLabel, AppColors.muted),
+            ? ('Needs attention', StudentHubColors.danger)
+            : (item.statusLabel, StudentHubColors.muted),
     };
 
     return Material(
-      color: AppColors.surface,
-      borderRadius: BorderRadius.circular(14),
+      color: StudentHubColors.surface,
+      borderRadius: BorderRadius.circular(StudentHubColors.cardRadius),
       child: InkWell(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(StudentHubColors.cardRadius),
         onTap: onTap,
         child: Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppColors.brandSoft),
+            borderRadius: BorderRadius.circular(StudentHubColors.cardRadius),
+            border: Border.all(color: StudentHubColors.border),
           ),
           child: Row(
             children: [
@@ -486,7 +486,7 @@ class _AttemptTile extends StatelessWidget {
                       title,
                       style: const TextStyle(
                         fontWeight: FontWeight.w700,
-                        color: AppColors.ink,
+                        color: StudentHubColors.ink,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -494,7 +494,7 @@ class _AttemptTile extends StatelessWidget {
                       'Attempt ${item.attemptNumber} · ${formatRelativeTime(stamp)}',
                       style: const TextStyle(
                         fontSize: 13,
-                        color: AppColors.muted,
+                        color: StudentHubColors.muted,
                       ),
                     ),
                   ],
@@ -508,20 +508,20 @@ class _AttemptTile extends StatelessWidget {
                       formatScorePair(item.totalScore, item.maxScore),
                       style: const TextStyle(
                         fontWeight: FontWeight.w700,
-                        color: AppColors.brand,
+                        color: StudentHubColors.blue,
                       ),
                     ),
                     Text(
                       formatPercent(item.percentage),
                       style: const TextStyle(
                         fontSize: 12,
-                        color: AppColors.muted,
+                        color: StudentHubColors.muted,
                       ),
                     ),
                   ],
                 ),
               const SizedBox(width: 8),
-              const Icon(Icons.chevron_right_rounded, color: AppColors.muted),
+              const Icon(Icons.chevron_right_rounded, color: StudentHubColors.muted),
             ],
           ),
         ),
@@ -547,16 +547,16 @@ class _ScoreTile extends StatelessWidget {
     final stamp = item.evaluatedAt ?? item.submittedAt;
 
     return Material(
-      color: AppColors.surface,
-      borderRadius: BorderRadius.circular(14),
+      color: StudentHubColors.surface,
+      borderRadius: BorderRadius.circular(StudentHubColors.cardRadius),
       child: InkWell(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(StudentHubColors.cardRadius),
         onTap: onTap,
         child: Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppColors.brandSoft),
+            borderRadius: BorderRadius.circular(StudentHubColors.cardRadius),
+            border: Border.all(color: StudentHubColors.border),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -568,7 +568,7 @@ class _ScoreTile extends StatelessWidget {
                       title,
                       style: const TextStyle(
                         fontWeight: FontWeight.w700,
-                        color: AppColors.ink,
+                        color: StudentHubColors.ink,
                         fontSize: 16,
                       ),
                     ),
@@ -579,7 +579,7 @@ class _ScoreTile extends StatelessWidget {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.brandSoft,
+                      color: StudentHubColors.blueSoft,
                       borderRadius: BorderRadius.circular(999),
                     ),
                     child: Text(
@@ -587,7 +587,7 @@ class _ScoreTile extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.brand,
+                        color: StudentHubColors.blue,
                       ),
                     ),
                   ),
@@ -596,7 +596,7 @@ class _ScoreTile extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 'Attempt ${item.attemptNumber} · Evaluated ${formatRelativeTime(stamp)}',
-                style: const TextStyle(color: AppColors.muted, fontSize: 13),
+                style: const TextStyle(color: StudentHubColors.muted, fontSize: 13),
               ),
               const SizedBox(height: 12),
               Row(
@@ -606,7 +606,7 @@ class _ScoreTile extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.w700,
-                      color: AppColors.brand,
+                      color: StudentHubColors.blue,
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -614,7 +614,7 @@ class _ScoreTile extends StatelessWidget {
                     formatPercent(item.percentage),
                     style: const TextStyle(
                       fontSize: 15,
-                      color: AppColors.muted,
+                      color: StudentHubColors.muted,
                     ),
                   ),
                   const Spacer(),
@@ -622,12 +622,12 @@ class _ScoreTile extends StatelessWidget {
                     'Open report',
                     style: TextStyle(
                       fontWeight: FontWeight.w700,
-                      color: AppColors.brand,
+                      color: StudentHubColors.blue,
                     ),
                   ),
                   const Icon(
                     Icons.chevron_right_rounded,
-                    color: AppColors.brand,
+                    color: StudentHubColors.blue,
                   ),
                 ],
               ),
@@ -654,9 +654,9 @@ class _EmptyCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.brandSoft),
+        color: StudentHubColors.surface,
+        borderRadius: BorderRadius.circular(StudentHubColors.cardRadius),
+        border: Border.all(color: StudentHubColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -665,13 +665,13 @@ class _EmptyCard extends StatelessWidget {
             title,
             style: const TextStyle(
               fontWeight: FontWeight.w700,
-              color: AppColors.ink,
+              color: StudentHubColors.ink,
             ),
           ),
           const SizedBox(height: 6),
           Text(
             message,
-            style: const TextStyle(color: AppColors.muted, height: 1.4),
+            style: const TextStyle(color: StudentHubColors.muted, height: 1.4),
           ),
         ],
       ),

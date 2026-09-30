@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'package:student_mobile/app/theme/app_colors.dart';
+import 'package:student_mobile/app/theme/student_hub_colors.dart';
 
 class SecondaryButton extends StatelessWidget {
   const SecondaryButton({
@@ -20,8 +20,8 @@ class SecondaryButton extends StatelessWidget {
       child: OutlinedButton(
         onPressed: onPressed,
         style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.brand,
-          side: const BorderSide(color: AppColors.brand, width: 1.4),
+          foregroundColor: StudentHubColors.blue,
+          side: const BorderSide(color: StudentHubColors.blue, width: 1.4),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),

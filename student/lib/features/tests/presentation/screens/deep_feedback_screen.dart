@@ -3,7 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'package:student_mobile/app/theme/app_colors.dart';
+import 'package:student_mobile/app/share/pragyu_copy.dart';
+import 'package:student_mobile/app/theme/student_hub_colors.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/features/payments/presentation/credit_exhaustion.dart';
 import 'package:student_mobile/features/tests/data/tests_repository.dart';
@@ -214,10 +215,10 @@ class _DeepFeedbackScreenState extends State<DeepFeedbackScreen> {
   }
 
   Future<void> _copyText(String label, String text) async {
-    await Clipboard.setData(ClipboardData(text: text));
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$label copied')),
+    await copyPragyuText(
+      context,
+      text: brandPragyuCopiedBody(text),
+      message: '$label copied',
     );
   }
 
@@ -230,20 +231,20 @@ class _DeepFeedbackScreenState extends State<DeepFeedbackScreen> {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
       child: Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: StudentHubColors.pageBg,
         appBar: AppBar(
-          backgroundColor: AppColors.background,
+          backgroundColor: StudentHubColors.pageBg,
           title: Text(title),
         ),
         body: SafeArea(
           child: _loading
               ? const Center(
-                  child: CircularProgressIndicator(color: AppColors.brand),
+                  child: CircularProgressIndicator(color: StudentHubColors.blue),
                 )
               : _error != null && _snapshot == null
                   ? _ErrorBody(message: _error!, onRetry: _load)
                   : RefreshIndicator(
-                      color: AppColors.brand,
+                      color: StudentHubColors.blue,
                       onRefresh: _load,
                       child: ListView(
                         physics: const AlwaysScrollableScrollPhysics(),
@@ -253,7 +254,7 @@ class _DeepFeedbackScreenState extends State<DeepFeedbackScreen> {
                             Text(
                               _error!,
                               style: const TextStyle(
-                                color: AppColors.danger,
+                                color: StudentHubColors.danger,
                                 height: 1.4,
                               ),
                             ),
@@ -265,8 +266,8 @@ class _DeepFeedbackScreenState extends State<DeepFeedbackScreen> {
                             onPressed: () =>
                                 Navigator.of(context).maybePop(),
                             style: OutlinedButton.styleFrom(
-                              foregroundColor: AppColors.brand,
-                              side: const BorderSide(color: AppColors.brand),
+                              foregroundColor: StudentHubColors.blue,
+                              side: const BorderSide(color: StudentHubColors.blue),
                               minimumSize: const Size.fromHeight(48),
                             ),
                             child: const Text('Back to result'),
@@ -297,7 +298,7 @@ class _DeepFeedbackScreenState extends State<DeepFeedbackScreen> {
             children: [
               const Text(
                 'No personalized suggestions yet.',
-                style: TextStyle(color: AppColors.muted, height: 1.4),
+                style: TextStyle(color: StudentHubColors.muted, height: 1.4),
               ),
               if (widget.args.feedbackId?.isNotEmpty == true) ...[
                 const SizedBox(height: 12),
@@ -332,7 +333,7 @@ class _DeepFeedbackScreenState extends State<DeepFeedbackScreen> {
       FilledButton(
         onPressed: (_busy || processing) ? null : _requestRewrite,
         style: FilledButton.styleFrom(
-          backgroundColor: AppColors.brand,
+          backgroundColor: StudentHubColors.blue,
           foregroundColor: Colors.white,
           minimumSize: const Size.fromHeight(48),
         ),
@@ -346,7 +347,7 @@ class _DeepFeedbackScreenState extends State<DeepFeedbackScreen> {
         const SizedBox(height: 10),
         Text(
           'Status: ${_activeRequest!.statusLabel}',
-          style: const TextStyle(color: AppColors.muted, fontSize: 13),
+          style: const TextStyle(color: StudentHubColors.muted, fontSize: 13),
         ),
       ],
       if (failed) ...[
@@ -359,7 +360,7 @@ class _DeepFeedbackScreenState extends State<DeepFeedbackScreen> {
       if (processing) ...[
         const SizedBox(height: 16),
         const Center(
-          child: CircularProgressIndicator(color: AppColors.brand),
+          child: CircularProgressIndicator(color: StudentHubColors.blue),
         ),
       ],
       if (original != null && original.isNotEmpty) ...[
@@ -404,7 +405,7 @@ class _DeepFeedbackScreenState extends State<DeepFeedbackScreen> {
         _MutedCard(
           child: Text(
             _result!.reasoning!,
-            style: const TextStyle(color: AppColors.ink, height: 1.45),
+            style: const TextStyle(color: StudentHubColors.ink, height: 1.45),
           ),
         ),
       ],
@@ -430,13 +431,13 @@ class _ErrorBody extends StatelessWidget {
         children: [
           Text(
             message,
-            style: const TextStyle(color: AppColors.danger, height: 1.4),
+            style: const TextStyle(color: StudentHubColors.danger, height: 1.4),
           ),
           const Spacer(),
           FilledButton(
             onPressed: onRetry,
             style: FilledButton.styleFrom(
-              backgroundColor: AppColors.brand,
+              backgroundColor: StudentHubColors.blue,
               foregroundColor: Colors.white,
               minimumSize: const Size.fromHeight(48),
             ),
@@ -460,7 +461,7 @@ class _SectionTitle extends StatelessWidget {
       style: const TextStyle(
         fontSize: 17,
         fontWeight: FontWeight.w700,
-        color: AppColors.ink,
+        color: StudentHubColors.ink,
       ),
     );
   }
@@ -477,9 +478,9 @@ class _MutedCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.brandSoft),
+        color: StudentHubColors.surface,
+        borderRadius: BorderRadius.circular(StudentHubColors.cardRadius),
+        border: Border.all(color: StudentHubColors.border),
       ),
       child: child,
     );
@@ -497,9 +498,9 @@ class _SuggestionTile extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.brandSoft),
+        color: StudentHubColors.surface,
+        borderRadius: BorderRadius.circular(StudentHubColors.cardRadius),
+        border: Border.all(color: StudentHubColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -510,7 +511,7 @@ class _SuggestionTile extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
-                color: AppColors.accent,
+                color: StudentHubColors.blue,
                 letterSpacing: 0.4,
               ),
             ),
@@ -519,7 +520,7 @@ class _SuggestionTile extends StatelessWidget {
             item.headline,
             style: const TextStyle(
               fontWeight: FontWeight.w700,
-              color: AppColors.ink,
+              color: StudentHubColors.ink,
             ),
           ),
           if (item.description != null &&
@@ -527,7 +528,7 @@ class _SuggestionTile extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               item.description!,
-              style: const TextStyle(color: AppColors.muted, height: 1.4),
+              style: const TextStyle(color: StudentHubColors.muted, height: 1.4),
             ),
           ],
         ],
@@ -626,7 +627,7 @@ class _DropdownRow<T> extends StatelessWidget {
             label,
             style: const TextStyle(
               fontWeight: FontWeight.w600,
-              color: AppColors.ink,
+              color: StudentHubColors.ink,
             ),
           ),
         ),
@@ -634,18 +635,18 @@ class _DropdownRow<T> extends StatelessWidget {
           child: InputDecorator(
             decoration: InputDecoration(
               filled: true,
-              fillColor: AppColors.background,
+              fillColor: StudentHubColors.pageBg,
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 12,
                 vertical: 4,
               ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppColors.brandSoft),
+                borderSide: const BorderSide(color: StudentHubColors.border),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppColors.brandSoft),
+                borderSide: const BorderSide(color: StudentHubColors.border),
               ),
             ),
             child: DropdownButtonHideUnderline(
@@ -692,23 +693,23 @@ class _TextCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: accent ? AppColors.brandSoft : AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.brandSoft),
+        color: accent ? StudentHubColors.blueSoft : StudentHubColors.surface,
+        borderRadius: BorderRadius.circular(StudentHubColors.cardRadius),
+        border: Border.all(color: StudentHubColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             text,
-            style: const TextStyle(color: AppColors.ink, height: 1.45),
+            style: const TextStyle(color: StudentHubColors.ink, height: 1.45),
           ),
           if (footer != null && footer!.isNotEmpty) ...[
             const SizedBox(height: 10),
             Text(
               footer!,
               style: const TextStyle(
-                color: AppColors.muted,
+                color: StudentHubColors.muted,
                 fontSize: 12,
                 height: 1.35,
               ),
@@ -751,7 +752,7 @@ class _BulletCard extends StatelessWidget {
                   const Text(
                     '•  ',
                     style: TextStyle(
-                      color: AppColors.brand,
+                      color: StudentHubColors.blue,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -759,7 +760,7 @@ class _BulletCard extends StatelessWidget {
                     child: Text(
                       item,
                       style: const TextStyle(
-                        color: AppColors.ink,
+                        color: StudentHubColors.ink,
                         height: 1.4,
                       ),
                     ),

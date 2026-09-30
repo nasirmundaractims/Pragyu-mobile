@@ -3,13 +3,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:student_mobile/app/router/app_router.dart';
+import 'package:student_mobile/app/share/pragyu_copy.dart';
 import 'package:student_mobile/app/theme/app_theme.dart';
 import 'package:student_mobile/app/widgets/pragyu_logo.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/core/session/session_service.dart';
 import 'package:student_mobile/features/ai_mentor/data/ai_mentor_repository.dart';
+import 'package:student_mobile/features/ai_mentor/data/mentor_prefs_store.dart';
 import 'package:student_mobile/features/ai_mentor/domain/ai_mentor_models.dart';
+import 'package:student_mobile/features/ai_mentor/presentation/mentor_share.dart';
 import 'package:student_mobile/features/auth/domain/auth_models.dart';
+import 'package:student_mobile/features/payments/domain/payments_models.dart';
 import 'package:student_mobile/features/payments/presentation/credit_exhaustion.dart';
 
 /// Enables mouse / trackpad drag for horizontal strips (needed on Flutter web).
@@ -127,6 +131,7 @@ class _AiMentorScreenState extends State<AiMentorScreen> {
       widget.mentorRepository ?? AiMentorRepository();
   late final SessionService _session =
       widget.sessionService ?? SessionService();
+  final MentorPrefsStore _prefsStore = MentorPrefsStore();
 
   final TextEditingController _composer = TextEditingController();
   final ScrollController _scroll = ScrollController();
@@ -135,8 +140,12 @@ class _AiMentorScreenState extends State<AiMentorScreen> {
   bool _loading = true;
   bool _sending = false;
   String? _error;
+  /// When set, replace chat UI with the website-style access card.
+  _MentorBlock? _block;
   MentorChatSnapshot? _snapshot;
   AuthUser? _user;
+  MentorPrefs _prefs = const MentorPrefs();
+  String? _dislikePromptFor;
 
   @override
   void initState() {
@@ -165,6 +174,7 @@ class _AiMentorScreenState extends State<AiMentorScreen> {
     setState(() {
       _loading = true;
       _error = null;
+      _block = null;
     });
     try {
       final snapshot = await _mentor.loadChat();
@@ -173,9 +183,20 @@ class _AiMentorScreenState extends State<AiMentorScreen> {
         _snapshot = snapshot;
         _loading = false;
       });
+      _loadPrefs(snapshot.studentProfileId);
       _scrollToBottom();
     } catch (error) {
       if (!mounted) return;
+      if (isCreditExhaustedError(error)) {
+        setState(() {
+          _loading = false;
+          _error = null;
+          _block = _MentorBlock.creditsExhausted(
+            error is ApiException ? error.message : null,
+          );
+        });
+        return;
+      }
       setState(() {
         _loading = false;
         _error = error is ApiException
@@ -183,6 +204,77 @@ class _AiMentorScreenState extends State<AiMentorScreen> {
             : 'Unable to open AI Mentor.';
       });
     }
+  }
+
+  Future<void> _loadPrefs(String studentProfileId) async {
+    final prefs = await _prefsStore.load(studentProfileId);
+    if (!mounted) return;
+    setState(() => _prefs = prefs);
+  }
+
+  Future<void> _toggleLike(String messageId) async {
+    final profileId = _snapshot?.studentProfileId ?? '';
+    final wasLiked = _prefs.liked.contains(messageId);
+    final next = await _prefsStore.toggleLike(
+      studentProfileId: profileId,
+      current: _prefs,
+      messageId: messageId,
+    );
+    if (!mounted) return;
+    setState(() {
+      _prefs = next;
+      if (_dislikePromptFor == messageId) _dislikePromptFor = null;
+    });
+    _toast(wasLiked ? 'Like removed' : 'Liked');
+  }
+
+  Future<void> _toggleDislike(String messageId) async {
+    final profileId = _snapshot?.studentProfileId ?? '';
+    final wasDisliked = _prefs.disliked.contains(messageId);
+    final next = await _prefsStore.setDislike(
+      studentProfileId: profileId,
+      current: _prefs,
+      messageId: messageId,
+    );
+    if (!mounted) return;
+    setState(() {
+      _prefs = next;
+      _dislikePromptFor = wasDisliked ? null : messageId;
+    });
+    _toast(wasDisliked ? 'Dislike removed' : 'Disliked');
+  }
+
+  Future<void> _setDislikeReason(String messageId, String reason) async {
+    final profileId = _snapshot?.studentProfileId ?? '';
+    final next = await _prefsStore.setDislike(
+      studentProfileId: profileId,
+      current: _prefs,
+      messageId: messageId,
+      reason: reason,
+    );
+    if (!mounted) return;
+    setState(() {
+      _prefs = next;
+      _dislikePromptFor = null;
+    });
+    _toast('Thanks for the feedback');
+  }
+
+  void _toast(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 1),
+      ),
+    );
+  }
+
+  String _priorUserQuestion(List<MentorMessage> messages, int index) {
+    for (var i = index - 1; i >= 0; i--) {
+      if (messages[i].isUser) return messages[i].content;
+    }
+    return 'Study question';
   }
 
   Future<void> _startNewChat() async {
@@ -295,12 +387,11 @@ class _AiMentorScreenState extends State<AiMentorScreen> {
       _scrollToBottom();
     } catch (error) {
       if (!mounted) return;
+      // Flash snackbar only — no red inline banner.
       setState(() {
         _sending = false;
         _snapshot = snapshot;
-        _error = error is ApiException
-            ? error.message
-            : 'Unable to send message.';
+        _error = null;
       });
       showCreditAwareError(
         context,
@@ -435,33 +526,64 @@ class _AiMentorScreenState extends State<AiMentorScreen> {
     );
   }
 
-  void _onQuickAction(_QuickAction action) {
-    switch (action.id) {
-      case 'more':
-        Navigator.of(context).pushNamed(AppRoutes.weakTopics);
-        return;
-      case 'plan':
-        Navigator.of(context).pushNamed(AppRoutes.studyPlanner);
-        return;
-      case 'evaluate':
-        Navigator.of(context).pushNamed(AppRoutes.pastResults);
-        return;
-      default:
-        final prompt = action.prompt;
-        if (prompt == null || prompt.isEmpty) {
-          _composerFocus.requestFocus();
-          return;
-        }
-        if (prompt.trimRight().endsWith(':')) {
-          _composer.text = prompt;
-          _composer.selection = TextSelection.collapsed(
-            offset: _composer.text.length,
-          );
-          _composerFocus.requestFocus();
-          return;
-        }
-        _send(prompt);
-    }
+  /// Matches student-web MentorHero starters (clarify turn, no API yet).
+  void _onStarter(_QuickAction action) {
+    final snapshot = _snapshot;
+    if (snapshot == null || _sending) return;
+
+    final turn = switch (action.id) {
+      'explain' => (
+          'Explain a topic',
+          'Sure! What topic would you like me to explain?',
+          const <String>[],
+        ),
+      'practice' => (
+          'Practice questions',
+          'Sure! Which subject or topic would you like to practice?',
+          const <String>[],
+        ),
+      'plan' => (
+          'Create study plan',
+          "I'd be happy to. What exam are you preparing for?",
+          const <String>['GPSC', 'UPSC', 'School exam'],
+        ),
+      _ => (
+          'Improve my answer',
+          'Paste the answer you want me to improve.',
+          const <String>[],
+        ),
+    };
+
+    final stamp = DateTime.now().millisecondsSinceEpoch;
+    setState(() {
+      _error = null;
+      _snapshot = snapshot.copyWith(
+        session: MentorSession(
+          id: snapshot.session?.id ?? '',
+          studentProfileId: snapshot.studentProfileId,
+          status: snapshot.session?.status ?? 'active',
+          createdAt: snapshot.session?.createdAt,
+          context: snapshot.session?.context ?? const {},
+          messages: [
+            MentorMessage(
+              id: 'local-starter-u-$stamp',
+              role: MentorMessageRole.user,
+              content: turn.$1,
+              createdAt: DateTime.now(),
+            ),
+            MentorMessage(
+              id: 'local-starter-a-$stamp',
+              role: MentorMessageRole.assistant,
+              content: turn.$2,
+              createdAt: DateTime.now(),
+              followUpQuestions: turn.$3,
+            ),
+          ],
+        ),
+      );
+    });
+    _composerFocus.requestFocus();
+    _scrollToBottom();
   }
 
   @override
@@ -482,34 +604,25 @@ class _AiMentorScreenState extends State<AiMentorScreen> {
                     Navigator.of(context).pushNamed(AppRoutes.weakTopics),
               ),
               Expanded(
-                child: _loading && _snapshot == null
+                child: _loading && _snapshot == null && _block == null
                     ? const Center(
                         child: CircularProgressIndicator(color: _blue),
                       )
-                    : _error != null && _snapshot == null
+                    : _block != null
+                        ? _AccessBlockedCard(block: _block!)
+                        : _error != null && _snapshot == null
                         ? _ErrorBody(message: _error!, onRetry: _load)
                         : Column(
                             children: [
-                              if (_error != null)
+                              if ((_snapshot?.messages ?? const []).isEmpty)
                                 Padding(
                                   padding:
-                                      const EdgeInsets.fromLTRB(16, 4, 16, 0),
-                                  child: Text(
-                                    _error!,
-                                    style: const TextStyle(
-                                      color: Color(0xFFC0392B),
-                                      height: 1.35,
-                                    ),
+                                      const EdgeInsets.fromLTRB(0, 4, 0, 8),
+                                  child: _QuickActionsRow(
+                                    actions: _quickActions,
+                                    onTap: _sending ? null : _onStarter,
                                   ),
                                 ),
-                              Padding(
-                                padding:
-                                    const EdgeInsets.fromLTRB(0, 4, 0, 8),
-                                child: _QuickActionsRow(
-                                  actions: _quickActions,
-                                  onTap: _sending ? null : _onQuickAction,
-                                ),
-                              ),
                               Expanded(child: _buildBody()),
                               _Composer(
                                 controller: _composer,
@@ -597,6 +710,15 @@ class _AiMentorScreenState extends State<AiMentorScreen> {
                           .skip(i + 1)
                           .any((m) => m.isAssistant)),
               recommendations: snapshot?.recommendationTitles ?? const [],
+              priorUserQuestion: _priorUserQuestion(messages, i),
+              liked: _prefs.liked.contains(messages[i].id),
+              disliked: _prefs.disliked.contains(messages[i].id),
+              dislikeReason: _prefs.dislikeReasons[messages[i].id],
+              showDislikeReasons: _dislikePromptFor == messages[i].id,
+              onLike: () => _toggleLike(messages[i].id),
+              onDislike: () => _toggleDislike(messages[i].id),
+              onDislikeReason: (reason) =>
+                  _setDislikeReason(messages[i].id, reason),
               onFollowUp: _sending ? null : _send,
               onRecommendation: (title) =>
                   _send('Tell me more about: $title'),
@@ -615,57 +737,39 @@ class _AiMentorScreenState extends State<AiMentorScreen> {
     );
   }
 
+  /// Same four starters as student-web `MentorHero`.
   static const _quickActions = <_QuickAction>[
     _QuickAction(
       id: 'explain',
-      title: 'Explain a Concept',
-      subtitle: 'Get simple explanations.',
-      icon: Icons.chat_bubble_outline_rounded,
-      tint: Color(0xFF7B61FF),
-      soft: Color(0xFFF0EBFF),
-      prompt: 'Explain this concept in simple language: ',
+      title: 'Explain a topic',
+      subtitle: 'Clear explanations with examples.',
+      icon: Icons.menu_book_rounded,
+      tint: Color(0xFF0284C7),
+      soft: Color(0xFFE0F2FE),
     ),
     _QuickAction(
-      id: 'summarize',
-      title: 'Summarize Notes',
-      subtitle: 'Quick revision summaries.',
-      icon: Icons.description_outlined,
-      tint: Color(0xFF22A06B),
-      soft: Color(0xFFE8F8F0),
-      prompt: 'Summarize my notes into key revision points: ',
+      id: 'practice',
+      title: 'Practice questions',
+      subtitle: 'Questions tailored to you.',
+      icon: Icons.checklist_rounded,
+      tint: Color(0xFF059669),
+      soft: Color(0xFFD1FAE5),
     ),
     _QuickAction(
       id: 'plan',
-      title: 'Create Study Plan',
-      subtitle: 'Personalized schedule.',
-      icon: Icons.track_changes_outlined,
-      tint: Color(0xFFE85D75),
-      soft: Color(0xFFFFEEF1),
+      title: 'Create study plan',
+      subtitle: 'Prioritize what to revise.',
+      icon: Icons.calendar_month_rounded,
+      tint: Color(0xFFE11D48),
+      soft: Color(0xFFFFE4E6),
     ),
     _QuickAction(
-      id: 'doubt',
-      title: 'Solve Doubts',
-      subtitle: 'Ask any question.',
-      icon: Icons.help_outline_rounded,
-      tint: Color(0xFFF08A3C),
-      soft: Color(0xFFFFF2E8),
-      prompt: 'I have a doubt. Can you help me understand: ',
-    ),
-    _QuickAction(
-      id: 'evaluate',
-      title: 'Evaluate Answer',
-      subtitle: 'Get AI feedback.',
+      id: 'improve',
+      title: 'Improve my answer',
+      subtitle: 'Feedback on your writing.',
       icon: Icons.edit_note_rounded,
-      tint: Color(0xFF2F7BFF),
-      soft: Color(0xFFE8F0FF),
-    ),
-    _QuickAction(
-      id: 'more',
-      title: 'More',
-      subtitle: 'Explore all features.',
-      icon: Icons.grid_view_rounded,
-      tint: Color(0xFF7A8499),
-      soft: Color(0xFFF2F4F8),
+      tint: Color(0xFFEA580C),
+      soft: Color(0xFFFFEDD5),
     ),
   ];
 }
@@ -1041,6 +1145,157 @@ class _QuickActionsRow extends StatelessWidget {
   }
 }
 
+class _MentorBlock {
+  const _MentorBlock({
+    required this.title,
+    required this.message,
+    this.showGetCredits = false,
+  });
+
+  factory _MentorBlock.creditsExhausted([String? apiMessage]) {
+    final trimmed = apiMessage?.trim();
+    return _MentorBlock(
+      title: 'AI credits used',
+      message: (trimmed != null && trimmed.isNotEmpty)
+          ? trimmed
+          : 'You have used your AI credits. Purchase AI credits or choose a plan to continue.',
+      showGetCredits: true,
+    );
+  }
+
+  final String title;
+  final String message;
+  final bool showGetCredits;
+}
+
+/// Matches student-web mentor access card when credits / plan block AI Mentor.
+class _AccessBlockedCard extends StatelessWidget {
+  const _AccessBlockedCard({required this.block});
+
+  final _MentorBlock block;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(24, 32, 24, 32),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFE6EAF2)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.auto_awesome_rounded,
+                    color: Color(0xFF7B61FF),
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  block.title,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontFamily: AppTheme.fontFamily,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                    color: _AiMentorScreenState._ink,
+                    letterSpacing: -0.3,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  block.message,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontFamily: AppTheme.fontFamily,
+                    fontSize: 14,
+                    height: 1.45,
+                    color: _AiMentorScreenState._muted,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 22),
+                if (block.showGetCredits) ...[
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: () {
+                        Navigator.of(context).pushNamed(
+                          AppRoutes.payments,
+                          arguments: PaymentsViewId.balance,
+                        );
+                      },
+                      style: FilledButton.styleFrom(
+                        backgroundColor: _AiMentorScreenState._blue,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text('Get credits'),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () {
+                      Navigator.of(context).pushNamed(AppRoutes.payments);
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: _AiMentorScreenState._ink,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      side: const BorderSide(color: Color(0xFFE2E8F0)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text('View Plans'),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'AI Mentor unlocks explanations, study plans, and answer feedback — it is separate from course purchases.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: AppTheme.fontFamily,
+                    fontSize: 12,
+                    height: 1.4,
+                    color: _AiMentorScreenState._muted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _ErrorBody extends StatelessWidget {
   const _ErrorBody({
     required this.message,
@@ -1084,6 +1339,14 @@ class _MessageBubble extends StatelessWidget {
     required this.initials,
     this.isLastAssistant = false,
     this.recommendations = const [],
+    this.priorUserQuestion = 'Study question',
+    this.liked = false,
+    this.disliked = false,
+    this.dislikeReason,
+    this.showDislikeReasons = false,
+    this.onLike,
+    this.onDislike,
+    this.onDislikeReason,
     this.onFollowUp,
     this.onRecommendation,
   });
@@ -1092,6 +1355,14 @@ class _MessageBubble extends StatelessWidget {
   final String initials;
   final bool isLastAssistant;
   final List<String> recommendations;
+  final String priorUserQuestion;
+  final bool liked;
+  final bool disliked;
+  final String? dislikeReason;
+  final bool showDislikeReasons;
+  final VoidCallback? onLike;
+  final VoidCallback? onDislike;
+  final ValueChanged<String>? onDislikeReason;
   final ValueChanged<String>? onFollowUp;
   final ValueChanged<String>? onRecommendation;
 
@@ -1148,7 +1419,17 @@ class _MessageBubble extends StatelessWidget {
                       ),
                       if (!isUser) ...[
                         const SizedBox(height: 10),
-                        _AssistantActions(content: message.content),
+                        _AssistantActions(
+                          content: message.content,
+                          question: priorUserQuestion,
+                          liked: liked,
+                          disliked: disliked,
+                          dislikeReason: dislikeReason,
+                          showDislikeReasons: showDislikeReasons,
+                          onLike: onLike,
+                          onDislike: onDislike,
+                          onDislikeReason: onDislikeReason,
+                        ),
                       ],
                     ],
                   ),
@@ -1222,72 +1503,116 @@ class _MessageBubble extends StatelessWidget {
 }
 
 class _AssistantActions extends StatelessWidget {
-  const _AssistantActions({required this.content});
+  const _AssistantActions({
+    required this.content,
+    required this.question,
+    this.liked = false,
+    this.disliked = false,
+    this.dislikeReason,
+    this.showDislikeReasons = false,
+    this.onLike,
+    this.onDislike,
+    this.onDislikeReason,
+  });
+
+  static const _dislikeReasons = <String>[
+    'Incorrect answer',
+    'Not relevant',
+    'Poor explanation',
+    'Too complicated',
+    'Other',
+  ];
 
   final String content;
+  final String question;
+  final bool liked;
+  final bool disliked;
+  final String? dislikeReason;
+  final bool showDislikeReasons;
+  final VoidCallback? onLike;
+  final VoidCallback? onDislike;
+  final ValueChanged<String>? onDislikeReason;
 
   @override
   Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 4,
-      runSpacing: 4,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _ActionLink(
-          icon: Icons.thumb_up_alt_outlined,
-          label: 'Helpful',
-          onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Thanks for the feedback'),
-                behavior: SnackBarBehavior.floating,
-                duration: Duration(seconds: 1),
+        Wrap(
+          spacing: 4,
+          runSpacing: 4,
+          children: [
+            _ActionLink(
+              icon: liked
+                  ? Icons.thumb_up_alt_rounded
+                  : Icons.thumb_up_alt_outlined,
+              label: 'Helpful',
+              active: liked,
+              onTap: onLike ?? () {},
+            ),
+            _ActionLink(
+              icon: disliked
+                  ? Icons.thumb_down_alt_rounded
+                  : Icons.thumb_down_alt_outlined,
+              label: '',
+              active: disliked,
+              onTap: onDislike ?? () {},
+            ),
+            _ActionLink(
+              icon: Icons.copy_rounded,
+              label: 'Copy',
+              onTap: () => copyPragyuText(
+                context,
+                text: brandPragyuCopiedBody(content, via: 'Pragyu AI'),
+                message: PragyuCopyMessages.messageCopied,
               ),
-            );
-          },
-        ),
-        _ActionLink(
-          icon: Icons.thumb_down_alt_outlined,
-          label: '',
-          onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Thanks — we\'ll improve'),
-                behavior: SnackBarBehavior.floating,
-                duration: Duration(seconds: 1),
+            ),
+            _ActionLink(
+              icon: Icons.ios_share_rounded,
+              label: 'Share',
+              onTap: () => showMentorShareSheet(
+                context,
+                question: question,
+                answer: content,
               ),
-            );
-          },
+            ),
+          ],
         ),
-        _ActionLink(
-          icon: Icons.copy_rounded,
-          label: 'Copy',
-          onTap: () async {
-            await Clipboard.setData(ClipboardData(text: content));
-            if (!context.mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Copied'),
-                behavior: SnackBarBehavior.floating,
-                duration: Duration(seconds: 1),
-              ),
-            );
-          },
-        ),
-        _ActionLink(
-          icon: Icons.ios_share_rounded,
-          label: 'Share',
-          onTap: () async {
-            await Clipboard.setData(ClipboardData(text: content));
-            if (!context.mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Message copied to share'),
-                behavior: SnackBarBehavior.floating,
-                duration: Duration(seconds: 1),
-              ),
-            );
-          },
-        ),
+        if (showDislikeReasons || (disliked && dislikeReason != null)) ...[
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              for (final reason in _dislikeReasons)
+                FilterChip(
+                  label: Text(
+                    reason,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: dislikeReason == reason
+                          ? const Color(0xFF6D28D9)
+                          : _AiMentorScreenState._muted,
+                    ),
+                  ),
+                  selected: dislikeReason == reason,
+                  onSelected: onDislikeReason == null
+                      ? null
+                      : (_) => onDislikeReason!(reason),
+                  selectedColor: const Color(0xFFF3E8FF),
+                  backgroundColor: Colors.white,
+                  side: BorderSide(
+                    color: dislikeReason == reason
+                        ? const Color(0xFFC4B5FD)
+                        : const Color(0xFFE6EAF2),
+                  ),
+                  visualDensity: VisualDensity.compact,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+            ],
+          ),
+        ],
       ],
     );
   }
@@ -1298,14 +1623,19 @@ class _ActionLink extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.onTap,
+    this.active = false,
   });
 
   final IconData icon;
   final String label;
   final VoidCallback onTap;
+  final bool active;
 
   @override
   Widget build(BuildContext context) {
+    final color = active
+        ? const Color(0xFF7C3AED)
+        : _AiMentorScreenState._muted;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
@@ -1314,15 +1644,15 @@ class _ActionLink extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 14, color: _AiMentorScreenState._muted),
+            Icon(icon, size: 14, color: color),
             if (label.isNotEmpty) ...[
               const SizedBox(width: 4),
               Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: AppTheme.fontFamily,
                   fontSize: 12,
-                  color: _AiMentorScreenState._muted,
+                  color: color,
                   fontWeight: FontWeight.w600,
                 ),
               ),

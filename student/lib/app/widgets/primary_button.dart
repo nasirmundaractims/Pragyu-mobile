@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'package:student_mobile/app/theme/app_colors.dart';
+import 'package:student_mobile/app/theme/student_hub_colors.dart';
 
 class PrimaryButton extends StatelessWidget {
   const PrimaryButton({
@@ -20,9 +20,10 @@ class PrimaryButton extends StatelessWidget {
       child: FilledButton(
         onPressed: onPressed,
         style: FilledButton.styleFrom(
-          backgroundColor: AppColors.brand,
+          backgroundColor: StudentHubColors.blue,
           foregroundColor: Colors.white,
-          disabledBackgroundColor: AppColors.brand.withValues(alpha: 0.4),
+          disabledBackgroundColor:
+              StudentHubColors.blue.withValues(alpha: 0.4),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),

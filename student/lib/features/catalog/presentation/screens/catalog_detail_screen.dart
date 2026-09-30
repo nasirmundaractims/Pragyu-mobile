@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:student_mobile/app/router/app_router.dart';
-import 'package:student_mobile/app/theme/app_colors.dart';
+import 'package:student_mobile/app/theme/student_hub_colors.dart';
 import 'package:student_mobile/features/catalog/data/catalog_repository.dart';
 import 'package:student_mobile/features/catalog/domain/catalog_checkout_models.dart';
 import 'package:student_mobile/features/catalog/domain/catalog_models.dart';
@@ -87,14 +87,14 @@ class _CatalogDetailScreenState extends State<CatalogDetailScreen> {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
       child: Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: StudentHubColors.pageBg,
         appBar: AppBar(
-          backgroundColor: AppColors.background,
+          backgroundColor: StudentHubColors.pageBg,
           title: Text(title),
         ),
         body: SafeArea(
           child: RefreshIndicator(
-            color: AppColors.brand,
+            color: StudentHubColors.blue,
             onRefresh: _load,
             child: _buildBody(),
           ),
@@ -109,7 +109,7 @@ class _CatalogDetailScreenState extends State<CatalogDetailScreen> {
         physics: const AlwaysScrollableScrollPhysics(),
         children: const [
           SizedBox(height: 140),
-          Center(child: CircularProgressIndicator(color: AppColors.brand)),
+          Center(child: CircularProgressIndicator(color: StudentHubColors.blue)),
         ],
       );
     }
@@ -119,7 +119,7 @@ class _CatalogDetailScreenState extends State<CatalogDetailScreen> {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(24),
         children: [
-          Text(_error!, style: const TextStyle(color: AppColors.danger)),
+          Text(_error!, style: const TextStyle(color: StudentHubColors.danger)),
         ],
       );
     }
@@ -134,14 +134,14 @@ class _CatalogDetailScreenState extends State<CatalogDetailScreen> {
           style: const TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.w700,
-            color: AppColors.ink,
+            color: StudentHubColors.ink,
           ),
         ),
         if (listing.subtitle?.isNotEmpty == true) ...[
           const SizedBox(height: 8),
           Text(
             listing.subtitle!,
-            style: const TextStyle(fontSize: 15, color: AppColors.muted),
+            style: const TextStyle(fontSize: 15, color: StudentHubColors.muted),
           ),
         ],
         const SizedBox(height: 12),
@@ -150,7 +150,7 @@ class _CatalogDetailScreenState extends State<CatalogDetailScreen> {
           style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w800,
-            color: AppColors.accent,
+            color: StudentHubColors.blue,
           ),
         ),
         if (listing.sellerName != null) ...[
@@ -160,7 +160,7 @@ class _CatalogDetailScreenState extends State<CatalogDetailScreen> {
             style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: AppColors.muted,
+              color: StudentHubColors.muted,
             ),
           ),
         ],
@@ -171,7 +171,7 @@ class _CatalogDetailScreenState extends State<CatalogDetailScreen> {
             style: const TextStyle(
               fontSize: 15,
               height: 1.5,
-              color: AppColors.ink,
+              color: StudentHubColors.ink,
             ),
           ),
         ],
@@ -182,7 +182,7 @@ class _CatalogDetailScreenState extends State<CatalogDetailScreen> {
             decoration: InputDecoration(
               labelText: 'Coupon code (optional)',
               filled: true,
-              fillColor: AppColors.surface,
+              fillColor: StudentHubColors.surface,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -193,26 +193,34 @@ class _CatalogDetailScreenState extends State<CatalogDetailScreen> {
             width: double.infinity,
             child: FilledButton(
               onPressed: _startCheckout,
-              style: FilledButton.styleFrom(backgroundColor: AppColors.brand),
+              style: FilledButton.styleFrom(
+                backgroundColor: StudentHubColors.blue,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
               child: const Text('Buy / Enroll'),
             ),
           ),
           const SizedBox(height: 10),
           const Text(
             'You are enrolled only after payment succeeds. Razorpay may open in the browser when needed.',
-            style: TextStyle(fontSize: 12, color: AppColors.muted, height: 1.4),
+            style: TextStyle(fontSize: 12, color: StudentHubColors.muted, height: 1.4),
           ),
         ] else
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: AppColors.brandSoft,
-              borderRadius: BorderRadius.circular(14),
+              color: StudentHubColors.blueSoft,
+              borderRadius: BorderRadius.circular(StudentHubColors.cardRadius),
+              border: Border.all(color: StudentHubColors.border),
             ),
             child: const Text(
               'This listing is not linked to a purchasable course offer yet. '
               'Browse other catalog items, or ask your academy to publish a commerce course.',
-              style: TextStyle(height: 1.45, color: AppColors.ink),
+              style: TextStyle(height: 1.45, color: StudentHubColors.ink),
             ),
           ),
       ],

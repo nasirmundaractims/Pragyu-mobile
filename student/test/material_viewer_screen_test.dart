@@ -137,7 +137,7 @@ void main() {
     await tester.tap(find.text('Copy link'));
     await tester.pump();
 
-    expect(find.text('Link copied.'), findsOneWidget);
+    expect(find.text('Link copied'), findsOneWidget);
   });
 
   test('MaterialViewerArgs.fromObject accepts StudyMaterial seed', () {

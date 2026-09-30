@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:student_mobile/app/share/pragyu_copy.dart';
 import 'package:student_mobile/app/theme/app_colors.dart';
 import 'package:student_mobile/features/lectures/data/lectures_repository.dart';
 import 'package:student_mobile/features/lectures/domain/lecture_models.dart';
@@ -130,13 +131,10 @@ class _RecordedLectureScreenState extends State<RecordedLectureScreen> {
   Future<void> _copyPlaybackUrl() async {
     final url = _playback?.bestUrl;
     if (url == null || url.isEmpty) return;
-    await Clipboard.setData(ClipboardData(text: url));
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Playback link copied.'),
-        behavior: SnackBarBehavior.floating,
-      ),
+    await copyPragyuText(
+      context,
+      text: url,
+      message: PragyuCopyMessages.linkCopied,
     );
   }
 

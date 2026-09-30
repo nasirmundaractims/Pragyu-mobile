@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'package:student_mobile/app/theme/app_colors.dart';
+import 'package:student_mobile/app/theme/student_hub_colors.dart';
 
 class AppTextField extends StatelessWidget {
   const AppTextField({
@@ -40,7 +40,7 @@ class AppTextField extends StatelessWidget {
           style: const TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w600,
-            color: AppColors.ink,
+            color: StudentHubColors.ink,
           ),
         ),
         const SizedBox(height: 8),
@@ -52,12 +52,12 @@ class AppTextField extends StatelessWidget {
           textInputAction: textInputAction,
           autofillHints: autofillHints,
           onSubmitted: onSubmitted,
-          style: const TextStyle(color: AppColors.ink, fontSize: 16),
+          style: const TextStyle(color: StudentHubColors.ink, fontSize: 16),
           decoration: InputDecoration(
             hintText: hint,
             errorText: errorText,
             filled: true,
-            fillColor: AppColors.surface,
+            fillColor: StudentHubColors.surface,
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
               vertical: 14,
@@ -65,19 +65,20 @@ class AppTextField extends StatelessWidget {
             suffixIcon: suffix,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: AppColors.brandSoft),
+              borderSide: const BorderSide(color: StudentHubColors.border),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: AppColors.brandSoft),
+              borderSide: const BorderSide(color: StudentHubColors.border),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: AppColors.accent, width: 1.5),
+              borderSide:
+                  const BorderSide(color: StudentHubColors.blue, width: 1.5),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: AppColors.danger),
+              borderSide: const BorderSide(color: StudentHubColors.danger),
             ),
           ),
         ),
