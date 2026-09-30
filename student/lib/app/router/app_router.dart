@@ -66,13 +66,13 @@ import '../../features/tests/presentation/screens/deep_feedback_screen.dart';
 import '../../features/tests/presentation/screens/past_results_screen.dart';
 import '../../features/tests/presentation/screens/result_feedback_screen.dart';
 import '../../features/tests/presentation/screens/submission_status_screen.dart';
-import '../../features/welcome/presentation/screens/welcome_screen.dart';
 
 /// Central route names.
 abstract final class AppRoutes {
   static const splash = '/';
-  static const welcome = '/welcome';
   static const signIn = '/sign-in';
+  /// Legacy alias — navigates to Sign In.
+  static const welcome = signIn;
   static const forgotPassword = '/forgot-password';
   static const resetPassword = '/reset-password';
   static const verifyEmail = '/verify-email';
@@ -134,12 +134,8 @@ Route<dynamic> onGenerateRoute(RouteSettings settings) {
         settings: settings,
         builder: (_) => const SplashScreen(),
       );
-    case AppRoutes.welcome:
-      return MaterialPageRoute<void>(
-        settings: settings,
-        builder: (_) => const WelcomeScreen(),
-      );
     case AppRoutes.signIn:
+    case '/welcome':
       return MaterialPageRoute<void>(
         settings: settings,
         builder: (_) => const SignInScreen(),

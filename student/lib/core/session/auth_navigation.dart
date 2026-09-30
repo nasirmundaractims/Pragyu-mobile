@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:student_mobile/app/router/app_router.dart';
 import 'package:student_mobile/core/session/session_service.dart';
 import 'package:student_mobile/features/onboarding/data/onboarding_store.dart';
-import 'package:student_mobile/features/onboarding/data/prefs_onboarding_store.dart';
 import 'package:student_mobile/features/organization/data/organization_repository.dart';
 import 'package:student_mobile/features/organization/domain/organization_summary.dart';
 
@@ -12,7 +11,7 @@ abstract final class AuthNavigation {
   /// Optional override for tests / DI without changing screen constructors.
   static OrganizationGateway? organizationGatewayOverride;
 
-  /// Clears the entire stack (welcome/sign-in) and opens [route].
+  /// Clears the entire stack and opens [route].
   static void goAndClear(BuildContext context, String route) {
     Navigator.of(context).pushNamedAndRemoveUntil(route, (r) => false);
   }
@@ -24,35 +23,33 @@ abstract final class AuthNavigation {
     OrganizationGateway? organizationRepository,
   }) async {
     final session = sessionService ?? SessionService();
-    final onboarding = onboardingStore ?? PrefsOnboardingStore();
 
     if (!await session.hasAccessToken()) {
-      return AppRoutes.welcome;
+      return AppRoutes.signIn;
     }
 
-    final destination = await resolveWorkspaceRoute(
+    return resolveWorkspaceRoute(
       sessionService: session,
-      onboardingStore: onboarding,
+      onboardingStore: onboardingStore,
       organizationRepository: organizationRepository,
     );
-    return destination;
   }
 
   /// Resolves organisation vs individual workspace after authentication.
   ///
   /// Priority:
-  /// 1. Active organisation (non-individual) membership → org workspace
-  /// 2. Individual workspace → individual experience
-  /// 3. No memberships → association onboarding
+  /// 1. Active organisation (non-individual) membership → organisation Home
+  /// 2. Individual workspace → Individual Home
+  /// 3. No memberships → organisation association (code or Individual)
   ///
   /// Multiple organisations without a stored match → org picker (safe default).
+  /// Tips onboarding is never forced — students go straight to Home.
   static Future<String> resolveWorkspaceRoute({
     SessionService? sessionService,
     OnboardingStore? onboardingStore,
     OrganizationGateway? organizationRepository,
   }) async {
     final session = sessionService ?? SessionService();
-    final onboarding = onboardingStore ?? PrefsOnboardingStore();
     final orgs = organizationRepository ??
         organizationGatewayOverride ??
         OrganizationRepository();
@@ -60,7 +57,7 @@ abstract final class AuthNavigation {
     // Tests inject [organizationGatewayOverride] without a usable token store.
     if (organizationGatewayOverride == null) {
       if (!await session.hasAccessToken()) {
-        return AppRoutes.welcome;
+        return AppRoutes.signIn;
       }
     }
 
@@ -77,7 +74,7 @@ abstract final class AuthNavigation {
         );
         if (selected != null) {
           await orgs.selectOrganization(selected);
-          return await _afterWorkspaceRoute(onboarding);
+          return AppRoutes.home;
         }
         return AppRoutes.orgPicker;
       }
@@ -88,14 +85,14 @@ abstract final class AuthNavigation {
           storedId: storedId,
         );
         await orgs.selectOrganization(selected ?? individuals.first);
-        return await _afterWorkspaceRoute(onboarding);
+        return AppRoutes.home;
       }
 
       return AppRoutes.orgAssociation;
     } catch (_) {
       final full = await session.read();
       if (full != null) {
-        return await _afterWorkspaceRoute(onboarding);
+        return AppRoutes.home;
       }
       return AppRoutes.orgAssociation;
     }
@@ -116,7 +113,7 @@ abstract final class AuthNavigation {
   /// If already authenticated, leave guest screens for the post-auth entry.
   static Future<bool> redirectIfAuthenticated(BuildContext context) async {
     final route = await resolveEntryRoute();
-    if (route == AppRoutes.welcome) return false;
+    if (route == AppRoutes.signIn) return false;
     if (!context.mounted) return true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!context.mounted) return;
@@ -137,12 +134,5 @@ abstract final class AuthNavigation {
     }
     if (candidates.length == 1) return candidates.first;
     return null;
-  }
-
-  static Future<String> _afterWorkspaceRoute(OnboardingStore onboarding) async {
-    if (!await onboarding.hasCompleted()) {
-      return AppRoutes.onboarding;
-    }
-    return AppRoutes.home;
   }
 }

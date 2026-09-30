@@ -203,7 +203,7 @@ void main() {
     expect(find.text('9876543210'), findsOneWidget);
   });
 
-  testWidgets('S-70 logout confirms and navigates to welcome', (tester) async {
+  testWidgets('S-70 logout confirms and navigates to sign in', (tester) async {
     final fake = _FakeMe(sample());
     Object? loggedOutRoute;
 
@@ -217,10 +217,10 @@ void main() {
         ),
         onGenerateRoute: (settings) {
           loggedOutRoute = settings.name;
-          if (settings.name == AppRoutes.welcome) {
+          if (settings.name == AppRoutes.signIn) {
             return MaterialPageRoute<void>(
               settings: settings,
-              builder: (_) => const Scaffold(body: Text('Welcome screen')),
+              builder: (_) => const Scaffold(body: Text('Sign in screen')),
             );
           }
           return null;
@@ -244,8 +244,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(fake.signOutCalls, 1);
-    expect(find.text('Welcome screen'), findsOneWidget);
-    expect(loggedOutRoute, AppRoutes.welcome);
+    expect(find.text('Sign in screen'), findsOneWidget);
+    expect(loggedOutRoute, AppRoutes.signIn);
   });
 
   testWidgets('S-70 Me tab shows profile in shell', (tester) async {

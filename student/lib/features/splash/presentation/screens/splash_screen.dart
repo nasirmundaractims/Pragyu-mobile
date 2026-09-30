@@ -61,14 +61,14 @@ class _SplashScreenState extends State<SplashScreen>
   Future<void> _bootstrap() async {
     await Future<void>.delayed(AppConstants.splashMinDuration);
 
-    var nextRoute = AppRoutes.welcome;
+    var nextRoute = AppRoutes.signIn;
     try {
       nextRoute = await AuthNavigation.resolveEntryRoute().timeout(
         const Duration(milliseconds: 400),
-        onTimeout: () => AppRoutes.welcome,
+        onTimeout: () => AppRoutes.signIn,
       );
     } catch (_) {
-      nextRoute = AppRoutes.welcome;
+      nextRoute = AppRoutes.signIn;
     }
 
     if (!mounted) return;
@@ -181,16 +181,25 @@ class _BrandBlock extends StatelessWidget {
             constraints: BoxConstraints(maxWidth: markMax, maxHeight: markMax),
             child: AspectRatio(
               aspectRatio: 1,
-              child: Image.asset(
-                'assets/images/brand/pragyu-mark.png',
-                fit: BoxFit.contain,
-                filterQuality: FilterQuality.high,
-                semanticLabel: 'Pragyu brand mark',
-                errorBuilder: (_, error, stackTrace) => const Icon(
-                  Icons.school_rounded,
-                  size: 88,
-                  color: Color(0xFF3D7EFF),
-                ),
+              child: Builder(
+                builder: (context) {
+                  final dpr = MediaQuery.devicePixelRatioOf(context);
+                  final cachePx = (markMax * dpr).round().clamp(256, 1024);
+                  return Image.asset(
+                    'assets/images/brand/pragyu-mark.png',
+                    fit: BoxFit.contain,
+                    filterQuality: FilterQuality.high,
+                    isAntiAlias: true,
+                    cacheWidth: cachePx,
+                    cacheHeight: cachePx,
+                    semanticLabel: 'Pragyu brand mark',
+                    errorBuilder: (_, error, stackTrace) => const Icon(
+                      Icons.school_rounded,
+                      size: 88,
+                      color: Color(0xFF3D7EFF),
+                    ),
+                  );
+                },
               ),
             ),
           ),

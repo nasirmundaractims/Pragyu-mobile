@@ -251,7 +251,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await _me.signOut();
       if (!mounted) return;
       Navigator.of(context).pushNamedAndRemoveUntil(
-        AppRoutes.welcome,
+        AppRoutes.signIn,
         (route) => false,
       );
     } catch (_) {

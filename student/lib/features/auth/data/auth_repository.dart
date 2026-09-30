@@ -228,7 +228,7 @@ class AuthRepository implements AuthGateway {
         'password': request.password,
         'password_confirmation': request.passwordConfirmation,
         'accept_terms': request.acceptTerms,
-        'registration_context': 'individual_student',
+        'registration_context': 'organization_student',
         'device_name': deviceName,
       },
     );

@@ -53,7 +53,7 @@ class _OrgAssociationScreenState extends State<OrgAssociationScreen> {
       );
       await _orgs.selectOrganization(workspace);
       if (!mounted) return;
-      await AuthNavigation.goToResolvedWorkspace(context);
+      AuthNavigation.goAndClear(context, AppRoutes.home);
     } on ApiException catch (error) {
       if (!mounted) return;
       setState(() {

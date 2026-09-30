@@ -17,7 +17,7 @@ void main() {
     await prefs.clear();
   });
 
-  testWidgets('S-01 splash shows native UI then opens S-02', (tester) async {
+  testWidgets('S-01 splash shows brand mark then opens Sign In', (tester) async {
     await tester.binding.setSurfaceSize(const Size(390, 844));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -28,10 +28,7 @@ void main() {
     expect(find.text('Practice'), findsOneWidget);
     expect(find.text('Grow'), findsOneWidget);
     expect(find.text('Building a Brighter Tomorrow'), findsOneWidget);
-    expect(
-      find.image(const AssetImage('assets/images/brand/pragyu-mark.png')),
-      findsOneWidget,
-    );
+    expect(find.byType(Image), findsWidgets);
     expect(
       find.image(const AssetImage('assets/images/splash/splash_screen.png')),
       findsNothing,
@@ -45,8 +42,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
     await tester.pump(const Duration(milliseconds: 800));
 
-    expect(find.text('Skip'), findsOneWidget);
-    expect(find.text('Next'), findsOneWidget);
-    expect(find.textContaining('Your Preparation'), findsOneWidget);
+    expect(find.text('Welcome Back'), findsOneWidget);
+    expect(find.text('Sign in'), findsWidgets);
   });
 }

@@ -335,7 +335,7 @@ class _MeScreenState extends State<MeScreen> {
       await _me.signOut();
       if (!mounted) return;
       Navigator.of(context).pushNamedAndRemoveUntil(
-        AppRoutes.welcome,
+        AppRoutes.signIn,
         (route) => false,
       );
     } catch (_) {

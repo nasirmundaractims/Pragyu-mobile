@@ -16,7 +16,7 @@ class OrgPickerScreen extends StatefulWidget {
     this.organizationRepository,
     this.autoSelectSingle = true,
     this.allowBack = false,
-    this.afterSelectRoute = AppRoutes.onboarding,
+    this.afterSelectRoute = AppRoutes.home,
     this.clearStackOnSelect = false,
   });
 

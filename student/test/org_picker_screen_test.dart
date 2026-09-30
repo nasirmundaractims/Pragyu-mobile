@@ -4,20 +4,17 @@ import 'package:student_mobile/app/router/app_router.dart';
 import 'package:student_mobile/app/theme/app_theme.dart';
 import 'package:student_mobile/core/config/app_config.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
-import 'package:student_mobile/features/onboarding/data/memory_onboarding_store.dart';
-import 'package:student_mobile/features/onboarding/presentation/screens/onboarding_screen.dart';
 import 'package:student_mobile/features/organization/domain/organization_summary.dart';
 import 'package:student_mobile/features/organization/presentation/screens/org_picker_screen.dart';
 
 import 'support/fake_organization_gateway.dart';
 
 Route<dynamic> _routes(RouteSettings settings) {
-  if (settings.name == AppRoutes.onboarding) {
+  if (settings.name == AppRoutes.home) {
     return MaterialPageRoute<void>(
       settings: settings,
-      builder: (_) => OnboardingScreen(
-        onboardingStore: MemoryOnboardingStore(),
-        forceShow: true,
+      builder: (_) => const Scaffold(
+        body: Center(child: Text('Student Home')),
       ),
     );
   }
@@ -92,8 +89,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(fake.selected?.id, 'org-1');
-    expect(find.text('Learn'), findsOneWidget);
-    expect(find.text('Skip'), findsOneWidget);
+    expect(find.text('Student Home'), findsOneWidget);
   });
 
   testWidgets('S-05 auto-selects single institute', (tester) async {
@@ -117,7 +113,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(fake.selected?.id, 'only-org');
-    expect(find.text('Learn'), findsOneWidget);
+    expect(find.text('Student Home'), findsOneWidget);
   });
 
   testWidgets('S-05 shows load error', (tester) async {

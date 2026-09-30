@@ -64,7 +64,7 @@ class _OrgCodeEntryScreenState extends State<OrgCodeEntryScreen> {
       final redeemed = await _orgs.redeemMembershipCode(code);
       await _orgs.selectOrganization(redeemed.toOrganizationSummary());
       if (!mounted) return;
-      AuthNavigation.goAndClear(context, AppRoutes.onboarding);
+      AuthNavigation.goAndClear(context, AppRoutes.home);
     } on ApiException catch (error) {
       if (!mounted) return;
       setState(() {
@@ -100,7 +100,7 @@ class _OrgCodeEntryScreenState extends State<OrgCodeEntryScreen> {
       );
       await _orgs.selectOrganization(workspace);
       if (!mounted) return;
-      await AuthNavigation.goToResolvedWorkspace(context);
+      AuthNavigation.goAndClear(context, AppRoutes.home);
     } on ApiException catch (error) {
       if (!mounted) return;
       setState(() {
