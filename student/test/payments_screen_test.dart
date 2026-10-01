@@ -152,7 +152,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 
-    expect(find.text('Payments & invoices'), findsOneWidget);
-    expect(find.textContaining('No payments yet'), findsOneWidget);
+    expect(find.text('My purchases'), findsOneWidget);
+    expect(find.textContaining('No purchases yet'), findsOneWidget);
   });
 }

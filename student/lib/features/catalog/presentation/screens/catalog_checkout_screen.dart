@@ -479,7 +479,7 @@ class _PaymentCard extends StatelessWidget {
             const SizedBox(height: 8),
             OutlinedButton(
               onPressed: onOpenBilling,
-              child: const Text('View billing history'),
+              child: const Text('View my purchases'),
             ),
           ] else ...[
             FilledButton(

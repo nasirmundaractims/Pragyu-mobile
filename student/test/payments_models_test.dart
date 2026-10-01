@@ -4,8 +4,10 @@ import 'package:student_mobile/features/payments/domain/payments_models.dart';
 void main() {
   test('PaymentsViewId parses aliases', () {
     expect(PaymentsViewIdX.fromObject('billing'), PaymentsViewId.billing);
+    expect(PaymentsViewIdX.fromObject('purchases'), PaymentsViewId.billing);
     expect(PaymentsViewIdX.fromObject('credits'), PaymentsViewId.balance);
     expect(PaymentsViewIdX.fromObject({'view': 'dues'}), PaymentsViewId.fees);
+    expect(PaymentsViewId.billing.label, 'Purchases');
   });
 
   test('FeeAssignment detects payable outstanding', () {

@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'package:student_mobile/app/router/app_router.dart';
 import 'package:student_mobile/app/theme/app_theme.dart';
+import 'package:student_mobile/app/widgets/student_screen_kit.dart';
 import 'package:student_mobile/app/widgets/pragyu_logo.dart';
 import 'package:student_mobile/core/config/app_config.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
@@ -28,9 +29,9 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  static const _ink = Color(0xFF1A2B4C);
-  static const _muted = Color(0xFF7A8499);
-  static const _blue = Color(0xFF2F7BFF);
+  static const _ink = StudentHubColors.ink;
+  static const _muted = StudentHubColors.muted;
+  static const _blue = StudentHubColors.blue;
   static const _blueDeep = Color(0xFF1E5FE0);
   static const _fieldBorder = Color(0xFFE2E8F0);
   static const _success = Color(0xFF22A06B);
@@ -657,11 +658,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   : null,
                             ),
                             const SizedBox(height: 16),
-                            _CreateAccountButton(
+                            PrimaryButton(
                               label: _submitting
                                   ? 'Creating account…'
                                   : 'Create account',
-                              showArrow: !_submitting,
                               onPressed: _submitting ? null : _submit,
                             ),
                             const SizedBox(height: 20),
@@ -1182,68 +1182,6 @@ class _LegalLabel extends StatelessWidget {
   }
 }
 
-class _CreateAccountButton extends StatelessWidget {
-  const _CreateAccountButton({
-    required this.label,
-    required this.onPressed,
-    this.showArrow = true,
-  });
-
-  final String label;
-  final VoidCallback? onPressed;
-  final bool showArrow;
-
-  @override
-  Widget build(BuildContext context) {
-    final enabled = onPressed != null;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(16),
-        child: Ink(
-          height: 54,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            color: enabled
-                ? _RegisterScreenState._blue
-                : const Color(0xFFB8C0D6),
-            boxShadow: enabled
-                ? [
-                    BoxShadow(
-                      color: _RegisterScreenState._blue.withValues(alpha: 0.32),
-                      blurRadius: 18,
-                      offset: const Offset(0, 8),
-                    ),
-                  ]
-                : null,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                label,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              if (showArrow) ...[
-                const SizedBox(width: 8),
-                const Icon(
-                  Icons.arrow_forward_rounded,
-                  color: Colors.white,
-                  size: 20,
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 class _ErrorBanner extends StatelessWidget {
   const _ErrorBanner({required this.message});

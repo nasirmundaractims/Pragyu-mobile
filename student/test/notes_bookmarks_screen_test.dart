@@ -13,6 +13,7 @@ class _FakeLibrary implements NotesBookmarksGateway {
   NotesBookmarksSnapshot snapshot;
   int createCalls = 0;
   int deleteNoteCalls = 0;
+  int addBookmarkCalls = 0;
   int removeBookmarkCalls = 0;
 
   @override
@@ -40,6 +41,26 @@ class _FakeLibrary implements NotesBookmarksGateway {
     snapshot = snapshot.copyWith(
       notes: snapshot.notes.where((n) => n.id != noteId).toList(),
     );
+  }
+
+  @override
+  Future<ContentBookmark> addBookmark({
+    required String bookmarkableType,
+    required String bookmarkableId,
+    String? title,
+  }) async {
+    addBookmarkCalls += 1;
+    final bookmark = ContentBookmark(
+      id: 'b-new',
+      bookmarkableType: bookmarkableType,
+      bookmarkableId: bookmarkableId,
+      title: title,
+      createdAt: DateTime(2026, 9, 16),
+    );
+    snapshot = snapshot.copyWith(
+      bookmarks: [bookmark, ...snapshot.bookmarks],
+    );
+    return bookmark;
   }
 
   @override

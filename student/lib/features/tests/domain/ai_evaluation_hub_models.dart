@@ -51,18 +51,38 @@ class AiEvalQuestionItem {
   String get kindLabel =>
       kind == AiAnswerKind.shortAnswer ? 'Short answer' : 'Long answer';
 
-  String get statusLabel {
+  /// One-line hint so Short vs Long is clear without a tutorial.
+  String get kindHint => kind == AiAnswerKind.shortAnswer
+      ? 'Concise written response'
+      : 'Essay / descriptive response';
+
+  String get primaryActionLabel {
     switch (status) {
       case AiEvalQuestionStatus.notStarted:
         return 'Upload answer';
       case AiEvalQuestionStatus.draft:
         return 'Continue upload';
       case AiEvalQuestionStatus.evaluating:
-        return 'AI evaluating';
+        return 'Check status';
       case AiEvalQuestionStatus.evaluated:
         return 'View score';
       case AiEvalQuestionStatus.failed:
-        return 'Needs attention';
+        return 'Upload again';
+    }
+  }
+
+  String get statusLabel {
+    switch (status) {
+      case AiEvalQuestionStatus.notStarted:
+        return 'Ready to upload';
+      case AiEvalQuestionStatus.draft:
+        return 'Draft — continue upload';
+      case AiEvalQuestionStatus.evaluating:
+        return 'AI evaluating';
+      case AiEvalQuestionStatus.evaluated:
+        return 'Score ready';
+      case AiEvalQuestionStatus.failed:
+        return 'Needs attention — try again';
     }
   }
 

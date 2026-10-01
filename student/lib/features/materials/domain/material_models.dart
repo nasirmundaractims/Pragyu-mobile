@@ -277,6 +277,14 @@ class MaterialViewerSnapshot {
         url.contains('.webm');
   }
 
+  /// True when the app can embed a preview (PDF / audio-video stream).
+  bool get canPreviewInApp =>
+      !isLocked && hasOpenableLink && (isPdf || isStreamableMedia);
+
+  /// Has a link but the format is not previewable in-app (pptx, docs, etc.).
+  bool get needsExternalOpen =>
+      !isLocked && hasOpenableLink && !isPdf && !isStreamableMedia;
+
   String get accessLabel {
     if (isLocked) return 'Locked';
     if (isFree) return 'Free preview';

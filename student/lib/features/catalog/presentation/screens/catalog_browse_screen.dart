@@ -12,6 +12,7 @@ import 'package:student_mobile/features/auth/domain/auth_models.dart';
 import 'package:student_mobile/features/catalog/data/catalog_repository.dart';
 import 'package:student_mobile/features/catalog/domain/catalog_models.dart';
 import 'package:student_mobile/features/home/presentation/screens/home_screen.dart';
+import 'package:student_mobile/features/payments/domain/payments_models.dart';
 
 /// S-29 Catalog / Marketplace — discover marketplace listings.
 class CatalogBrowseScreen extends StatefulWidget {
@@ -263,7 +264,24 @@ class _CatalogBrowseScreenState extends State<CatalogBrowseScreen> {
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 10),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: () => Navigator.of(context).pushNamed(
+                      AppRoutes.payments,
+                      arguments: PaymentsViewId.billing,
+                    ),
+                    icon: const Icon(Icons.receipt_long_outlined, size: 18),
+                    label: const Text('My purchases'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: _blue,
+                      padding: EdgeInsets.zero,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
                 _SearchField(
                   controller: _searchController,
                   onSubmit: (value) => _load(query: value),

@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:student_mobile/app/router/app_router.dart';
-import 'package:student_mobile/app/theme/app_colors.dart';
 import 'package:student_mobile/app/widgets/app_text_field.dart';
-import 'package:student_mobile/app/widgets/primary_button.dart';
+import 'package:student_mobile/app/widgets/student_screen_kit.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/features/auth/data/auth_repository.dart';
 
@@ -183,18 +182,10 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
-      child: Scaffold(
-        backgroundColor: AppColors.background,
-        appBar: AppBar(
-          backgroundColor: AppColors.background,
-          title: const Text('Email verification'),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_rounded),
-            onPressed: busy ? null : _backToSignIn,
-          ),
-        ),
-        body: SafeArea(
-          child: SingleChildScrollView(
+      child: StudentHubPage(
+        title: 'Email verification',
+        onBack: busy ? null : _backToSignIn,
+        body: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(24, 8, 24, 28),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -204,16 +195,13 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                   style: const TextStyle(
                     fontSize: 16,
                     height: 1.45,
-                    color: AppColors.muted,
+                    color: StudentHubColors.muted,
                   ),
                 ),
                 const SizedBox(height: 24),
                 if (_status == _VerifyStatus.verifying) ...[
-                  const Center(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(vertical: 24),
-                      child: CircularProgressIndicator(),
-                    ),
+                  const AppLoadingState(
+                    padding: EdgeInsets.symmetric(vertical: 24),
                   ),
                 ],
                 if (_status == _VerifyStatus.success) ...[
@@ -221,13 +209,13 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                     width: 56,
                     height: 56,
                     decoration: BoxDecoration(
-                      color: AppColors.brandSoft,
+                      color: StudentHubColors.blueSoft,
                       borderRadius: BorderRadius.circular(16),
                     ),
                     alignment: Alignment.center,
                     child: const Icon(
                       Icons.mark_email_read_outlined,
-                      color: AppColors.brand,
+                      color: StudentHubColors.blue,
                       size: 28,
                     ),
                   ),
@@ -270,7 +258,6 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
               ],
             ),
           ),
-        ),
       ),
     );
   }
@@ -289,12 +276,12 @@ class _ErrorBanner extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFFFDECEA),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.danger.withValues(alpha: 0.25)),
+        border: Border.all(color: StudentHubColors.danger.withValues(alpha: 0.25)),
       ),
       child: Text(
         message,
         style: const TextStyle(
-          color: AppColors.danger,
+          color: StudentHubColors.danger,
           height: 1.4,
           fontSize: 14,
         ),

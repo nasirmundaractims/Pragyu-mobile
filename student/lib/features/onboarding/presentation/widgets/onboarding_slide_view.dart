@@ -22,7 +22,7 @@ const onboardingSlides = <OnboardingSlide>[
     icon: Icons.menu_book_rounded,
   ),
   OnboardingSlide(
-    title: 'Tests',
+    title: 'Practice',
     body:
         'Take assessments, track what’s due, and review results when they’re ready.',
     icon: Icons.quiz_outlined,

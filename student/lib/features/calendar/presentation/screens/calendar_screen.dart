@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:student_mobile/app/router/app_router.dart';
-import 'package:student_mobile/app/theme/student_hub_colors.dart';
-import 'package:student_mobile/app/widgets/student_app_header.dart';
 import 'package:student_mobile/app/theme/app_theme.dart';
+import 'package:student_mobile/app/widgets/student_screen_kit.dart';
 import 'package:student_mobile/features/calendar/data/calendar_repository.dart';
 import 'package:student_mobile/features/calendar/domain/calendar_models.dart';
 import 'package:student_mobile/features/lectures/domain/lecture_models.dart';
@@ -97,23 +96,16 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   Widget _buildBody() {
     if (_loading && _snapshot == null) {
-      return ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        children: const [
-          SizedBox(height: 140),
-          Center(child: CircularProgressIndicator(color: StudentHubColors.blue)),
-        ],
-      );
+      return const AppLoadingState(scrollable: true);
     }
 
     if (_error != null && _snapshot == null) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(24),
         children: [
-          Text(
-            _error!,
-            style: const TextStyle(color: StudentHubColors.danger, height: 1.45),
+          AppErrorState(
+            message: _error!,
+            onRetry: _load,
           ),
         ],
       );
@@ -158,52 +150,21 @@ class _CalendarScreenState extends State<CalendarScreen> {
         ),
         const SizedBox(height: 18),
         if (snapshot.isEmpty)
-          Padding(
-            padding: const EdgeInsets.only(top: 32),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(16, 28, 16, 28),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius:
-                    BorderRadius.circular(StudentHubColors.cardRadius),
-                border: Border.all(color: StudentHubColors.border),
-              ),
-              child: const Column(
-                children: [
-                  Icon(
-                    Icons.event_available_outlined,
-                    size: 36,
-                    color: StudentHubColors.blue,
-                  ),
-                  SizedBox(height: 12),
-                  Text(
-                    'No upcoming activities',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontFamily: AppTheme.fontFamily,
-                      fontWeight: FontWeight.w700,
-                      color: StudentHubColors.ink,
-                    ),
-                  ),
-                  SizedBox(height: 6),
-                  Text(
-                    'Nothing upcoming in this window.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontFamily: AppTheme.fontFamily,
-                      color: StudentHubColors.muted,
-                      height: 1.4,
-                    ),
-                  ),
-                ],
-              ),
+          const Padding(
+            padding: EdgeInsets.only(top: 16),
+            child: AppEmptyState(
+              icon: Icons.event_available_outlined,
+              title: 'No upcoming activities',
+              message: 'Nothing upcoming in this window.',
             ),
           )
         else
           ...snapshot.days.expand((day) {
             return [
-              _DayHeader(day: day.day),
+              StudentSectionHeader(
+                title: _DayHeader.formatDay(day.day),
+                compact: true,
+              ),
               const SizedBox(height: 8),
               ...day.events.map(
                 (event) => Padding(
@@ -266,24 +227,10 @@ class _FilterChip extends StatelessWidget {
   }
 }
 
-class _DayHeader extends StatelessWidget {
-  const _DayHeader({required this.day});
+class _DayHeader {
+  const _DayHeader._();
 
-  final DateTime day;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      _formatDay(day),
-      style: const TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.w700,
-        color: StudentHubColors.ink,
-      ),
-    );
-  }
-
-  static String _formatDay(DateTime day) {
+  static String formatDay(DateTime day) {
     const weekdays = [
       'Mon',
       'Tue',

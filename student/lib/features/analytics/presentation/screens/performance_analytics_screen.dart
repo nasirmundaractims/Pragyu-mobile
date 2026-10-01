@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import 'package:student_mobile/app/router/app_router.dart';
 import 'package:student_mobile/app/theme/app_colors.dart';
+import 'package:student_mobile/app/widgets/student_screen_kit.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/features/analytics/data/analytics_repository.dart';
 import 'package:student_mobile/features/analytics/domain/analytics_models.dart';
@@ -70,187 +71,142 @@ class _PerformanceAnalyticsScreenState
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
-      child: Scaffold(
-        backgroundColor: AppColors.background,
-        appBar: AppBar(
-          backgroundColor: AppColors.background,
-          title: const Text('My Performance'),
-          actions: [
-            IconButton(
-              tooltip: 'Weak topics',
-              onPressed: () =>
-                  Navigator.of(context).pushNamed(AppRoutes.weakTopics),
-              icon: const Icon(Icons.track_changes_outlined),
+      child: StudentHubPage(
+        title: 'My Performance',
+        actions: [
+          IconButton(
+            tooltip: 'Weak topics',
+            onPressed: () =>
+                Navigator.of(context).pushNamed(AppRoutes.weakTopics),
+            icon: const Icon(
+              Icons.track_changes_outlined,
+              color: StudentHubColors.ink,
             ),
-          ],
-        ),
-        body: SafeArea(
-          child: _loading && snapshot == null
-              ? const Center(
-                  child: CircularProgressIndicator(color: AppColors.brand),
-                )
-              : _error != null && snapshot == null
-                  ? _ErrorBody(message: _error!, onRetry: _load)
-                  : RefreshIndicator(
-                      color: AppColors.brand,
-                      onRefresh: _load,
-                      child: SingleChildScrollView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            if (_error != null)
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 12),
-                                child: Text(
-                                  _error!,
-                                  style: const TextStyle(
-                                    color: AppColors.danger,
-                                    height: 1.35,
-                                  ),
-                                ),
-                              ),
-                            _HeroBanner(
-                              level: snapshot?.levelLabel ?? 'Starter',
-                              period: snapshot?.periodType,
-                              snapshotDate: snapshot?.snapshotDate,
-                            ),
-                            const SizedBox(height: 14),
-                            _KpiGrid(
-                              overall: _pct(snapshot?.overallAverage),
-                              progress: _pct(snapshot?.learningProgress),
-                              streak: (snapshot?.streak ?? 0) == 0
-                                  ? '—'
-                                  : '${snapshot!.streak}d',
-                              completed:
-                                  '${snapshot?.completedAssessments ?? 0}',
-                              practice: '${snapshot?.practiceSessions ?? 0}',
-                              improvement: snapshot?.improvement == null
-                                  ? null
-                                  : '${snapshot!.improvement! >= 0 ? '+' : ''}${snapshot.improvement!.round()}%',
-                            ),
-                            const SizedBox(height: 20),
-                            const Text(
-                              'AI insights',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.ink,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            for (final insight
-                                in snapshot?.insights ?? const <PerformanceInsight>[]) ...[
-                              _InsightCard(insight: insight),
-                              const SizedBox(height: 10),
-                            ],
-                            const SizedBox(height: 10),
-                            const Text(
-                              'Subject analysis',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.ink,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            if (snapshot == null || snapshot.subjects.isEmpty)
-                              const _EmptyCard(
-                                title: 'No subject scores yet',
-                                body:
-                                    'Evaluated assessments will appear here with averages and trends.',
-                              )
-                            else
-                              for (final subject in snapshot.subjects) ...[
-                                _SubjectCard(subject: subject),
-                                const SizedBox(height: 10),
-                              ],
-                            const SizedBox(height: 10),
-                            const Text(
-                              'Score trend',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.ink,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            if (snapshot == null ||
-                                snapshot.scoreTrend.isEmpty)
-                              const _EmptyCard(
-                                title: 'No score trend yet',
-                                body:
-                                    'Complete a few evaluated attempts to see your progress over time.',
-                              )
-                            else
-                              _TrendList(points: snapshot.scoreTrend),
-                            const SizedBox(height: 18),
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: [
-                                OutlinedButton.icon(
-                                  onPressed: () => Navigator.of(context)
-                                      .pushNamed(AppRoutes.weakTopics),
-                                  icon: const Icon(Icons.track_changes_outlined),
-                                  label: const Text('Weak topics'),
-                                ),
-                                OutlinedButton.icon(
-                                  onPressed: () => Navigator.of(context)
-                                      .pushNamed(AppRoutes.recommendations),
-                                  icon: const Icon(Icons.lightbulb_outline),
-                                  label: const Text('Recommendations'),
-                                ),
-                                OutlinedButton.icon(
-                                  onPressed: () => Navigator.of(context)
-                                      .pushNamed(AppRoutes.pastResults),
-                                  icon: const Icon(Icons.assignment_outlined),
-                                  label: const Text('Past results'),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ErrorBody extends StatelessWidget {
-  const _ErrorBody({
-    required this.message,
-    required this.onRetry,
-  });
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            message,
-            style: const TextStyle(color: AppColors.danger, height: 1.4),
-          ),
-          const Spacer(),
-          FilledButton(
-            onPressed: onRetry,
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.brand,
-              foregroundColor: Colors.white,
-              minimumSize: const Size.fromHeight(48),
-            ),
-            child: const Text('Try again'),
           ),
         ],
+        body: _loading && snapshot == null
+            ? const AppLoadingState(padding: EdgeInsets.zero)
+            : _error != null && snapshot == null
+                ? Center(
+                    child: AppErrorState(
+                      message: _error!,
+                      onRetry: _load,
+                    ),
+                  )
+                : RefreshIndicator(
+                    color: StudentHubColors.blue,
+                    onRefresh: _load,
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (_error != null)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: Text(
+                                _error!,
+                                style: const TextStyle(
+                                  color: StudentHubColors.danger,
+                                  height: 1.35,
+                                ),
+                              ),
+                            ),
+                          _HeroBanner(
+                            level: snapshot?.levelLabel ?? 'Starter',
+                            period: snapshot?.periodType,
+                            snapshotDate: snapshot?.snapshotDate,
+                          ),
+                          const SizedBox(height: 14),
+                          _KpiGrid(
+                            overall: _pct(snapshot?.overallAverage),
+                            progress: _pct(snapshot?.learningProgress),
+                            streak: (snapshot?.streak ?? 0) == 0
+                                ? '—'
+                                : '${snapshot!.streak}d',
+                            completed:
+                                '${snapshot?.completedAssessments ?? 0}',
+                            practice: '${snapshot?.practiceSessions ?? 0}',
+                            improvement: snapshot?.improvement == null
+                                ? null
+                                : '${snapshot!.improvement! >= 0 ? '+' : ''}${snapshot.improvement!.round()}%',
+                          ),
+                          const SizedBox(height: 20),
+                          const StudentSectionHeader(
+                            title: 'AI insights',
+                            compact: true,
+                          ),
+                          const SizedBox(height: 8),
+                          for (final insight in snapshot?.insights ??
+                              const <PerformanceInsight>[]) ...[
+                            _InsightCard(insight: insight),
+                            const SizedBox(height: 10),
+                          ],
+                          const SizedBox(height: 10),
+                          const StudentSectionHeader(
+                            title: 'Subject analysis',
+                            compact: true,
+                          ),
+                          const SizedBox(height: 8),
+                          if (snapshot == null || snapshot.subjects.isEmpty)
+                            const AppEmptyState(
+                              icon: Icons.bar_chart_outlined,
+                              title: 'No subject scores yet',
+                              message:
+                                  'Evaluated assessments will appear here with averages and trends.',
+                            )
+                          else
+                            for (final subject in snapshot.subjects) ...[
+                              _SubjectCard(subject: subject),
+                              const SizedBox(height: 10),
+                            ],
+                          const SizedBox(height: 10),
+                          const StudentSectionHeader(
+                            title: 'Score trend',
+                            compact: true,
+                          ),
+                          const SizedBox(height: 8),
+                          if (snapshot == null || snapshot.scoreTrend.isEmpty)
+                            const AppEmptyState(
+                              icon: Icons.show_chart_outlined,
+                              title: 'No score trend yet',
+                              message:
+                                  'Complete a few evaluated attempts to see your progress over time.',
+                            )
+                          else
+                            _TrendList(points: snapshot.scoreTrend),
+                          const SizedBox(height: 18),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              OutlinedButton.icon(
+                                onPressed: () => Navigator.of(context)
+                                    .pushNamed(AppRoutes.weakTopics),
+                                icon: const Icon(
+                                  Icons.track_changes_outlined,
+                                ),
+                                label: const Text('Weak topics'),
+                              ),
+                              OutlinedButton.icon(
+                                onPressed: () => Navigator.of(context)
+                                    .pushNamed(AppRoutes.recommendations),
+                                icon: const Icon(Icons.lightbulb_outline),
+                                label: const Text('Recommendations'),
+                              ),
+                              OutlinedButton.icon(
+                                onPressed: () => Navigator.of(context)
+                                    .pushNamed(AppRoutes.pastResults),
+                                icon: const Icon(Icons.assignment_outlined),
+                                label: const Text('Past results'),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
       ),
     );
   }
@@ -664,47 +620,6 @@ class _TrendList extends StatelessWidget {
           ),
         ],
       ],
-    );
-  }
-}
-
-class _EmptyCard extends StatelessWidget {
-  const _EmptyCard({
-    required this.title,
-    required this.body,
-  });
-
-  final String title;
-  final String body;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 20),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.brandSoft),
-      ),
-      child: Column(
-        children: [
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontWeight: FontWeight.w700,
-              color: AppColors.ink,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            body,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: AppColors.muted, height: 1.4),
-          ),
-        ],
-      ),
     );
   }
 }

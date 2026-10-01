@@ -112,6 +112,7 @@ void main() {
         lastName: 'Student',
       ),
       organizationName: 'Pragyu Demo Institute',
+      organizationType: 'academy',
       studentProfile: StudentProfileSummary(
         id: 'sp1',
         studentCode: 'STU-101',
@@ -158,9 +159,18 @@ void main() {
     expect(find.text('alex@pragyu.test'), findsOneWidget);
     expect(find.text('Pragyu Demo Institute'), findsWidgets);
     expect(find.textContaining('STU-101'), findsOneWidget);
+    expect(find.text('Learning'), findsOneWidget);
+    expect(find.text('Exams'), findsOneWidget);
+    expect(find.text('Organisation'), findsWidgets);
+    expect(find.text('Attendance'), findsOneWidget);
+    expect(find.text('Account'), findsOneWidget);
+    expect(find.text('More'), findsOneWidget);
     expect(find.text('Notification preferences'), findsOneWidget);
     expect(find.text('Help & About'), findsOneWidget);
-    expect(find.text('Switch institute'), findsOneWidget);
+    expect(find.text('About Pragyu'), findsNothing);
+    expect(find.text('Switch organisation'), findsOneWidget);
+    expect(find.text('Exam Series'), findsOneWidget);
+    expect(find.text('Exam Workspace'), findsNothing);
     expect(find.text('Logout'), findsWidgets);
 
     await tester.ensureVisible(find.text('Notification preferences'));
@@ -168,6 +178,41 @@ void main() {
     await tester.tap(find.text('Notification preferences'));
     await tester.pumpAndSettle();
     expect(find.text('Notification preferences page'), findsOneWidget);
+  });
+
+  testWidgets('S-70 individual workspace hides attendance', (tester) async {
+    final fake = _FakeMe(
+      const MeSnapshot(
+        user: AuthUser(
+          id: 'u1',
+          email: 'solo@pragyu.test',
+          firstName: 'Solo',
+        ),
+        organizationName: 'My Learning',
+        organizationType: 'individual',
+        userProfile: UserProfileSummary(
+          id: 'up1',
+          displayName: 'Solo Learner',
+        ),
+      ),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: MeScreen(
+          meRepository: fake,
+          homeRepository: _FakeHome(),
+          alertsRepository: _FakeAlerts(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Workspace'), findsOneWidget);
+    expect(find.text('Individual'), findsWidgets);
+    expect(find.text('Attendance'), findsNothing);
+    expect(find.text('Join organisation'), findsOneWidget);
   });
 
   testWidgets('S-70 edits display name and phone', (tester) async {

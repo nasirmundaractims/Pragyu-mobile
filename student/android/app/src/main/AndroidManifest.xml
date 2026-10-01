@@ -33,6 +33,28 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- Custom scheme: pragyu://reset-password / pragyu://verify-email -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="pragyu" android:host="reset-password"/>
+                <data android:scheme="pragyu" android:host="verify-email"/>
+            </intent-filter>
+            <!-- HTTPS web/email links (same paths as public/student web). -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="https" android:host="student.pragyu.com" android:pathPrefix="/reset-password"/>
+                <data android:scheme="https" android:host="student.pragyu.com" android:pathPrefix="/verify-email"/>
+                <data android:scheme="https" android:host="pragyu.com" android:pathPrefix="/reset-password"/>
+                <data android:scheme="https" android:host="pragyu.com" android:pathPrefix="/verify-email"/>
+                <data android:scheme="https" android:host="www.pragyu.com" android:pathPrefix="/reset-password"/>
+                <data android:scheme="https" android:host="www.pragyu.com" android:pathPrefix="/verify-email"/>
+                <data android:scheme="https" android:host="app.pragyu.com" android:pathPrefix="/reset-password"/>
+                <data android:scheme="https" android:host="app.pragyu.com" android:pathPrefix="/verify-email"/>
+            </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->

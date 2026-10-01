@@ -41,7 +41,7 @@ void main() {
     await AppConfig.load();
   });
 
-  testWidgets('S-06 shows Learn / Tests / Alerts tips', (tester) async {
+  testWidgets('S-06 shows Learn / Practice / Alerts tips', (tester) async {
     final store = MemoryOnboardingStore();
     await tester.pumpWidget(
       MaterialApp(
@@ -60,7 +60,7 @@ void main() {
 
     await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
-    expect(find.text('Tests'), findsOneWidget);
+    expect(find.text('Practice'), findsOneWidget);
 
     await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
@@ -71,7 +71,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(store.completed, isTrue);
-    expect(find.text('KEEP GOING'), findsOneWidget);
+    expect(find.byType(StudentShell), findsOneWidget);
+    expect(find.text('Home'), findsWidgets);
   });
 
   testWidgets('S-06 skip marks complete and opens home', (tester) async {
@@ -92,7 +93,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(store.completed, isTrue);
-    expect(find.text('KEEP GOING'), findsOneWidget);
+    expect(find.byType(StudentShell), findsOneWidget);
+    expect(find.text('Home'), findsWidgets);
   });
 
   testWidgets('S-06 skips slides when already completed', (tester) async {
@@ -107,6 +109,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Skip'), findsNothing);
-    expect(find.text('KEEP GOING'), findsOneWidget);
+    expect(find.byType(StudentShell), findsOneWidget);
+    expect(find.text('Home'), findsWidgets);
   });
 }

@@ -718,7 +718,8 @@ class _BookmarksList extends StatelessWidget {
       return const _EmptyCard(
         icon: Icons.bookmark_outline,
         title: 'No bookmarks yet',
-        body: 'Bookmark lessons, PDFs, and videos while learning to find them here.',
+        body:
+            'Open a lesson or PDF/video material and tap the bookmark icon to save it here.',
       );
     }
     return Column(

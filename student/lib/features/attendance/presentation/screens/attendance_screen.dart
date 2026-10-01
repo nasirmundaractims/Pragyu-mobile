@@ -1,20 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'package:student_mobile/app/theme/student_hub_colors.dart';
-import 'package:student_mobile/app/widgets/student_app_header.dart';
+import 'package:student_mobile/app/router/app_router.dart';
+import 'package:student_mobile/app/widgets/student_screen_kit.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
+import 'package:student_mobile/core/storage/platform_stores.dart';
 import 'package:student_mobile/features/attendance/data/attendance_repository.dart';
 import 'package:student_mobile/features/attendance/domain/attendance_models.dart';
+import 'package:student_mobile/features/organization/data/tenant_store.dart';
 
 /// S-68 My Attendance — present, absent, late, and excused marks.
 class AttendanceScreen extends StatefulWidget {
   const AttendanceScreen({
     super.key,
     this.attendanceRepository,
+    this.tenantStore,
   });
 
   final AttendanceGateway? attendanceRepository;
+  final TenantStore? tenantStore;
 
   @override
   State<AttendanceScreen> createState() => _AttendanceScreenState();
@@ -23,10 +27,13 @@ class AttendanceScreen extends StatefulWidget {
 class _AttendanceScreenState extends State<AttendanceScreen> {
   late final AttendanceGateway _repo =
       widget.attendanceRepository ?? AttendanceRepository();
+  late final TenantStore _tenant =
+      widget.tenantStore ?? createTenantStore();
 
   bool _loading = true;
   String? _error;
   bool _missingProfile = false;
+  bool _individualWorkspace = false;
   AttendanceSummary? _summary;
 
   @override
@@ -40,8 +47,20 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       _loading = true;
       _error = null;
       _missingProfile = false;
+      _individualWorkspace = false;
     });
     try {
+      final orgType = await _tenant.readActiveOrganizationType();
+      if (orgType == 'individual') {
+        if (!mounted) return;
+        setState(() {
+          _loading = false;
+          _individualWorkspace = true;
+          _summary = null;
+        });
+        return;
+      }
+
       final summary = await _repo.loadSummary();
       if (!mounted) return;
       setState(() {
@@ -75,66 +94,83 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       value: SystemUiOverlayStyle.dark,
       child: StudentHubPage(
         title: 'Attendance',
-        body: _loading && summary == null && !_missingProfile && _error == null
-              ? const Center(
-                  child: CircularProgressIndicator(color: StudentHubColors.blue),
-                )
-              : _missingProfile
-                  ? _MissingProfileBody(message: _error ?? 'Link a student profile to view your attendance.')
-                  : _error != null && summary == null
-                      ? _ErrorBody(message: _error!, onRetry: _load)
-                      : RefreshIndicator(
-                          color: StudentHubColors.blue,
-                          onRefresh: _load,
-                          child: SingleChildScrollView(
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                const Text(
-                                  'See present, absent, late, and excused marks from your academy.',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: StudentHubColors.muted,
-                                    height: 1.35,
+        body: _loading &&
+                summary == null &&
+                !_missingProfile &&
+                !_individualWorkspace &&
+                _error == null
+            ? const AppLoadingState(padding: EdgeInsets.zero)
+            : _individualWorkspace
+                ? AppEmptyState(
+                    icon: Icons.fact_check_outlined,
+                    title: 'Attendance is for organisations',
+                    message:
+                        'You’re in an Individual workspace. Join an organisation to see academy attendance.',
+                    actionLabel: 'Join organisation',
+                    onAction: () => Navigator.of(context)
+                        .pushNamed(AppRoutes.orgCodeEntry),
+                  )
+                : _missingProfile
+                    ? AppEmptyState(
+                        icon: Icons.person_outline,
+                        title: 'Student profile needed',
+                        message: _error ??
+                            'Link a student profile to view your attendance.',
+                      )
+                    : _error != null && summary == null
+                        ? Center(
+                            child: AppErrorState(
+                              title: "Couldn't load attendance",
+                              message: _error!,
+                              onRetry: _load,
+                            ),
+                          )
+                        : RefreshIndicator(
+                            color: StudentHubColors.blue,
+                            onRefresh: _load,
+                            child: SingleChildScrollView(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              padding:
+                                  const EdgeInsets.fromLTRB(16, 8, 16, 28),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  const Text(
+                                    'See present, absent, late, and excused marks from your academy.',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: StudentHubColors.muted,
+                                      height: 1.35,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 14),
-                                if (summary != null) ...[
-                                  _StatsGrid(summary: summary),
-                                  const SizedBox(height: 18),
-                                  const Row(
-                                    children: [
-                                      Icon(
-                                        Icons.event_available_outlined,
-                                        size: 18,
-                                        color: StudentHubColors.blue,
-                                      ),
-                                      SizedBox(width: 8),
-                                      Text(
-                                        'Recent marks',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w700,
-                                          color: StudentHubColors.ink,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 10),
-                                  if (summary.recentMarks.isEmpty)
-                                    const _EmptyRecords()
-                                  else
-                                    for (final record in summary.recentMarks) ...[
-                                      _RecordRow(record: record),
-                                      const SizedBox(height: 8),
-                                    ],
+                                  const SizedBox(height: 14),
+                                  if (summary != null) ...[
+                                    _StatsGrid(summary: summary),
+                                    const SizedBox(height: 18),
+                                    const StudentSectionHeader(
+                                      title: 'Recent marks',
+                                      leading: Icons.event_available_outlined,
+                                      compact: true,
+                                    ),
+                                    const SizedBox(height: 10),
+                                    if (summary.recentMarks.isEmpty)
+                                      const AppEmptyState(
+                                        icon: Icons.event_busy_outlined,
+                                        title: 'No attendance records yet',
+                                        message:
+                                            'When your academy marks attendance, it will appear here.',
+                                      )
+                                    else
+                                      for (final record
+                                          in summary.recentMarks) ...[
+                                        _RecordRow(record: record),
+                                        const SizedBox(height: 8),
+                                      ],
+                                  ],
                                 ],
-                              ],
+                              ),
                             ),
                           ),
-                        ),
       ),
     );
   }
@@ -191,7 +227,8 @@ class _StatsGrid extends StatelessWidget {
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
                     color: StudentHubColors.surface,
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius:
+                        BorderRadius.circular(StudentHubColors.cardRadius),
                     border: Border.all(color: StudentHubColors.border),
                   ),
                   child: Column(
@@ -282,7 +319,10 @@ class _RecordRow extends StatelessWidget {
                 record.reason!,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 12, color: StudentHubColors.muted),
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: StudentHubColors.muted,
+                ),
               ),
             ),
           ],
@@ -304,107 +344,5 @@ class _RecordRow extends StatelessWidget {
       case AttendanceStatus.other:
         return (StudentHubColors.blueSoft, StudentHubColors.blue);
     }
-  }
-}
-
-class _EmptyRecords extends StatelessWidget {
-  const _EmptyRecords();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 28, 16, 28),
-      decoration: BoxDecoration(
-        color: StudentHubColors.surface,
-        borderRadius: BorderRadius.circular(StudentHubColors.cardRadius),
-        border: Border.all(
-          color: const Color(0x33142033),
-          style: BorderStyle.solid,
-        ),
-      ),
-      child: const Column(
-        children: [
-          Text(
-            'No attendance records yet',
-            style: TextStyle(
-              fontWeight: FontWeight.w700,
-              color: StudentHubColors.ink,
-            ),
-          ),
-          SizedBox(height: 6),
-          Text(
-            'When your academy marks attendance, it will appear here.',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 13, color: StudentHubColors.muted),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MissingProfileBody extends StatelessWidget {
-  const _MissingProfileBody({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.person_outline, size: 40, color: StudentHubColors.blue),
-            const SizedBox(height: 12),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: StudentHubColors.muted),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ErrorBody extends StatelessWidget {
-  const _ErrorBody({required this.message, required this.onRetry});
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              "Couldn't load attendance",
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                color: StudentHubColors.ink,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: StudentHubColors.muted),
-            ),
-            const SizedBox(height: 12),
-            OutlinedButton(
-              onPressed: onRetry,
-              child: const Text('Try again'),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }

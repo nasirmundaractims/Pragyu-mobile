@@ -5,6 +5,8 @@ import 'package:student_mobile/core/config/app_config.dart';
 import 'package:student_mobile/features/learn/data/learn_repository.dart';
 import 'package:student_mobile/features/learn/domain/learn_models.dart';
 import 'package:student_mobile/features/learn/presentation/screens/lesson_player_screen.dart';
+import 'package:student_mobile/features/notes_bookmarks/data/notes_bookmarks_repository.dart';
+import 'package:student_mobile/features/notes_bookmarks/domain/notes_bookmarks_models.dart';
 
 class _FakeLearn implements LearnGateway {
   bool completeCalled = false;
@@ -61,6 +63,50 @@ class _FakeLearn implements LearnGateway {
   }
 }
 
+class _FakeBookmarks implements NotesBookmarksGateway {
+  NotesBookmarksSnapshot snapshot;
+  int addCalls = 0;
+  int removeCalls = 0;
+
+  _FakeBookmarks([this.snapshot = const NotesBookmarksSnapshot()]);
+
+  @override
+  Future<NotesBookmarksSnapshot> loadLibrary() async => snapshot;
+
+  @override
+  Future<StudyNote> createNote({required String body, String? title}) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> deleteNote(String noteId) async {}
+
+  @override
+  Future<ContentBookmark> addBookmark({
+    required String bookmarkableType,
+    required String bookmarkableId,
+    String? title,
+  }) async {
+    addCalls += 1;
+    final bookmark = ContentBookmark(
+      id: 'bm-1',
+      bookmarkableType: bookmarkableType,
+      bookmarkableId: bookmarkableId,
+      title: title,
+    );
+    snapshot = snapshot.copyWith(bookmarks: [bookmark, ...snapshot.bookmarks]);
+    return bookmark;
+  }
+
+  @override
+  Future<void> removeBookmark(String bookmarkId) async {
+    removeCalls += 1;
+    snapshot = snapshot.copyWith(
+      bookmarks: snapshot.bookmarks.where((b) => b.id != bookmarkId).toList(),
+    );
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -79,6 +125,7 @@ void main() {
             courseId: 'c1',
           ),
           learnRepository: _FakeLearn(),
+          bookmarksRepository: _FakeBookmarks(),
         ),
       ),
     );
@@ -108,6 +155,7 @@ void main() {
         home: LessonPlayerScreen(
           args: const LessonDetailArgs(lessonId: 'l2', title: 'Preamble'),
           learnRepository: fake,
+          bookmarksRepository: _FakeBookmarks(),
         ),
       ),
     );
@@ -119,6 +167,28 @@ void main() {
     expect(fake.completeCalled, isTrue);
     expect(find.text('Completed'), findsWidgets);
     expect(find.text('Lesson marked complete.'), findsOneWidget);
+  });
+
+  testWidgets('S-22 bookmark icon saves lesson', (tester) async {
+    final bookmarks = _FakeBookmarks();
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: LessonPlayerScreen(
+          args: const LessonDetailArgs(lessonId: 'l2', title: 'Preamble'),
+          learnRepository: _FakeLearn(),
+          bookmarksRepository: bookmarks,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Save bookmark'));
+    await tester.pumpAndSettle();
+
+    expect(bookmarks.addCalls, 1);
+    expect(find.text('Saved to bookmarks'), findsOneWidget);
+    expect(find.byTooltip('Remove bookmark'), findsOneWidget);
   });
 
   test('stripHtml converts basic tags', () {

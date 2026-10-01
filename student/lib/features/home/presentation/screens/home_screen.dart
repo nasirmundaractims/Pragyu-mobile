@@ -8,6 +8,8 @@ import 'package:student_mobile/app/theme/app_theme.dart';
 import 'package:student_mobile/app/widgets/app_network_image.dart';
 import 'package:student_mobile/app/widgets/pragyu_logo.dart';
 import 'package:student_mobile/features/alerts/data/alerts_repository.dart';
+import 'package:student_mobile/features/announcements/data/announcements_repository.dart';
+import 'package:student_mobile/features/announcements/domain/announcements_models.dart';
 import 'package:student_mobile/features/catalog/data/marketplace_access_service.dart';
 import 'package:student_mobile/features/home/data/home_repository.dart';
 import 'package:student_mobile/features/home/domain/greeting.dart';
@@ -17,6 +19,8 @@ import 'package:student_mobile/features/learn/domain/learn_models.dart';
 import 'package:student_mobile/features/learn/presentation/screens/my_learning_screen.dart';
 import 'package:student_mobile/features/me/data/me_repository.dart';
 import 'package:student_mobile/features/me/presentation/screens/me_screen.dart';
+import 'package:student_mobile/features/recommendations/data/recommendations_repository.dart';
+import 'package:student_mobile/features/recommendations/domain/recommendations_models.dart';
 import 'package:student_mobile/features/search/presentation/widgets/quick_search_sheet.dart';
 import 'package:student_mobile/features/tests/data/tests_repository.dart';
 import 'package:student_mobile/features/tests/presentation/screens/ai_evaluation_hub_screen.dart';
@@ -27,9 +31,13 @@ class HomeScreen extends StatefulWidget {
   const HomeScreen({
     super.key,
     this.homeRepository,
+    this.announcementsRepository,
+    this.recommendationsRepository,
   });
 
   final HomeGateway? homeRepository;
+  final AnnouncementsGateway? announcementsRepository;
+  final RecommendationsGateway? recommendationsRepository;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -43,12 +51,18 @@ class _HomeScreenState extends State<HomeScreen> {
   static const _heroAsset = 'assets/images/auth/hero_home.png';
 
   late final HomeGateway _home = widget.homeRepository ?? HomeRepository();
+  late final AnnouncementsGateway _announcements =
+      widget.announcementsRepository ?? AnnouncementsRepository();
+  late final RecommendationsGateway _recommendations =
+      widget.recommendationsRepository ?? RecommendationsRepository();
   final MarketplaceAccessService _marketplace =
       MarketplaceAccessService.instance;
 
   bool _loading = true;
   String? _error;
   HomeSnapshot? _snapshot;
+  List<AnnouncementItem> _noticeItems = const [];
+  RecommendationItem? _topRecommendation;
 
   @override
   void initState() {
@@ -81,6 +95,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _snapshot = snapshot;
         _loading = false;
       });
+      await _loadPulse();
     } catch (_) {
       if (!mounted) return;
       setState(() {
@@ -88,6 +103,41 @@ class _HomeScreenState extends State<HomeScreen> {
         _loading = false;
       });
     }
+  }
+
+  /// Notices + recommendations are non-blocking; empty on failure.
+  Future<void> _loadPulse() async {
+    final noticesFuture = _announcements
+        .loadAnnouncements()
+        .then<List<AnnouncementItem>>(
+          _pickNotices,
+          onError: (_) => const <AnnouncementItem>[],
+        );
+    final recFuture = _recommendations
+        .loadRecommendations()
+        .then<RecommendationItem?>(
+      (snap) {
+        final items = snap.filtered();
+        return items.isEmpty ? null : items.first;
+      },
+      onError: (_) => null,
+    );
+
+    final notices = await noticesFuture;
+    final rec = await recFuture;
+    if (!mounted) return;
+    setState(() {
+      _noticeItems = notices;
+      _topRecommendation = rec;
+    });
+  }
+
+  static List<AnnouncementItem> _pickNotices(AnnouncementsSnapshot snapshot) {
+    final ordered = <AnnouncementItem>[
+      ...snapshot.pinned,
+      ...snapshot.unpinned,
+    ];
+    return ordered.take(2).toList(growable: false);
   }
 
   void _openTab(int index) => StudentShell.of(context)?.goToTab(index);
@@ -187,6 +237,8 @@ class _HomeScreenState extends State<HomeScreen> {
             greeting: '$greeting, $first! 👋',
             subtitle:
                 'Stay consistent. A brighter you is closer than you think.',
+            workspaceTitle: snapshot.workspaceTitle,
+            workspaceKindLabel: snapshot.workspaceKindLabel,
             narrow: narrow,
             short: short,
           ),
@@ -248,6 +300,43 @@ class _HomeScreenState extends State<HomeScreen> {
             },
             onEmpty: () => _openTab(1),
           ),
+          if (_noticeItems.isNotEmpty) ...[
+            SizedBox(height: short ? 16 : 20),
+            _SectionHeader(
+              title: 'Notices',
+              actionLabel: 'See All',
+              onAction: () =>
+                  Navigator.of(context).pushNamed(AppRoutes.announcements),
+            ),
+            const SizedBox(height: 12),
+            _HomeNoticesStrip(
+              items: _noticeItems,
+              onOpen: (item) {
+                Navigator.of(context).pushNamed(
+                  AppRoutes.announcementDetail,
+                  arguments: AnnouncementDetailArgs(
+                    announcementId: item.id,
+                    item: item,
+                  ),
+                );
+              },
+            ),
+          ],
+          if (_topRecommendation != null) ...[
+            SizedBox(height: short ? 16 : 20),
+            _SectionHeader(
+              title: 'Recommended for you',
+              actionLabel: 'See All',
+              onAction: () =>
+                  Navigator.of(context).pushNamed(AppRoutes.recommendations),
+            ),
+            const SizedBox(height: 12),
+            _HomeRecommendationCard(
+              item: _topRecommendation!,
+              onOpen: () =>
+                  Navigator.of(context).pushNamed(AppRoutes.recommendations),
+            ),
+          ],
           SizedBox(height: short ? 16 : 20),
           _SectionHeader(
             title: 'Upcoming Schedule',
@@ -395,12 +484,16 @@ class _GreetingHero extends StatelessWidget {
   const _GreetingHero({
     required this.greeting,
     required this.subtitle,
+    required this.workspaceTitle,
+    required this.workspaceKindLabel,
     required this.narrow,
     required this.short,
   });
 
   final String greeting;
   final String subtitle;
+  final String workspaceTitle;
+  final String workspaceKindLabel;
   final bool narrow;
   final bool short;
 
@@ -420,6 +513,11 @@ class _GreetingHero extends StatelessWidget {
             height: 1.15,
             letterSpacing: -0.3,
           ),
+        ),
+        const SizedBox(height: 8),
+        _WorkspaceChromeChip(
+          title: workspaceTitle,
+          kindLabel: workspaceKindLabel,
         ),
         const SizedBox(height: 8),
         Text(
@@ -471,6 +569,60 @@ class _GreetingHero extends StatelessWidget {
         const SizedBox(width: 8),
         hero,
       ],
+    );
+  }
+}
+
+class _WorkspaceChromeChip extends StatelessWidget {
+  const _WorkspaceChromeChip({
+    required this.title,
+    required this.kindLabel,
+  });
+
+  final String title;
+  final String kindLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final isIndividual = kindLabel.toLowerCase() == 'individual';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: isIndividual
+            ? const Color(0xFFF0EBFF)
+            : const Color(0xFFE8F1FF),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isIndividual
+                ? Icons.person_outline_rounded
+                : Icons.apartment_outlined,
+            size: 14,
+            color: isIndividual
+                ? const Color(0xFF7B61FF)
+                : _HomeScreenState._blue,
+          ),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              '$title · $kindLabel',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontFamily: AppTheme.fontFamily,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: isIndividual
+                    ? const Color(0xFF7B61FF)
+                    : _HomeScreenState._blue,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1452,12 +1604,265 @@ class _MotivationBanner extends StatelessWidget {
   }
 }
 
+class _HomeNoticesStrip extends StatelessWidget {
+  const _HomeNoticesStrip({
+    required this.items,
+    required this.onOpen,
+  });
+
+  final List<AnnouncementItem> items;
+  final ValueChanged<AnnouncementItem> onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        for (var i = 0; i < items.length; i++) ...[
+          if (i > 0) const SizedBox(height: 8),
+          _HomeNoticeTile(item: items[i], onTap: () => onOpen(items[i])),
+        ],
+      ],
+    );
+  }
+}
+
+class _HomeNoticeTile extends StatelessWidget {
+  const _HomeNoticeTile({
+    required this.item,
+    required this.onTap,
+  });
+
+  final AnnouncementItem item;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final preview = item.plainBody;
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE6EAF2)),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: item.isPinned
+                      ? const Color(0xFFFFF2E8)
+                      : const Color(0xFFE8F0FF),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  item.isPinned
+                      ? Icons.push_pin_rounded
+                      : Icons.campaign_outlined,
+                  size: 18,
+                  color: item.isPinned
+                      ? const Color(0xFFF08A3C)
+                      : _HomeScreenState._blue,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            item.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontFamily: AppTheme.fontFamily,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 14,
+                              color: _HomeScreenState._ink,
+                            ),
+                          ),
+                        ),
+                        if (item.isPinned)
+                          const Padding(
+                            padding: EdgeInsets.only(left: 6),
+                            child: Text(
+                              'Pinned',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFFF08A3C),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    if (preview.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        preview,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontFamily: AppTheme.fontFamily,
+                          fontSize: 12.5,
+                          height: 1.35,
+                          color: _HomeScreenState._muted,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 4),
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: _HomeScreenState._muted,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeRecommendationCard extends StatelessWidget {
+  const _HomeRecommendationCard({
+    required this.item,
+    required this.onOpen,
+  });
+
+  final RecommendationItem item;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: onOpen,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE6EAF2)),
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFFF8FBFF), Colors.white],
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE8F0FF),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      item.isHighPriority ? 'Priority' : item.whenLabel,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: _HomeScreenState._blue,
+                      ),
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    '${item.estimatedMinutes} min',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: _HomeScreenState._muted,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Text(
+                item.title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontFamily: AppTheme.fontFamily,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: _HomeScreenState._ink,
+                  height: 1.3,
+                ),
+              ),
+              if (item.reason.trim().isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Text(
+                  item.reason,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontFamily: AppTheme.fontFamily,
+                    fontSize: 13,
+                    height: 1.35,
+                    color: _HomeScreenState._muted,
+                  ),
+                ),
+              ],
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Text(
+                    item.primaryAction.label,
+                    style: const TextStyle(
+                      fontFamily: AppTheme.fontFamily,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 13,
+                      color: _HomeScreenState._blue,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  const Icon(
+                    Icons.arrow_forward_rounded,
+                    size: 16,
+                    color: _HomeScreenState._blue,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Inherited access so Home shortcuts can switch bottom tabs.
 class StudentShell extends StatefulWidget {
   const StudentShell({
     super.key,
     this.initialIndex = 0,
     this.homeRepository,
+    this.announcementsRepository,
+    this.recommendationsRepository,
     this.learnRepository,
     this.testsRepository,
     this.alertsRepository,
@@ -1466,6 +1871,8 @@ class StudentShell extends StatefulWidget {
 
   final int initialIndex;
   final HomeGateway? homeRepository;
+  final AnnouncementsGateway? announcementsRepository;
+  final RecommendationsGateway? recommendationsRepository;
   final LearnGateway? learnRepository;
   final TestsGateway? testsRepository;
   final AlertsGateway? alertsRepository;
@@ -1513,7 +1920,11 @@ class StudentShellState extends State<StudentShell> {
     }
     switch (index) {
       case 0:
-        return HomeScreen(homeRepository: widget.homeRepository);
+        return HomeScreen(
+          homeRepository: widget.homeRepository,
+          announcementsRepository: widget.announcementsRepository,
+          recommendationsRepository: widget.recommendationsRepository,
+        );
       case 1:
         return MyLearningScreen(
           key: const ValueKey('learn-screen-v3'),

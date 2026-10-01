@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:student_mobile/app/router/app_router.dart';
+import 'package:student_mobile/app/share/pragyu_share.dart';
 import 'package:student_mobile/app/theme/student_hub_colors.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/features/home/domain/due_state.dart';
@@ -128,6 +129,21 @@ class _AssessmentDetailScreenState extends State<AssessmentDetailScreen> {
         appBar: AppBar(
           backgroundColor: StudentHubColors.pageBg,
           title: Text(title),
+          actions: [
+            IconButton(
+              tooltip: 'Share exam',
+              onPressed: () {
+                final id = _snapshot?.assessment.id ?? widget.args.assessmentId;
+                if (id.trim().isEmpty) return;
+                PragyuShare.shareAssessment(
+                  assessmentId: id,
+                  title: title,
+                  detail: _snapshot?.assessment.due?.label,
+                );
+              },
+              icon: const Icon(Icons.ios_share_rounded),
+            ),
+          ],
         ),
         body: SafeArea(
           child: RefreshIndicator(

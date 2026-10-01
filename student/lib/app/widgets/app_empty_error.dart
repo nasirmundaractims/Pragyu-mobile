@@ -85,11 +85,15 @@ class AppErrorState extends StatelessWidget {
   const AppErrorState({
     super.key,
     required this.message,
+    this.title,
     this.onRetry,
+    this.retryLabel = 'Try again',
   });
 
   final String message;
+  final String? title;
   final VoidCallback? onRetry;
+  final String retryLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -98,12 +102,27 @@ class AppErrorState extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          if (title != null && title!.trim().isNotEmpty) ...[
+            Text(
+              title!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontFamily: AppTheme.fontFamily,
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                color: StudentHubColors.ink,
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
           Text(
             message,
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: AppTheme.fontFamily,
-              color: StudentHubColors.danger,
+              color: title == null
+                  ? StudentHubColors.danger
+                  : StudentHubColors.muted,
               height: 1.45,
             ),
           ),
@@ -118,7 +137,7 @@ class AppErrorState extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: const Text('Try again'),
+              child: Text(retryLabel),
             ),
           ],
         ],

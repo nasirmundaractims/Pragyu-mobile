@@ -13,15 +13,20 @@ class StudentAppHeader extends StatelessWidget {
     required this.title,
     this.onBack,
     this.actions,
+    this.showBack = true,
   });
 
   final String title;
   final VoidCallback? onBack;
   final List<Widget>? actions;
 
+  /// When false, hides the back control even if the route can pop.
+  final bool showBack;
+
   @override
   Widget build(BuildContext context) {
-    final canPop = onBack != null || Navigator.of(context).canPop();
+    final canPop =
+        showBack && (onBack != null || Navigator.of(context).canPop());
     return Padding(
       padding: const EdgeInsets.fromLTRB(4, 4, 8, 8),
       child: Row(
@@ -67,12 +72,14 @@ class StudentHubPage extends StatelessWidget {
     required this.body,
     this.onBack,
     this.actions,
+    this.showBack = true,
   });
 
   final String title;
   final Widget body;
   final VoidCallback? onBack;
   final List<Widget>? actions;
+  final bool showBack;
 
   @override
   Widget build(BuildContext context) {
@@ -85,6 +92,7 @@ class StudentHubPage extends StatelessWidget {
               title: title,
               onBack: onBack,
               actions: actions,
+              showBack: showBack,
             ),
             Expanded(child: body),
           ],

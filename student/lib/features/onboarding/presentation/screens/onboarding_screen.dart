@@ -9,7 +9,7 @@ import 'package:student_mobile/features/onboarding/data/onboarding_store.dart';
 import 'package:student_mobile/features/onboarding/data/prefs_onboarding_store.dart';
 import 'package:student_mobile/features/onboarding/presentation/widgets/onboarding_slide_view.dart';
 
-/// S-06 Onboarding tips — optional once; Learn / Tests / Alerts.
+/// S-06 Onboarding tips — shown once after first auth; Learn / Practice / Alerts.
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({
     super.key,

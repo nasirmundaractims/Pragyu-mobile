@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:student_mobile/app/share/pragyu_copy.dart';
+import 'package:student_mobile/app/share/pragyu_share.dart';
 import 'package:student_mobile/app/theme/app_theme.dart';
 
 /// Builds a public share URL compatible with student-web `/share/ai?d=…`.
@@ -224,6 +225,19 @@ Future<void> showMentorShareSheet(
                           '&body=${Uri.encodeComponent(body)}',
                         ),
                       );
+                    },
+                  ),
+                  _ShareChannelChip(
+                    label: 'More…',
+                    color: accent,
+                    icon: Icons.ios_share_rounded,
+                    onTap: () async {
+                      await PragyuShare.shareMentor(
+                        question: question,
+                        link: link,
+                      );
+                      if (!sheetContext.mounted) return;
+                      Navigator.pop(sheetContext);
                     },
                   ),
                   _ShareChannelChip(

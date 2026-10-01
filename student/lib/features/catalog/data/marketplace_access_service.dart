@@ -3,7 +3,9 @@ import 'package:flutter/foundation.dart';
 import 'package:student_mobile/features/catalog/data/marketplace_access_repository.dart';
 import 'package:student_mobile/features/catalog/domain/marketplace_access_models.dart';
 
-/// App-wide marketplace visibility cache (TTL ~60s), fail-open on errors.
+/// App-wide marketplace visibility cache (TTL ~60s).
+///
+/// Slice 0.3: fail-closed on errors — never open the store when access is unknown.
 class MarketplaceAccessService extends ChangeNotifier {
   MarketplaceAccessService({MarketplaceAccessGateway? gateway})
       : _gateway = gateway ?? MarketplaceAccessRepository();
@@ -52,8 +54,7 @@ class MarketplaceAccessService extends ChangeNotifier {
       final next = await _gateway.fetch();
       _access = next;
     } catch (_) {
-      // Fail-open when offline / config missing (e.g. widget tests).
-      _access = MarketplaceAccess.unknownOpen;
+      _access = MarketplaceAccess.unknownClosed;
     }
     _fetchedAt = DateTime.now();
     notifyListeners();

@@ -135,8 +135,15 @@ class ResultFeedbackArgs {
 }
 
 enum SubmissionPipelineStage {
+  /// Media / OCR / initial processing.
   processing,
+
+  /// Waiting in AI queue (`ready_for_evaluation`).
+  queued,
+
+  /// AI scoring in progress (`evaluating`).
   evaluating,
+
   ready,
   failed,
 }
@@ -167,18 +174,64 @@ abstract final class SubmissionPipeline {
     }
   }
 
+  static bool isQueued(String status) =>
+      status.toLowerCase() == 'ready_for_evaluation';
+
+  static bool isEvaluating(String status) =>
+      status.toLowerCase() == 'evaluating';
+
+  static bool hasFailureReason(String? failureReason) =>
+      failureReason != null && failureReason.trim().isNotEmpty;
+
+  /// Pending statuses that still carry a server `failure_reason` need a
+  /// blocked UI (not an endless spinner).
+  static bool isBlocked(String status, String? failureReason) =>
+      isPending(status) && hasFailureReason(failureReason);
+
   static SubmissionPipelineStage stageFor(String status) {
     final value = status.toLowerCase();
     if (isFailed(value)) return SubmissionPipelineStage.failed;
     if (isReady(value)) return SubmissionPipelineStage.ready;
     switch (value) {
       case 'ready_for_evaluation':
+        return SubmissionPipelineStage.queued;
       case 'evaluating':
         return SubmissionPipelineStage.evaluating;
       default:
         return SubmissionPipelineStage.processing;
     }
   }
+
+  /// Short student-facing phase name for the hero.
+  static String phaseTitle(String status, {String? failureReason}) {
+    if (isFailed(status)) return 'Evaluation failed';
+    if (isReady(status)) return 'Feedback ready';
+    if (isBlocked(status, failureReason)) return 'Waiting on a fix';
+    switch (status.toLowerCase()) {
+      case 'media_processing':
+      case 'ocr_processing':
+        return 'Reading your pages';
+      case 'ready_for_evaluation':
+        return 'Queued for AI';
+      case 'evaluating':
+        return 'AI evaluating';
+      case 'pending':
+        return 'Submitted';
+      default:
+        return submissionStatusLabel(status);
+    }
+  }
+}
+
+extension SubmissionStatusPayloadHonesty on SubmissionStatusPayload {
+  bool get isQueued => SubmissionPipeline.isQueued(status);
+
+  bool get isEvaluating => SubmissionPipeline.isEvaluating(status);
+
+  bool get isBlocked => SubmissionPipeline.isBlocked(status, failureReason);
+
+  String get phaseTitle =>
+      SubmissionPipeline.phaseTitle(status, failureReason: failureReason);
 }
 
 extension SubmissionSummaryStatusX on SubmissionSummary {

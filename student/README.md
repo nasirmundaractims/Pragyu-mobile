@@ -181,10 +181,10 @@ lib/
 - **S-01…S-06** — auth entry complete
 - **S-03 Sign in** — email/password (+ MFA), org picker next; unverified email → verify screen
 - **S-04 Create account** — register with phone OTP, terms, org picker / email verify
-- **S-04 Forgot password** — request reset email; in-app reset with token
+- **S-04 Forgot password** — request reset email; in-app reset with token; email/app deep links open Reset / Verify screens (`pragyu://` + https paths)
 - **Email verify** — confirm `id`+`token` or resend verification
 - **Reset password** — email + token + new password (from forgot or email link args)
-- **S-10 Home** — implemented
+- **S-10 Home** — greeting, plan, continue; workspace chip (Organisation / Individual)
 - **S-11 Today detail** — implemented
 - **S-12 Quick search** — implemented (sheet: courses / tests / materials)
 - **S-20 My learning** — implemented (Learn tab: enrolled courses)
@@ -193,9 +193,9 @@ lib/
 - **S-23 Lectures list** — implemented (live / upcoming / recorded)
 - **S-24 Live lobby** — implemented (countdown, check-in / join)
 - **S-25 Live room** — LiveKit media + chat + heartbeat
-- **S-26 Recorded player** — in-app video player + progress posts
+- **S-26 Recorded player** — in-app video + progress; honest empty/locked (no fake playback CTA)
 - **S-27 Study materials list** — implemented (course PDFs/notes)
-- **S-28 Material viewer** — in-app PDF/video preview + open/copy
+- **S-28 Material viewer** — PDF/video in-app; unsupported types → Open externally (no silent stub)
 - **S-29 Catalog / browse** — marketplace catalog list + detail
 - **S-73 Catalog checkout** — Buy/Enroll from detail, order summary, pay/confirm
 - **S-30 Calendar** — implemented (14-day agenda: live classes + test deadlines)
@@ -215,13 +215,13 @@ lib/
 - **S-61 Weak Topics** — mastery focus list (needs work / improving), Ask Mentor CTA, Me entry
 - **S-62 Study Planner** — weekly plans, day sessions, goals, generate week, Me entry
 - **S-63 Recommendations** — AI next actions, filters, save/dismiss, refresh generate, Me entry
-- **S-64 Notes & Bookmarks** — notes CRUD, content bookmarks, AI feedback library, Me entry
+- **S-64 Notes & Bookmarks** — notes CRUD; create/remove bookmarks from lesson + lesson materials; AI feedback library; Me entry
 - **S-65 My Performance** — analytics KPIs, AI insights, subject analysis, score trend, Me entry
 - **S-66 Exam Workspace** — practice hub, readiness, pattern-aware assessments, Me entry
 - **S-67 Question Bank** — exam series packs hub + detail (rank, Take test), Me entry
-- **S-68 My Attendance** — rate, present/absent/late/excused, recent marks, Me entry
+- **S-68 My Attendance** — org-only rate/marks; Individual sees join-org empty state (not listed in Me)
 - **S-69 Announcements** — pinned + recent institute notices, detail + mark-read, Me entry, alert deep links
-- **S-70 Me** — profile edit, study hours, account shortcuts, switch institute, logout
+- **S-70 Me** — profile + workspace badge (Organisation/Individual); Attendance hidden for Individual
 - **S-71 Settings** — password, sessions, language/timezone, trusted devices, Me entry
 - **S-75 Notification preferences** — email / in-app / SMS / WhatsApp / push channel toggles (`GET|PATCH /notifications/preferences`)
 - **S-76 Switch organization** — covered by Me “Switch institute” (same as S-05 picker)
@@ -239,6 +239,14 @@ flutter run -d chrome \
   --dart-define=API_BASE_URL=http://127.0.0.1:8000/api/v1 \
   --dart-define=STUDENT_WEB_BASE_URL=http://127.0.0.1:3002
 ```
+
+## Shared screen kit
+
+Secondary screens should use the Phase 4.1 kit instead of one-off empty /
+loading / error layouts:
+
+- Docs: [`lib/app/widgets/SCREEN_KIT.md`](lib/app/widgets/SCREEN_KIT.md)
+- Import: `package:student_mobile/app/widgets/student_screen_kit.dart`
 
 ## Store release hardening
 

@@ -82,6 +82,8 @@ class HomeSnapshot {
     this.upcomingLectures = const [],
     this.profileDisplayName,
     this.avatarUrl,
+    this.organizationName,
+    this.organizationType,
   });
 
   final AuthUser user;
@@ -93,6 +95,21 @@ class HomeSnapshot {
   final List<HomeLecture> upcomingLectures;
   final String? profileDisplayName;
   final String? avatarUrl;
+  final String? organizationName;
+  final String? organizationType;
+
+  bool get isIndividualWorkspace => organizationType == 'individual';
+
+  /// Short workspace name shown in Home chrome.
+  String get workspaceTitle {
+    if (isIndividualWorkspace) return 'My Learning';
+    final name = organizationName?.trim();
+    if (name != null && name.isNotEmpty) return name;
+    return 'Organisation';
+  }
+
+  String get workspaceKindLabel =>
+      isIndividualWorkspace ? 'Individual' : 'Organisation';
 
   HomeProgressSummary get progressOrEmpty =>
       progress ?? const HomeProgressSummary();

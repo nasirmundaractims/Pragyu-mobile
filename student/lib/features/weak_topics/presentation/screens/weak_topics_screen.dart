@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import 'package:student_mobile/app/router/app_router.dart';
 import 'package:student_mobile/app/theme/app_colors.dart';
+import 'package:student_mobile/app/widgets/student_screen_kit.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/features/weak_topics/data/weak_topics_repository.dart';
 import 'package:student_mobile/features/weak_topics/domain/weak_topics_models.dart';
@@ -81,152 +82,118 @@ class _WeakTopicsScreenState extends State<WeakTopicsScreen> {
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
-      child: Scaffold(
-        backgroundColor: AppColors.background,
-        appBar: AppBar(
-          backgroundColor: AppColors.background,
-          title: const Text('Weak Topics'),
-          actions: [
-            IconButton(
-              tooltip: 'Ask AI Mentor',
-              onPressed: _openMentor,
-              icon: const Icon(Icons.auto_awesome),
+      child: StudentHubPage(
+        title: 'Weak Topics',
+        actions: [
+          IconButton(
+            tooltip: 'Ask AI Mentor',
+            onPressed: _openMentor,
+            icon: const Icon(
+              Icons.auto_awesome,
+              color: StudentHubColors.ink,
             ),
-          ],
-        ),
-        body: SafeArea(
-          child: _loading && _snapshot == null
-              ? const Center(
-                  child: CircularProgressIndicator(color: AppColors.brand),
-                )
-              : _error != null && _snapshot == null
-                  ? _ErrorBody(message: _error!, onRetry: _load)
-                  : RefreshIndicator(
-                      color: AppColors.brand,
-                      onRefresh: _load,
-                      child: SingleChildScrollView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            if (_error != null)
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 12),
-                                child: Text(
-                                  _error!,
-                                  style: const TextStyle(
-                                    color: AppColors.danger,
-                                    height: 1.35,
-                                  ),
-                                ),
-                              ),
-                            const _HeroBanner(),
-                            const SizedBox(height: 14),
-                            if (_snapshot != null) ...[
-                              _MetricsRow(
-                                needsWork: _snapshot!.needsWorkCount,
-                                improving: _snapshot!.improvingCount,
-                                turningAround: _snapshot!.turningAroundCount,
-                                onAskMentor: _openMentor,
-                              ),
-                              const SizedBox(height: 16),
-                            ],
-                            TextField(
-                              onChanged: (value) =>
-                                  setState(() => _query = value),
-                              decoration: InputDecoration(
-                                hintText: 'Search focus topics…',
-                                prefixIcon: const Icon(Icons.search),
-                                filled: true,
-                                fillColor: AppColors.surface,
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(14),
-                                  borderSide: const BorderSide(
-                                    color: AppColors.brandSoft,
-                                  ),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(14),
-                                  borderSide: const BorderSide(
-                                    color: AppColors.brandSoft,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 18),
-                            const Text(
-                              'Your focus list',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.ink,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            const Text(
-                              'Each card explains why it is shown and what to do next.',
-                              style: TextStyle(
-                                color: AppColors.muted,
-                                height: 1.35,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            if (_filtered.isEmpty)
-                              const _EmptyFocus()
-                            else
-                              for (final topic in _filtered) ...[
-                                _TopicCard(
-                                  topic: topic,
-                                  onAskMentor: _openMentor,
-                                ),
-                                const SizedBox(height: 10),
-                              ],
-                          ],
-                        ),
-                      ),
-                    ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ErrorBody extends StatelessWidget {
-  const _ErrorBody({
-    required this.message,
-    required this.onRetry,
-  });
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            message,
-            style: const TextStyle(color: AppColors.danger, height: 1.4),
-          ),
-          const Spacer(),
-          FilledButton(
-            onPressed: onRetry,
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.brand,
-              foregroundColor: Colors.white,
-              minimumSize: const Size.fromHeight(48),
-            ),
-            child: const Text('Try again'),
           ),
         ],
+        body: _loading && _snapshot == null
+            ? const AppLoadingState(padding: EdgeInsets.zero)
+            : _error != null && _snapshot == null
+                ? Center(
+                    child: AppErrorState(
+                      message: _error!,
+                      onRetry: _load,
+                    ),
+                  )
+                : RefreshIndicator(
+                    color: StudentHubColors.blue,
+                    onRefresh: _load,
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (_error != null)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: Text(
+                                _error!,
+                                style: const TextStyle(
+                                  color: StudentHubColors.danger,
+                                  height: 1.35,
+                                ),
+                              ),
+                            ),
+                          const _HeroBanner(),
+                          const SizedBox(height: 14),
+                          if (_snapshot != null) ...[
+                            _MetricsRow(
+                              needsWork: _snapshot!.needsWorkCount,
+                              improving: _snapshot!.improvingCount,
+                              turningAround: _snapshot!.turningAroundCount,
+                              onAskMentor: _openMentor,
+                            ),
+                            const SizedBox(height: 16),
+                          ],
+                          TextField(
+                            onChanged: (value) =>
+                                setState(() => _query = value),
+                            decoration: InputDecoration(
+                              hintText: 'Search focus topics…',
+                              prefixIcon: const Icon(Icons.search),
+                              filled: true,
+                              fillColor: AppColors.surface,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(14),
+                                borderSide: const BorderSide(
+                                  color: AppColors.brandSoft,
+                                ),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(14),
+                                borderSide: const BorderSide(
+                                  color: AppColors.brandSoft,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 18),
+                          const StudentSectionHeader(
+                            title: 'Your focus list',
+                            compact: true,
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Each card explains why it is shown and what to do next.',
+                            style: TextStyle(
+                              color: AppColors.muted,
+                              height: 1.35,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          if (_filtered.isEmpty)
+                            const AppEmptyState(
+                              icon: Icons.check_circle_outline,
+                              title: 'No weak topics right now',
+                              message:
+                                  'Great news — nothing is flagged as weak. Keep practicing or take a test so we can spot new gaps.',
+                            )
+                          else
+                            for (final topic in _filtered) ...[
+                              _TopicCard(
+                                topic: topic,
+                                onAskMentor: _openMentor,
+                              ),
+                              const SizedBox(height: 10),
+                            ],
+                        ],
+                      ),
+                    ),
+                  ),
       ),
     );
   }
 }
+
 
 class _HeroBanner extends StatelessWidget {
   const _HeroBanner();
@@ -434,43 +401,6 @@ class _MetricCard extends StatelessWidget {
   }
 }
 
-class _EmptyFocus extends StatelessWidget {
-  const _EmptyFocus();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(18, 28, 18, 28),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.brandSoft),
-      ),
-      child: const Column(
-        children: [
-          Icon(Icons.check_circle_outline, size: 36, color: AppColors.success),
-          SizedBox(height: 12),
-          Text(
-            'No weak topics right now',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontWeight: FontWeight.w700,
-              fontSize: 16,
-              color: AppColors.ink,
-            ),
-          ),
-          SizedBox(height: 8),
-          Text(
-            'Great news — nothing is flagged as weak. Keep practicing or take a test so we can spot new gaps.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.muted, height: 1.4),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 class _TopicCard extends StatelessWidget {
   const _TopicCard({

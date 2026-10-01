@@ -1,9 +1,11 @@
 import 'package:student_mobile/core/network/api_client.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/core/session/session_service.dart';
+import 'package:student_mobile/core/storage/platform_stores.dart';
 import 'package:student_mobile/features/auth/domain/auth_models.dart';
 import 'package:student_mobile/features/home/domain/due_state.dart';
 import 'package:student_mobile/features/home/domain/home_models.dart';
+import 'package:student_mobile/features/organization/data/tenant_store.dart';
 
 abstract class HomeGateway {
   Future<HomeSnapshot> loadHome();
@@ -14,11 +16,14 @@ class HomeRepository implements HomeGateway {
   HomeRepository({
     ApiClient? apiClient,
     SessionService? sessionService,
+    TenantStore? tenantStore,
   })  : _api = apiClient ?? ApiClient(),
-        _session = sessionService ?? SessionService();
+        _session = sessionService ?? SessionService(),
+        _tenant = tenantStore ?? createTenantStore();
 
   final ApiClient _api;
   final SessionService _session;
+  final TenantStore _tenant;
 
   @override
   Future<HomeSnapshot> loadHome() async {
@@ -28,12 +33,16 @@ class HomeRepository implements HomeGateway {
     final userProfileFuture = _loadUserProfile(session);
     final unreadFuture = _loadUnreadCount(session);
     final assessmentsFuture = _loadAssessments(session);
+    final orgNameFuture = _tenant.readActiveOrganizationName();
+    final orgTypeFuture = _tenant.readActiveOrganizationType();
 
     final user = await userFuture;
     final profileId = await profileFuture;
     final userProfile = await userProfileFuture;
     final unread = await unreadFuture;
     final assessments = await assessmentsFuture;
+    final orgName = await orgNameFuture;
+    final orgType = await orgTypeFuture;
     final lectures = profileId == null
         ? const <HomeLecture>[]
         : await _loadLectures(session, profileId);
@@ -67,6 +76,8 @@ class HomeRepository implements HomeGateway {
       upcomingLectures: upcoming,
       profileDisplayName: profileDisplayName,
       avatarUrl: avatarUrl,
+      organizationName: orgName,
+      organizationType: orgType,
     );
   }
 

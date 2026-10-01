@@ -4,9 +4,8 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:student_mobile/app/theme/app_theme.dart';
-import 'package:student_mobile/app/theme/student_hub_colors.dart';
 import 'package:student_mobile/app/widgets/pragyu_logo.dart';
-import 'package:student_mobile/app/widgets/student_app_header.dart';
+import 'package:student_mobile/app/widgets/student_screen_kit.dart';
 import 'package:student_mobile/core/config/app_config.dart';
 
 /// S-77 Help & About — version, support, legal links.
@@ -89,86 +88,65 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
-      child: Scaffold(
-        backgroundColor: StudentHubColors.pageBg,
-        body: SafeArea(
-          child: Column(
-            children: [
-              StudentAppHeader(
-                title: 'Help & About',
-                onBack: () => Navigator.of(context).maybePop(),
-              ),
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
-                  children: [
-                    _AboutHero(
-                      appName: config.appName,
-                      versionLabel: _versionLabel,
-                    ),
-                    if (hasSupportSection) ...[
-                      const SizedBox(height: 18),
-                      const Text(
-                        'Support & legal',
-                        style: TextStyle(
-                          fontFamily: AppTheme.fontFamily,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: StudentHubColors.muted,
-                          letterSpacing: 0.3,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      if (hasSupport) ...[
-                        _LinkTile(
-                          icon: Icons.mail_outline_rounded,
-                          tint: StudentHubColors.blue,
-                          soft: StudentHubColors.blueSoft,
-                          title: 'Contact support',
-                          subtitle: supportEmail,
-                          trailing: Icons.chevron_right_rounded,
-                          onTap: _emailSupport,
-                        ),
-                        if (hasPrivacy || hasTerms) const SizedBox(height: 10),
-                      ],
-                      if (hasPrivacy) ...[
-                        _LinkTile(
-                          icon: Icons.privacy_tip_outlined,
-                          tint: const Color(0xFF7B61FF),
-                          soft: const Color(0xFFF0EBFF),
-                          title: 'Privacy policy',
-                          subtitle: 'How we handle your data',
-                          trailing: Icons.open_in_new_rounded,
-                          onTap: () => _openUrl(privacyUrl),
-                        ),
-                        if (hasTerms) const SizedBox(height: 10),
-                      ],
-                      if (hasTerms)
-                        _LinkTile(
-                          icon: Icons.description_outlined,
-                          tint: const Color(0xFF22A06B),
-                          soft: const Color(0xFFE8F8F0),
-                          title: 'Terms of use',
-                          subtitle: 'Rules for using Pragyu',
-                          trailing: Icons.open_in_new_rounded,
-                          onTap: () => _openUrl(termsUrl),
-                        ),
-                    ],
-                    const SizedBox(height: 18),
-                    const Text(
-                      'For course, fee, or account questions, contact your institute admin.',
-                      style: TextStyle(
-                        fontFamily: AppTheme.fontFamily,
-                        fontSize: 12,
-                        height: 1.4,
-                        color: StudentHubColors.muted,
-                      ),
-                    ),
-                  ],
+      child: StudentHubPage(
+        title: 'Help & About',
+        body: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
+          children: [
+            _AboutHero(
+              appName: config.appName,
+              versionLabel: _versionLabel,
+            ),
+            if (hasSupportSection) ...[
+              const SizedBox(height: 18),
+              const StudentSectionHeader(title: 'Support & legal'),
+              const SizedBox(height: 10),
+              if (hasSupport) ...[
+                _LinkTile(
+                  icon: Icons.mail_outline_rounded,
+                  tint: StudentHubColors.blue,
+                  soft: StudentHubColors.blueSoft,
+                  title: 'Contact support',
+                  subtitle: supportEmail,
+                  trailing: Icons.chevron_right_rounded,
+                  onTap: _emailSupport,
                 ),
-              ),
+                if (hasPrivacy || hasTerms) const SizedBox(height: 10),
+              ],
+              if (hasPrivacy) ...[
+                _LinkTile(
+                  icon: Icons.privacy_tip_outlined,
+                  tint: const Color(0xFF7B61FF),
+                  soft: const Color(0xFFF0EBFF),
+                  title: 'Privacy policy',
+                  subtitle: 'How we handle your data',
+                  trailing: Icons.open_in_new_rounded,
+                  onTap: () => _openUrl(privacyUrl),
+                ),
+                if (hasTerms) const SizedBox(height: 10),
+              ],
+              if (hasTerms)
+                _LinkTile(
+                  icon: Icons.description_outlined,
+                  tint: const Color(0xFF22A06B),
+                  soft: const Color(0xFFE8F8F0),
+                  title: 'Terms of use',
+                  subtitle: 'Rules for using Pragyu',
+                  trailing: Icons.open_in_new_rounded,
+                  onTap: () => _openUrl(termsUrl),
+                ),
             ],
-          ),
+            const SizedBox(height: 18),
+            const Text(
+              'For course, fee, or account questions, contact your institute admin.',
+              style: TextStyle(
+                fontFamily: AppTheme.fontFamily,
+                fontSize: 12,
+                height: 1.4,
+                color: StudentHubColors.muted,
+              ),
+            ),
+          ],
         ),
       ),
     );

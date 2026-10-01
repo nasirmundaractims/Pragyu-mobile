@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:student_mobile/app/router/app_router.dart';
-import 'package:student_mobile/app/theme/app_colors.dart';
 import 'package:student_mobile/app/widgets/app_text_field.dart';
-import 'package:student_mobile/app/widgets/primary_button.dart';
+import 'package:student_mobile/app/widgets/student_screen_kit.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/features/auth/data/auth_repository.dart';
 import 'package:student_mobile/features/auth/domain/auth_models.dart';
@@ -158,9 +157,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
       child: Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: StudentHubColors.pageBg,
         appBar: AppBar(
-          backgroundColor: AppColors.background,
+          backgroundColor: StudentHubColors.pageBg,
           title: const Text('Reset password'),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_rounded),
@@ -179,7 +178,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                   style: TextStyle(
                     fontSize: 16,
                     height: 1.45,
-                    color: AppColors.muted,
+                    color: StudentHubColors.muted,
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -279,12 +278,12 @@ class _ErrorBanner extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFFFDECEA),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.danger.withValues(alpha: 0.25)),
+        border: Border.all(color: StudentHubColors.danger.withValues(alpha: 0.25)),
       ),
       child: Text(
         message,
         style: const TextStyle(
-          color: AppColors.danger,
+          color: StudentHubColors.danger,
           height: 1.4,
           fontSize: 14,
         ),

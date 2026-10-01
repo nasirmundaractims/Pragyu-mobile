@@ -8,6 +8,7 @@ import 'package:student_mobile/app/router/app_router.dart';
 import 'package:student_mobile/app/theme/app_theme.dart';
 import 'package:student_mobile/app/widgets/app_network_image.dart';
 import 'package:student_mobile/app/widgets/pragyu_logo.dart';
+import 'package:student_mobile/app/widgets/student_screen_kit.dart';
 import 'package:student_mobile/core/config/app_config.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/features/alerts/data/alerts_repository.dart';
@@ -258,14 +259,13 @@ class _MeScreenState extends State<MeScreen> {
   }
 
   Future<void> _switchInstitute() async {
-    await Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(
-        builder: (_) => const OrgPickerScreen(
-          autoSelectSingle: false,
-          allowBack: true,
-          afterSelectRoute: AppRoutes.home,
-          clearStackOnSelect: true,
-        ),
+    await Navigator.of(context).pushNamed(
+      AppRoutes.orgPicker,
+      arguments: const OrgPickerArgs(
+        autoSelectSingle: false,
+        allowBack: true,
+        afterSelectRoute: AppRoutes.home,
+        clearStackOnSelect: true,
       ),
     );
     if (!mounted) return;
@@ -289,13 +289,18 @@ class _MeScreenState extends State<MeScreen> {
   }
 
   String? _storeListingUrl() {
-    final config = AppConfig.instance;
-    final preferred = Theme.of(context).platform == TargetPlatform.iOS
-        ? (config.iosStoreUrl ?? config.androidStoreUrl)
-        : (config.androidStoreUrl ?? config.iosStoreUrl);
-    final trimmed = preferred?.trim();
-    if (trimmed == null || trimmed.isEmpty) return null;
-    return trimmed;
+    try {
+      final config = AppConfig.instance;
+      final preferred = Theme.of(context).platform == TargetPlatform.iOS
+          ? (config.iosStoreUrl ?? config.androidStoreUrl)
+          : (config.androidStoreUrl ?? config.iosStoreUrl);
+      final trimmed = preferred?.trim();
+      if (trimmed == null || trimmed.isEmpty) return null;
+      return trimmed;
+    } catch (_) {
+      // AppConfig may be unset in widget tests / early bootstrap.
+      return null;
+    }
   }
 
   Future<void> _signOut() async {
@@ -388,8 +393,7 @@ class _MeScreenState extends State<MeScreen> {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
         children: [
-          const SizedBox(height: 120),
-          const Center(child: CircularProgressIndicator(color: _blue)),
+          const AppLoadingState(padding: EdgeInsets.symmetric(vertical: 120)),
           const SizedBox(height: 48),
           _LogoutButton(signingOut: _signingOut, onPressed: _signOut),
         ],
@@ -399,20 +403,14 @@ class _MeScreenState extends State<MeScreen> {
     if (_error != null && _snapshot == null) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 24, 16, 28),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
         children: [
-          Text(
-            _error!,
-            softWrap: true,
-            style: const TextStyle(color: _danger, height: 1.4),
+          AppErrorState(
+            message: _error!,
+            onRetry: _load,
+            retryLabel: 'Retry',
           ),
-          const SizedBox(height: 16),
-          FilledButton(
-            onPressed: _load,
-            style: FilledButton.styleFrom(backgroundColor: _blue),
-            child: const Text('Retry'),
-          ),
-          const SizedBox(height: 28),
+          const SizedBox(height: 12),
           _LogoutButton(signingOut: _signingOut, onPressed: _signOut),
         ],
       );
@@ -484,9 +482,9 @@ class _MeScreenState extends State<MeScreen> {
           const SizedBox(height: 18),
         ] else
           const SizedBox(height: 4),
-        _SectionTitle(
-          title: 'My Learning',
-          action: 'View All',
+        StudentSectionHeader(
+          title: 'Learning',
+          actionLabel: 'View All',
           onAction: () => _openTab(1),
         ),
         const SizedBox(height: 10),
@@ -499,8 +497,134 @@ class _MeScreenState extends State<MeScreen> {
               ? () => Navigator.of(context).pushNamed(AppRoutes.catalog)
               : null,
         ),
+        const SizedBox(height: 10),
+        _MenuCard(
+          children: [
+            _MenuTile(
+              icon: Icons.auto_awesome,
+              tint: const Color(0xFF7B61FF),
+              soft: const Color(0xFFF0EBFF),
+              title: 'AI Mentor',
+              subtitle: 'Ask doubts and get study guidance',
+              onTap: () =>
+                  Navigator.of(context).pushNamed(AppRoutes.aiMentor),
+            ),
+            _MenuTile(
+              icon: Icons.calendar_month_outlined,
+              tint: const Color(0xFF2F7BFF),
+              soft: const Color(0xFFE8F1FF),
+              title: 'Calendar',
+              subtitle: 'Live classes and test deadlines',
+              onTap: () =>
+                  Navigator.of(context).pushNamed(AppRoutes.calendar),
+            ),
+            _MenuTile(
+              icon: Icons.event_note_outlined,
+              tint: const Color(0xFF22A06B),
+              soft: const Color(0xFFE8F8F0),
+              title: 'Study Planner',
+              subtitle: 'Weekly plans and goals',
+              onTap: () =>
+                  Navigator.of(context).pushNamed(AppRoutes.studyPlanner),
+            ),
+            _MenuTile(
+              icon: Icons.lightbulb_outline_rounded,
+              tint: const Color(0xFFF08A3C),
+              soft: const Color(0xFFFFF2E8),
+              title: 'Recommendations',
+              subtitle: 'Suggested next study actions',
+              onTap: () =>
+                  Navigator.of(context).pushNamed(AppRoutes.recommendations),
+            ),
+            _MenuTile(
+              icon: Icons.trending_down_rounded,
+              tint: const Color(0xFFE85D75),
+              soft: const Color(0xFFFFEEF1),
+              title: 'Weak Topics',
+              subtitle: 'Focus areas that need practice',
+              onTap: () =>
+                  Navigator.of(context).pushNamed(AppRoutes.weakTopics),
+            ),
+            _MenuTile(
+              icon: Icons.insights_outlined,
+              tint: _blue,
+              soft: const Color(0xFFE8F0FF),
+              title: 'My Performance',
+              subtitle: 'Scores, streak, and subject analytics',
+              onTap: () =>
+                  Navigator.of(context).pushNamed(AppRoutes.performance),
+              showDivider: false,
+            ),
+          ],
+        ),
         const SizedBox(height: 18),
-        const _SectionTitle(title: 'Account & Settings'),
+        const StudentSectionHeader(title: 'Exams'),
+        const SizedBox(height: 10),
+        _MenuCard(
+          children: [
+            // Slice 1.4: one Me entry → Exam Series; Workspace lives nested there.
+            _MenuTile(
+              icon: Icons.quiz_outlined,
+              tint: const Color(0xFF2F7BFF),
+              soft: const Color(0xFFE8F1FF),
+              title: 'Exam Series',
+              subtitle: 'Packs, mocks, and readiness workspace',
+              onTap: () =>
+                  Navigator.of(context).pushNamed(AppRoutes.examSeries),
+              showDivider: false,
+            ),
+          ],
+        ),
+        const SizedBox(height: 18),
+        StudentSectionHeader(
+          title: snapshot.isIndividualWorkspace ? 'Workspace' : 'Organisation',
+        ),
+        const SizedBox(height: 10),
+        _MenuCard(
+          children: [
+            _MenuTile(
+              icon: Icons.campaign_outlined,
+              tint: const Color(0xFFF08A3C),
+              soft: const Color(0xFFFFF2E8),
+              title: 'Announcements',
+              subtitle: snapshot.isIndividualWorkspace
+                  ? 'Notices for your learning account'
+                  : 'Institute and course notices',
+              onTap: () =>
+                  Navigator.of(context).pushNamed(AppRoutes.announcements),
+            ),
+            if (snapshot.showsOrgAttendance)
+              _MenuTile(
+                icon: Icons.fact_check_outlined,
+                tint: const Color(0xFF22A06B),
+                soft: const Color(0xFFE8F8F0),
+                title: 'Attendance',
+                subtitle: 'Present, absent, and late marks',
+                onTap: () =>
+                    Navigator.of(context).pushNamed(AppRoutes.attendance),
+              ),
+            _MenuTile(
+              icon: Icons.apartment_outlined,
+              tint: const Color(0xFF7B61FF),
+              soft: const Color(0xFFF0EBFF),
+              title: snapshot.isIndividualWorkspace
+                  ? 'Join organisation'
+                  : 'Switch organisation',
+              subtitle: snapshot.isIndividualWorkspace
+                  ? 'Enter an organisation code'
+                  : (snapshot.organizationName?.isNotEmpty == true
+                      ? snapshot.organizationName!
+                      : 'Choose another academy'),
+              onTap: snapshot.isIndividualWorkspace
+                  ? () =>
+                      Navigator.of(context).pushNamed(AppRoutes.orgCodeEntry)
+                  : _switchInstitute,
+              showDivider: false,
+            ),
+          ],
+        ),
+        const SizedBox(height: 18),
+        const StudentSectionHeader(title: 'Account'),
         const SizedBox(height: 10),
         _MenuCard(
           children: [
@@ -535,13 +659,13 @@ class _MeScreenState extends State<MeScreen> {
                   Navigator.of(context).pushNamed(AppRoutes.settings),
             ),
             _MenuTile(
-              icon: Icons.help_outline_rounded,
-              tint: const Color(0xFFF08A3C),
-              soft: const Color(0xFFFFF2E8),
-              title: 'Help & About',
-              subtitle: 'Get help or contact us',
+              icon: Icons.payments_outlined,
+              tint: const Color(0xFF22A06B),
+              soft: const Color(0xFFE8F8F0),
+              title: 'Payments',
+              subtitle: 'Fees, my purchases, and AI credits',
               onTap: () =>
-                  Navigator.of(context).pushNamed(AppRoutes.helpAbout),
+                  Navigator.of(context).pushNamed(AppRoutes.payments),
               showDivider: false,
             ),
           ],
@@ -560,91 +684,10 @@ class _MeScreenState extends State<MeScreen> {
           onChangeEnd: _saveStudyHours,
         ),
         const SizedBox(height: 18),
-        const _SectionTitle(title: 'More'),
+        const StudentSectionHeader(title: 'More'),
         const SizedBox(height: 10),
         _MenuCard(
           children: [
-            _MenuTile(
-              icon: Icons.auto_awesome,
-              tint: const Color(0xFF7B61FF),
-              soft: const Color(0xFFF0EBFF),
-              title: 'AI Mentor',
-              subtitle: 'Ask doubts and get study guidance',
-              onTap: () =>
-                  Navigator.of(context).pushNamed(AppRoutes.aiMentor),
-            ),
-            _MenuTile(
-              icon: Icons.insights_outlined,
-              tint: _blue,
-              soft: const Color(0xFFE8F0FF),
-              title: 'My Performance',
-              subtitle: 'Scores, streak, and subject analytics',
-              onTap: () =>
-                  Navigator.of(context).pushNamed(AppRoutes.performance),
-            ),
-            _MenuTile(
-              icon: Icons.trending_down_rounded,
-              tint: const Color(0xFFE85D75),
-              soft: const Color(0xFFFFEEF1),
-              title: 'Weak Topics',
-              subtitle: 'Focus areas that need practice',
-              onTap: () =>
-                  Navigator.of(context).pushNamed(AppRoutes.weakTopics),
-            ),
-            _MenuTile(
-              icon: Icons.calendar_month_outlined,
-              tint: const Color(0xFF2F7BFF),
-              soft: const Color(0xFFE8F1FF),
-              title: 'Calendar',
-              subtitle: 'Live classes and test deadlines',
-              onTap: () =>
-                  Navigator.of(context).pushNamed(AppRoutes.calendar),
-            ),
-            _MenuTile(
-              icon: Icons.event_note_outlined,
-              tint: const Color(0xFF22A06B),
-              soft: const Color(0xFFE8F8F0),
-              title: 'Study Planner',
-              subtitle: 'Weekly plans and goals',
-              onTap: () =>
-                  Navigator.of(context).pushNamed(AppRoutes.studyPlanner),
-            ),
-            _MenuTile(
-              icon: Icons.lightbulb_outline_rounded,
-              tint: const Color(0xFFF08A3C),
-              soft: const Color(0xFFFFF2E8),
-              title: 'Recommendations',
-              subtitle: 'AI next actions for you',
-              onTap: () =>
-                  Navigator.of(context).pushNamed(AppRoutes.recommendations),
-            ),
-            _MenuTile(
-              icon: Icons.dashboard_customize_outlined,
-              tint: const Color(0xFF7B61FF),
-              soft: const Color(0xFFF0EBFF),
-              title: 'Exam Workspace',
-              subtitle: 'Pattern-aware practice hub',
-              onTap: () =>
-                  Navigator.of(context).pushNamed(AppRoutes.examWorkspace),
-            ),
-            _MenuTile(
-              icon: Icons.quiz_outlined,
-              tint: const Color(0xFF2F7BFF),
-              soft: const Color(0xFFE8F1FF),
-              title: 'Exam Series',
-              subtitle: 'Packs, mocks, and question banks',
-              onTap: () =>
-                  Navigator.of(context).pushNamed(AppRoutes.examSeries),
-            ),
-            _MenuTile(
-              icon: Icons.fact_check_outlined,
-              tint: const Color(0xFF22A06B),
-              soft: const Color(0xFFE8F8F0),
-              title: 'Attendance',
-              subtitle: 'Present, absent, and late marks',
-              onTap: () =>
-                  Navigator.of(context).pushNamed(AppRoutes.attendance),
-            ),
             _MenuTile(
               icon: Icons.menu_book_outlined,
               tint: _blue,
@@ -653,40 +696,6 @@ class _MeScreenState extends State<MeScreen> {
               subtitle: 'Guides and how-to articles',
               onTap: () =>
                   Navigator.of(context).pushNamed(AppRoutes.tutorials),
-            ),
-            _MenuTile(
-              icon: Icons.payments_outlined,
-              tint: const Color(0xFF22A06B),
-              soft: const Color(0xFFE8F8F0),
-              title: 'Payments',
-              subtitle: 'Fees, invoices, and AI Balance',
-              onTap: () =>
-                  Navigator.of(context).pushNamed(AppRoutes.payments),
-            ),
-            _MenuTile(
-              icon: Icons.campaign_outlined,
-              tint: const Color(0xFFF08A3C),
-              soft: const Color(0xFFFFF2E8),
-              title: 'Announcements',
-              subtitle: 'Institute and course notices',
-              onTap: () =>
-                  Navigator.of(context).pushNamed(AppRoutes.announcements),
-            ),
-            _MenuTile(
-              icon: Icons.apartment_outlined,
-              tint: const Color(0xFF7B61FF),
-              soft: const Color(0xFFF0EBFF),
-              title: snapshot.isIndividualWorkspace
-                  ? 'Join organisation'
-                  : 'Switch organisation',
-              subtitle: snapshot.isIndividualWorkspace
-                  ? 'Enter an organisation code'
-                  : (snapshot.organizationName?.isNotEmpty == true
-                      ? snapshot.organizationName!
-                      : 'Choose another academy'),
-              onTap: snapshot.isIndividualWorkspace
-                  ? () => Navigator.of(context).pushNamed(AppRoutes.orgCodeEntry)
-                  : _switchInstitute,
             ),
             if (_storeListingUrl() != null)
               _MenuTile(
@@ -698,11 +707,11 @@ class _MeScreenState extends State<MeScreen> {
                 onTap: _ratePragyu,
               ),
             _MenuTile(
-              icon: Icons.info_outline_rounded,
-              tint: _blue,
-              soft: const Color(0xFFE8F0FF),
-              title: 'About Pragyu',
-              subtitle: 'Our mission, vision and version info',
+              icon: Icons.help_outline_rounded,
+              tint: const Color(0xFFF08A3C),
+              soft: const Color(0xFFFFF2E8),
+              title: 'Help & About',
+              subtitle: 'Support, legal, and app version',
               onTap: () =>
                   Navigator.of(context).pushNamed(AppRoutes.helpAbout),
               showDivider: false,
@@ -971,15 +980,21 @@ class _ProfileBanner extends StatelessWidget {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFE8F0FF),
+                        color: contextLabel?.toLowerCase() == 'individual'
+                            ? const Color(0xFFF0EBFF)
+                            : const Color(0xFFE8F0FF),
                         borderRadius: BorderRadius.circular(999),
                       ),
-                      child: const Text(
-                        'Student',
+                      child: Text(
+                        contextLabel?.isNotEmpty == true
+                            ? contextLabel!
+                            : 'Student',
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
-                          color: _MeScreenState._blue,
+                          color: contextLabel?.toLowerCase() == 'individual'
+                              ? const Color(0xFF7B61FF)
+                              : _MeScreenState._blue,
                         ),
                       ),
                     ),
@@ -1282,47 +1297,6 @@ class _UpgradeBanner extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle({
-    required this.title,
-    this.action,
-    this.onAction,
-  });
-
-  final String title;
-  final String? action;
-  final VoidCallback? onAction;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Text(
-            title,
-            softWrap: true,
-            style: const TextStyle(
-              fontFamily: AppTheme.fontFamily,
-              fontSize: 17,
-              fontWeight: FontWeight.w800,
-              color: _MeScreenState._ink,
-            ),
-          ),
-        ),
-        if (action != null)
-          TextButton(
-            onPressed: onAction,
-            style: TextButton.styleFrom(
-              foregroundColor: _MeScreenState._blue,
-              visualDensity: VisualDensity.compact,
-            ),
-            child: Text(action!),
-          ),
-      ],
     );
   }
 }

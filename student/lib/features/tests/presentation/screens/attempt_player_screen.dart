@@ -361,16 +361,22 @@ class _AttemptPlayerScreenState extends State<AttemptPlayerScreen> {
       if (!mounted) return;
       setState(() => _finalized = true);
       if (mounted) {
+        final questionCount = snapshot.questions.length;
+        final multi = questionCount > 1;
         await showDialog<void>(
           context: context,
           barrierDismissible: false,
           builder: (context) {
             return AlertDialog(
-              title: const Text('Answer submitted'),
-              content: const Text(
-                'Your answer was submitted successfully. '
-                'Evaluation is processing in the background. '
-                'We will notify you in the app (and by email, SMS, and WhatsApp when enabled) once it is ready.',
+              title: Text(multi ? 'Attempt submitted' : 'Answer submitted'),
+              content: Text(
+                multi
+                    ? 'All $questionCount answers were submitted together. '
+                        'Evaluation is processing in the background. '
+                        'We will notify you in the app (and by email, SMS, and WhatsApp when enabled) once scores are ready.'
+                    : 'Your answer was submitted successfully. '
+                        'Evaluation is processing in the background. '
+                        'We will notify you in the app (and by email, SMS, and WhatsApp when enabled) once it is ready.',
               ),
               actions: [
                 FilledButton(

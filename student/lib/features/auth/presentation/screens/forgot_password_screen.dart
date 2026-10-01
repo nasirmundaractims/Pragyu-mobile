@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import 'package:student_mobile/app/router/app_router.dart';
 import 'package:student_mobile/app/theme/app_theme.dart';
+import 'package:student_mobile/app/widgets/student_screen_kit.dart';
 import 'package:student_mobile/app/widgets/pragyu_logo.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/features/auth/data/auth_repository.dart';
@@ -24,9 +25,9 @@ class ForgotPasswordScreen extends StatefulWidget {
 }
 
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
-  static const _ink = Color(0xFF1A2B4C);
-  static const _muted = Color(0xFF7A8499);
-  static const _blue = Color(0xFF2F7BFF);
+  static const _ink = StudentHubColors.ink;
+  static const _muted = StudentHubColors.muted;
+  static const _blue = StudentHubColors.blue;
   static const _blueDeep = Color(0xFF1E5FE0);
   static const _fieldBorder = Color(0xFFE2E8F0);
   static const _heroAsset = 'assets/images/auth/hero_forgot_password.png';
@@ -260,9 +261,8 @@ class _FormState extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 18),
-              _GradientButton(
+              PrimaryButton(
                 label: submitting ? 'Sending…' : 'Send reset link',
-                showArrow: !submitting,
                 onPressed: submitting ? null : onSubmit,
               ),
               const SizedBox(height: 14),
@@ -273,7 +273,7 @@ class _FormState extends StatelessWidget {
         SizedBox(height: short ? 18 : 22),
         const _OrDivider(),
         SizedBox(height: short ? 14 : 16),
-        _BackToLoginButton(onPressed: submitting ? null : onBackToSignIn),
+        SecondaryButton(label: 'Back to Login', onPressed: submitting ? null : onBackToSignIn),
       ],
     );
   }
@@ -388,7 +388,7 @@ class _SentState extends StatelessWidget {
           ),
         ),
         SizedBox(height: short ? 22 : 28),
-        _BackToLoginButton(onPressed: onBackToSignIn),
+        SecondaryButton(label: 'Back to Login', onPressed: onBackToSignIn),
         const SizedBox(height: 8),
         TextButton(
           onPressed: onHaveToken,
@@ -604,84 +604,6 @@ class _LabeledField extends StatelessWidget {
   }
 }
 
-class _GradientButton extends StatelessWidget {
-  const _GradientButton({
-    required this.label,
-    required this.onPressed,
-    this.showArrow = true,
-  });
-
-  final String label;
-  final VoidCallback? onPressed;
-  final bool showArrow;
-
-  @override
-  Widget build(BuildContext context) {
-    final enabled = onPressed != null;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(16),
-        child: Ink(
-          height: 54,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            gradient: LinearGradient(
-              colors: enabled
-                  ? const [
-                      _ForgotPasswordScreenState._blueDeep,
-                      _ForgotPasswordScreenState._blue,
-                    ]
-                  : const [
-                      Color(0xFFB8C0D6),
-                      Color(0xFFA8B4CC),
-                    ],
-            ),
-            boxShadow: enabled
-                ? [
-                    BoxShadow(
-                      color: _ForgotPasswordScreenState._blue
-                          .withValues(alpha: 0.32),
-                      blurRadius: 18,
-                      offset: const Offset(0, 8),
-                    ),
-                  ]
-                : null,
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Flexible(
-                  child: Text(
-                    label,
-                    softWrap: true,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                if (showArrow) ...[
-                  const SizedBox(width: 8),
-                  const Icon(
-                    Icons.arrow_forward_rounded,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 class _SecurityBanner extends StatelessWidget {
   const _SecurityBanner();
@@ -722,63 +644,6 @@ class _SecurityBanner extends StatelessWidget {
   }
 }
 
-class _BackToLoginButton extends StatelessWidget {
-  const _BackToLoginButton({required this.onPressed});
-
-  final VoidCallback? onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final enabled = onPressed != null;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(16),
-        child: Ink(
-          height: 52,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: enabled
-                  ? _ForgotPasswordScreenState._blue
-                  : const Color(0xFFB8C0D6),
-              width: 1.4,
-            ),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.arrow_back_rounded,
-                size: 18,
-                color: enabled
-                    ? _ForgotPasswordScreenState._ink
-                    : const Color(0xFFB8C0D6),
-              ),
-              const SizedBox(width: 8),
-              Flexible(
-                child: Text(
-                  'Back to Login',
-                  softWrap: true,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: enabled
-                        ? _ForgotPasswordScreenState._ink
-                        : const Color(0xFFB8C0D6),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 class _OrDivider extends StatelessWidget {
   const _OrDivider();

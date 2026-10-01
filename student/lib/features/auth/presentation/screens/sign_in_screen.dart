@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import 'package:student_mobile/app/router/app_router.dart';
 import 'package:student_mobile/app/theme/app_theme.dart';
+import 'package:student_mobile/app/widgets/student_screen_kit.dart';
 import 'package:student_mobile/app/widgets/pragyu_logo.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/core/session/auth_navigation.dart';
@@ -24,9 +25,9 @@ class SignInScreen extends StatefulWidget {
 }
 
 class _SignInScreenState extends State<SignInScreen> {
-  static const _ink = Color(0xFF1A2B4C);
-  static const _muted = Color(0xFF7A8499);
-  static const _blue = Color(0xFF2F7BFF);
+  static const _ink = StudentHubColors.ink;
+  static const _muted = StudentHubColors.muted;
+  static const _blue = StudentHubColors.blue;
   static const _fieldBorder = Color(0xFFE2E8F0);
   static const _heroAsset = 'assets/images/auth/hero_sign_in.png';
 
@@ -438,7 +439,7 @@ class _SignInScreenState extends State<SignInScreen> {
                                     ),
                                   ],
                                   const SizedBox(height: 16),
-                                  _PrimaryButton(
+                                  PrimaryButton(
                                     label: _submitting
                                         ? (_mfaStep
                                             ? 'Verifying…'
@@ -446,7 +447,6 @@ class _SignInScreenState extends State<SignInScreen> {
                                         : (_mfaStep
                                             ? 'Verify and continue'
                                             : 'Sign in'),
-                                    showArrow: !_submitting && !_mfaStep,
                                     onPressed: _submitting ? null : _submit,
                                   ),
                                   if (!_mfaStep) ...[
@@ -892,68 +892,6 @@ class _LabeledField extends StatelessWidget {
   }
 }
 
-class _PrimaryButton extends StatelessWidget {
-  const _PrimaryButton({
-    required this.label,
-    required this.onPressed,
-    this.showArrow = true,
-  });
-
-  final String label;
-  final VoidCallback? onPressed;
-  final bool showArrow;
-
-  @override
-  Widget build(BuildContext context) {
-    final enabled = onPressed != null;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(16),
-        child: Ink(
-          height: 54,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            color: enabled
-                ? _SignInScreenState._blue
-                : const Color(0xFFB8C0D6),
-            boxShadow: enabled
-                ? [
-                    BoxShadow(
-                      color: _SignInScreenState._blue.withValues(alpha: 0.32),
-                      blurRadius: 18,
-                      offset: const Offset(0, 8),
-                    ),
-                  ]
-                : null,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                label,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              if (showArrow) ...[
-                const SizedBox(width: 8),
-                const Icon(
-                  Icons.arrow_forward_rounded,
-                  color: Colors.white,
-                  size: 20,
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 class _TrustRow extends StatelessWidget {
   const _TrustRow();

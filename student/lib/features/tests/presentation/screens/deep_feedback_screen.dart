@@ -8,6 +8,7 @@ import 'package:student_mobile/app/theme/student_hub_colors.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/features/payments/presentation/credit_exhaustion.dart';
 import 'package:student_mobile/features/tests/data/tests_repository.dart';
+import 'package:student_mobile/features/tests/domain/ai_credit_costs.dart';
 import 'package:student_mobile/features/tests/domain/deep_feedback_models.dart';
 
 /// S-47 Deep feedback — suggestions, AI rewrite, model answer.
@@ -110,7 +111,46 @@ class _DeepFeedbackScreenState extends State<DeepFeedbackScreen> {
     }
   }
 
+  Future<bool> _confirmCreditSpend({
+    required String title,
+    required String body,
+    required String confirmLabel,
+  }) async {
+    final proceed = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(title),
+          content: Text(body),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: FilledButton.styleFrom(
+                backgroundColor: StudentHubColors.blue,
+              ),
+              child: Text(confirmLabel),
+            ),
+          ],
+        );
+      },
+    );
+    return proceed == true;
+  }
+
   Future<void> _requestRewrite() async {
+    final regenerate = _result != null;
+    final confirmed = await _confirmCreditSpend(
+      title: regenerate ? 'Regenerate AI answer?' : 'Request AI answer?',
+      body:
+          '${AiCreditCosts.rewriteCostHint}\n\nThis spends about ${AiCreditCosts.rewriteRequest} AI credits from your wallet.',
+      confirmLabel: AiCreditCosts.rewriteCostLabel(regenerate: regenerate),
+    );
+    if (!confirmed || !mounted) return;
+
     setState(() {
       _busy = true;
       _error = null;
@@ -185,6 +225,15 @@ class _DeepFeedbackScreenState extends State<DeepFeedbackScreen> {
   Future<void> _generateSuggestions() async {
     final feedbackId = widget.args.feedbackId?.trim();
     if (feedbackId == null || feedbackId.isEmpty) return;
+    final confirmed = await _confirmCreditSpend(
+      title: 'Generate suggestions?',
+      body:
+          '${AiCreditCosts.suggestionCostHint}\n\nThis spends about ${AiCreditCosts.suggestionGenerate} AI credits.',
+      confirmLabel:
+          'Generate · ${AiCreditCosts.suggestionGenerate} credits',
+    );
+    if (!confirmed || !mounted) return;
+
     setState(() {
       _busy = true;
       _error = null;
@@ -211,6 +260,11 @@ class _DeepFeedbackScreenState extends State<DeepFeedbackScreen> {
             ? error.message
             : 'Unable to generate suggestions.';
       });
+      showCreditAwareError(
+        context,
+        error,
+        fallback: 'Unable to generate suggestions.',
+      );
     }
   }
 
@@ -289,6 +343,37 @@ class _DeepFeedbackScreenState extends State<DeepFeedbackScreen> {
     final failed = _activeRequest?.isFailed == true;
 
     return [
+      Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFF8EB),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFFFE0A3)),
+        ),
+        child: const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Advanced optional help',
+              style: TextStyle(
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF8A5A00),
+              ),
+            ),
+            SizedBox(height: 6),
+            Text(
+              'Use this after you understand your score. Rewrite and tip generation spend AI credits from your wallet.',
+              style: TextStyle(
+                color: Color(0xFF8A5A00),
+                height: 1.4,
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
+      ),
+      const SizedBox(height: 18),
       const _SectionTitle(title: 'Suggestions'),
       const SizedBox(height: 10),
       if (suggestions.isEmpty)
@@ -301,10 +386,21 @@ class _DeepFeedbackScreenState extends State<DeepFeedbackScreen> {
                 style: TextStyle(color: StudentHubColors.muted, height: 1.4),
               ),
               if (widget.args.feedbackId?.isNotEmpty == true) ...[
+                const SizedBox(height: 8),
+                Text(
+                  AiCreditCosts.suggestionCostHint,
+                  style: const TextStyle(
+                    color: StudentHubColors.muted,
+                    fontSize: 12,
+                    height: 1.35,
+                  ),
+                ),
                 const SizedBox(height: 12),
                 TextButton(
                   onPressed: _busy ? null : _generateSuggestions,
-                  child: const Text('Generate suggestions'),
+                  child: Text(
+                    'Generate suggestions · ${AiCreditCosts.suggestionGenerate} credits',
+                  ),
                 ),
               ],
             ],
@@ -319,6 +415,15 @@ class _DeepFeedbackScreenState extends State<DeepFeedbackScreen> {
         ),
       const SizedBox(height: 18),
       const _SectionTitle(title: 'Improve answer with AI'),
+      const SizedBox(height: 8),
+      Text(
+        AiCreditCosts.rewriteCostHint,
+        style: const TextStyle(
+          color: StudentHubColors.muted,
+          fontSize: 13,
+          height: 1.4,
+        ),
+      ),
       const SizedBox(height: 10),
       _RewriteControls(
         style: _style,
@@ -340,7 +445,7 @@ class _DeepFeedbackScreenState extends State<DeepFeedbackScreen> {
         child: Text(
           processing
               ? 'Generating…'
-              : (_result != null ? 'Regenerate AI answer' : 'Request AI answer'),
+              : AiCreditCosts.rewriteCostLabel(regenerate: _result != null),
         ),
       ),
       if (_activeRequest != null) ...[

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:student_mobile/app/router/app_router.dart';
+import 'package:student_mobile/app/share/pragyu_share.dart';
 import 'package:student_mobile/app/theme/app_theme.dart';
 import 'package:student_mobile/core/session/session_service.dart';
 import 'package:student_mobile/features/home/domain/greeting.dart';
@@ -282,6 +283,11 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
             narrow: narrow,
             short: short,
             onBack: () => Navigator.of(context).maybePop(),
+            onShare: () => PragyuShare.shareCourse(
+              courseId: snapshot.courseId,
+              title: snapshot.displayTitle,
+              subtitle: snapshot.subtitle.isEmpty ? null : snapshot.subtitle,
+            ),
             scriptAsset: _scriptAsset,
           ),
         ),
@@ -488,6 +494,7 @@ class _HeroHeader extends StatelessWidget {
     required this.short,
     required this.onBack,
     required this.scriptAsset,
+    this.onShare,
   });
 
   final String title;
@@ -495,6 +502,7 @@ class _HeroHeader extends StatelessWidget {
   final bool narrow;
   final bool short;
   final VoidCallback onBack;
+  final VoidCallback? onShare;
   final String scriptAsset;
 
   @override
@@ -536,6 +544,13 @@ class _HeroHeader extends StatelessWidget {
                       onTap: onBack,
                       tooltip: 'Back',
                     ),
+                    const Spacer(),
+                    if (onShare != null)
+                      _RoundIconButton(
+                        icon: Icons.ios_share_rounded,
+                        onTap: onShare!,
+                        tooltip: 'Share course',
+                      ),
                   ],
                 ),
                 SizedBox(height: short ? 14 : 18),

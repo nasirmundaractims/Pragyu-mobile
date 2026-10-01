@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:student_mobile/app/router/app_router.dart';
-import 'package:student_mobile/app/theme/student_hub_colors.dart';
-import 'package:student_mobile/app/widgets/student_app_header.dart';
+import 'package:student_mobile/app/widgets/student_screen_kit.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/features/exam_series/data/exam_series_repository.dart';
 import 'package:student_mobile/features/exam_series/domain/exam_series_models.dart';
@@ -81,37 +80,41 @@ class _ExamSeriesDetailScreenState extends State<ExamSeriesDetailScreen> {
       child: StudentHubPage(
         title: title,
         body: _loading && snapshot == null
-              ? const Center(
-                  child: CircularProgressIndicator(color: StudentHubColors.blue),
-                )
-              : _error != null && snapshot == null
-                  ? _ErrorBody(message: _error!, onRetry: _load)
-                  : RefreshIndicator(
-                      color: StudentHubColors.blue,
-                      onRefresh: _load,
-                      child: SingleChildScrollView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            if (snapshot != null) ...[
-                              _HeaderCard(pack: snapshot.pack),
-                              const SizedBox(height: 14),
-                              _RankCard(
-                                rank: snapshot.rank,
-                                unavailable: snapshot.rankUnavailable,
-                              ),
-                              const SizedBox(height: 14),
-                              _AssessmentsCard(
-                                items: snapshot.pack.items,
-                                onTakeTest: _takeTest,
-                              ),
-                            ],
+            ? const AppLoadingState(padding: EdgeInsets.zero)
+            : _error != null && snapshot == null
+                ? Center(
+                    child: AppErrorState(
+                      message: _error!,
+                      onRetry: _load,
+                      retryLabel: 'Retry',
+                    ),
+                  )
+                : RefreshIndicator(
+                    color: StudentHubColors.blue,
+                    onRefresh: _load,
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (snapshot != null) ...[
+                            _HeaderCard(pack: snapshot.pack),
+                            const SizedBox(height: 14),
+                            _RankCard(
+                              rank: snapshot.rank,
+                              unavailable: snapshot.rankUnavailable,
+                            ),
+                            const SizedBox(height: 14),
+                            _AssessmentsCard(
+                              items: snapshot.pack.items,
+                              onTakeTest: _takeTest,
+                            ),
                           ],
-                        ),
+                        ],
                       ),
                     ),
+                  ),
       ),
     );
   }
@@ -297,19 +300,15 @@ class _AssessmentsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Assessments',
-            style: TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w700,
-              color: StudentHubColors.ink,
-            ),
+          const StudentSectionHeader(
+            title: 'Assessments',
+            compact: true,
           ),
           const SizedBox(height: 10),
           if (items.isEmpty)
-            const Text(
-              'No assessments in this series.',
-              style: TextStyle(fontSize: 13, color: StudentHubColors.muted),
+            const AppEmptyState(
+              icon: Icons.assignment_outlined,
+              title: 'No assessments in this series.',
             )
           else
             for (var i = 0; i < items.length; i++) ...[
@@ -352,38 +351,6 @@ class _AssessmentsCard extends StatelessWidget {
               ),
             ],
         ],
-      ),
-    );
-  }
-}
-
-class _ErrorBody extends StatelessWidget {
-  const _ErrorBody({required this.message, required this.onRetry});
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: StudentHubColors.muted),
-            ),
-            const SizedBox(height: 12),
-            FilledButton(
-              onPressed: onRetry,
-              style: FilledButton.styleFrom(backgroundColor: StudentHubColors.blue),
-              child: const Text('Retry'),
-            ),
-          ],
-        ),
       ),
     );
   }

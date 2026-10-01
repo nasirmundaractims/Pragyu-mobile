@@ -81,6 +81,23 @@ class ContentBookmark {
 
   bool get isLesson => bookmarkableType.toLowerCase() == 'lesson';
 
+  bool matches({
+    required String type,
+    required String id,
+  }) {
+    return bookmarkableType.toLowerCase() == type.trim().toLowerCase() &&
+        bookmarkableId == id.trim();
+  }
+
+  /// Maps a lesson / material resource type string to API bookmarkable_type.
+  static String typeForResource(String? resourceType) {
+    final raw = (resourceType ?? '').trim().toLowerCase();
+    if (raw.contains('pdf')) return 'pdf';
+    if (raw.contains('video')) return 'video';
+    if (raw.isEmpty) return 'resource';
+    return 'resource';
+  }
+
   factory ContentBookmark.fromJson(Map<String, dynamic> json) {
     return ContentBookmark(
       id: json['id']?.toString() ?? '',

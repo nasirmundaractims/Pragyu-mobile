@@ -80,7 +80,10 @@ class MeSnapshot {
   }
 
   String get contextSubtitle =>
-      isIndividualWorkspace ? 'Individual' : 'Student';
+      isIndividualWorkspace ? 'Individual' : 'Organisation';
+
+  /// Whether org-only tools like Attendance belong in Me chrome.
+  bool get showsOrgAttendance => !isIndividualWorkspace;
 
   String get displayName {
     final fromProfile = userProfile?.displayName?.trim();

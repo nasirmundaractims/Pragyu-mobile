@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import 'package:student_mobile/app/router/app_router.dart';
 import 'package:student_mobile/app/theme/app_colors.dart';
+import 'package:student_mobile/app/widgets/student_screen_kit.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/features/study_planner/data/study_planner_repository.dart';
 import 'package:student_mobile/features/study_planner/domain/study_planner_models.dart';
@@ -146,24 +147,12 @@ class _StudyPlannerScreenState extends State<StudyPlannerScreen> {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
       child: Scaffold(
-        backgroundColor: AppColors.background,
-        appBar: AppBar(
-          backgroundColor: AppColors.background,
-          title: const Text('Study Planner'),
-          actions: [
-            IconButton(
-              tooltip: 'Weak topics',
-              onPressed: () =>
-                  Navigator.of(context).pushNamed(AppRoutes.weakTopics),
-              icon: const Icon(Icons.track_changes_outlined),
-            ),
-          ],
-        ),
+        backgroundColor: StudentHubColors.pageBg,
         floatingActionButton: snapshot == null
             ? null
             : FloatingActionButton.extended(
                 onPressed: _generating ? null : _generate,
-                backgroundColor: AppColors.brand,
+                backgroundColor: StudentHubColors.blue,
                 foregroundColor: Colors.white,
                 icon: _generating
                     ? const SizedBox(
@@ -178,138 +167,184 @@ class _StudyPlannerScreenState extends State<StudyPlannerScreen> {
                 label: Text(_generating ? 'Generating…' : 'Generate week'),
               ),
         body: SafeArea(
-          child: _loading && snapshot == null
-              ? const Center(
-                  child: CircularProgressIndicator(color: AppColors.brand),
-                )
-              : _error != null && snapshot == null
-                  ? _ErrorBody(message: _error!, onRetry: _load)
-                  : RefreshIndicator(
-                      color: AppColors.brand,
-                      onRefresh: _load,
-                      child: SingleChildScrollView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            if (_error != null)
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 12),
-                                child: Text(
-                                  _error!,
-                                  style: const TextStyle(
-                                    color: AppColors.danger,
-                                    height: 1.35,
-                                  ),
-                                ),
-                              ),
-                            const _HeroBanner(),
-                            const SizedBox(height: 14),
-                            _MetricsRow(
-                              daySessions: daySessions.length,
-                              dayMinutes: dayMinutes,
-                              plans: snapshot?.plans.length ?? 0,
-                              openGoals: snapshot?.openGoals.length ?? 0,
-                              dayLabel: _selectedDay.shortLabel,
-                            ),
-                            const SizedBox(height: 18),
-                            _SectionHeader(
-                              title: 'Your plans',
-                              actionLabel: snapshot?.plans.isEmpty == true
-                                  ? null
-                                  : 'Generate',
-                              onAction: snapshot?.plans.isEmpty == true
-                                  ? null
-                                  : (_generating ? null : _generate),
-                            ),
-                            const SizedBox(height: 10),
-                            if (snapshot == null || snapshot.plans.isEmpty)
-                              _EmptyPlans(onGenerate: _generating ? null : _generate)
-                            else
-                              SizedBox(
-                                height: 108,
-                                child: ListView.separated(
-                                  scrollDirection: Axis.horizontal,
-                                  itemCount: snapshot.plans.length,
-                                  separatorBuilder: (_, __) =>
-                                      const SizedBox(width: 10),
-                                  itemBuilder: (context, index) {
-                                    final item = snapshot.plans[index];
-                                    final active = item.id == plan?.id;
-                                    return _PlanChip(
-                                      plan: item,
-                                      active: active,
-                                      onTap: () => setState(() {
-                                        _snapshot = snapshot.copyWith(
-                                          activePlanId: item.id,
-                                        );
-                                      }),
-                                    );
-                                  },
-                                ),
-                              ),
-                            const SizedBox(height: 18),
-                            const Text(
-                              'This week',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.ink,
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            _DayStrip(
-                              selected: _selectedDay,
-                              onSelect: (day) =>
-                                  setState(() => _selectedDay = day),
-                              counts: {
-                                for (final day in weekDayOrder)
-                                  day: plan?.sessionsForDay(day).length ?? 0,
-                              },
-                            ),
-                            const SizedBox(height: 14),
-                            Text(
-                              '${_selectedDay.label} sessions',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.ink,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            if (daySessions.isEmpty)
-                              const _EmptyDay()
-                            else
-                              for (final period in StudyPeriod.values) ...[
-                                ..._sessionsForPeriod(daySessions, period),
-                              ],
-                            const SizedBox(height: 22),
-                            const Text(
-                              'Goals',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.ink,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            if (snapshot == null || snapshot.goals.isEmpty)
-                              const _EmptyGoals()
-                            else
-                              for (final goal in snapshot.goals) ...[
-                                _GoalCard(
-                                  goal: goal,
-                                  completing: _completingGoalId == goal.id,
-                                  onComplete: goal.isOpen
-                                      ? () => _completeGoal(goal)
-                                      : null,
-                                ),
-                                const SizedBox(height: 10),
-                              ],
-                          ],
-                        ),
-                      ),
+          child: Column(
+            children: [
+              StudentAppHeader(
+                title: 'Study Planner',
+                actions: [
+                  IconButton(
+                    tooltip: 'Weak topics',
+                    onPressed: () =>
+                        Navigator.of(context).pushNamed(AppRoutes.weakTopics),
+                    icon: const Icon(
+                      Icons.track_changes_outlined,
+                      color: StudentHubColors.ink,
                     ),
+                  ),
+                ],
+              ),
+              Expanded(
+                child: _loading && snapshot == null
+                    ? const AppLoadingState(padding: EdgeInsets.zero)
+                    : _error != null && snapshot == null
+                        ? Center(
+                            child: AppErrorState(
+                              message: _error!,
+                              onRetry: _load,
+                            ),
+                          )
+                        : RefreshIndicator(
+                            color: StudentHubColors.blue,
+                            onRefresh: _load,
+                            child: SingleChildScrollView(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              padding:
+                                  const EdgeInsets.fromLTRB(16, 8, 16, 96),
+                              child: Column(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.stretch,
+                                children: [
+                                  if (_error != null)
+                                    Padding(
+                                      padding:
+                                          const EdgeInsets.only(bottom: 12),
+                                      child: Text(
+                                        _error!,
+                                        style: const TextStyle(
+                                          color: StudentHubColors.danger,
+                                          height: 1.35,
+                                        ),
+                                      ),
+                                    ),
+                                  const _HeroBanner(),
+                                  const SizedBox(height: 14),
+                                  _MetricsRow(
+                                    daySessions: daySessions.length,
+                                    dayMinutes: dayMinutes,
+                                    plans: snapshot?.plans.length ?? 0,
+                                    openGoals:
+                                        snapshot?.openGoals.length ?? 0,
+                                    dayLabel: _selectedDay.shortLabel,
+                                  ),
+                                  const SizedBox(height: 18),
+                                  StudentSectionHeader(
+                                    title: 'Your plans',
+                                    actionLabel:
+                                        snapshot?.plans.isEmpty == true
+                                            ? null
+                                            : 'Generate',
+                                    onAction: snapshot?.plans.isEmpty == true
+                                        ? null
+                                        : (_generating ? null : _generate),
+                                    compact: true,
+                                  ),
+                                  const SizedBox(height: 10),
+                                  if (snapshot == null ||
+                                      snapshot.plans.isEmpty)
+                                    AppEmptyState(
+                                      icon: Icons.calendar_month_outlined,
+                                      title: 'No plans yet',
+                                      message:
+                                          'Generate a weekly study plan from your weak topics and learning signals.',
+                                      actionLabel: 'Generate weekly plan',
+                                      onAction: _generating ? null : _generate,
+                                    )
+                                  else
+                                    SizedBox(
+                                      height: 108,
+                                      child: ListView.separated(
+                                        scrollDirection: Axis.horizontal,
+                                        itemCount: snapshot.plans.length,
+                                        separatorBuilder: (_, _) =>
+                                            const SizedBox(width: 10),
+                                        itemBuilder: (context, index) {
+                                          final item = snapshot.plans[index];
+                                          final active = item.id == plan?.id;
+                                          return _PlanChip(
+                                            plan: item,
+                                            active: active,
+                                            onTap: () => setState(() {
+                                              _snapshot = snapshot.copyWith(
+                                                activePlanId: item.id,
+                                              );
+                                            }),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                  const SizedBox(height: 18),
+                                  const StudentSectionHeader(
+                                    title: 'This week',
+                                    compact: true,
+                                  ),
+                                  const SizedBox(height: 10),
+                                  _DayStrip(
+                                    selected: _selectedDay,
+                                    onSelect: (day) =>
+                                        setState(() => _selectedDay = day),
+                                    counts: {
+                                      for (final day in weekDayOrder)
+                                        day: plan
+                                                ?.sessionsForDay(day)
+                                                .length ??
+                                            0,
+                                    },
+                                  ),
+                                  const SizedBox(height: 14),
+                                  Text(
+                                    '${_selectedDay.label} sessions',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.ink,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  if (daySessions.isEmpty)
+                                    const AppEmptyState(
+                                      icon: Icons.event_busy_outlined,
+                                      title: 'No sessions scheduled for this day.',
+                                    )
+                                  else
+                                    for (final period
+                                        in StudyPeriod.values) ...[
+                                      ..._sessionsForPeriod(
+                                        daySessions,
+                                        period,
+                                      ),
+                                    ],
+                                  const SizedBox(height: 22),
+                                  const StudentSectionHeader(
+                                    title: 'Goals',
+                                    compact: true,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  if (snapshot == null ||
+                                      snapshot.goals.isEmpty)
+                                    const AppEmptyState(
+                                      icon: Icons.flag_outlined,
+                                      title: 'No learning goals yet',
+                                      message:
+                                          'Goals appear when your institute or plan sets them.',
+                                    )
+                                  else
+                                    for (final goal in snapshot.goals) ...[
+                                      _GoalCard(
+                                        goal: goal,
+                                        completing:
+                                            _completingGoalId == goal.id,
+                                        onComplete: goal.isOpen
+                                            ? () => _completeGoal(goal)
+                                            : null,
+                                      ),
+                                      const SizedBox(height: 10),
+                                    ],
+                                ],
+                              ),
+                            ),
+                          ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -352,42 +387,6 @@ class _StudyPlannerScreenState extends State<StudyPlannerScreen> {
       case StudyPeriod.night:
         return 'NIGHT';
     }
-  }
-}
-
-class _ErrorBody extends StatelessWidget {
-  const _ErrorBody({
-    required this.message,
-    required this.onRetry,
-  });
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            message,
-            style: const TextStyle(color: AppColors.danger, height: 1.4),
-          ),
-          const Spacer(),
-          FilledButton(
-            onPressed: onRetry,
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.brand,
-              foregroundColor: Colors.white,
-              minimumSize: const Size.fromHeight(48),
-            ),
-            child: const Text('Try again'),
-          ),
-        ],
-      ),
-    );
   }
 }
 
@@ -561,41 +560,6 @@ class _MetricCard extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({
-    required this.title,
-    this.actionLabel,
-    this.onAction,
-  });
-
-  final String title;
-  final String? actionLabel;
-  final VoidCallback? onAction;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Text(
-            title,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: AppColors.ink,
-            ),
-          ),
-        ),
-        if (actionLabel != null)
-          TextButton(
-            onPressed: onAction,
-            child: Text(actionLabel!),
-          ),
-      ],
     );
   }
 }
@@ -880,99 +844,6 @@ class _GoalCard extends StatelessWidget {
                   : const Text('Complete'),
             ),
         ],
-      ),
-    );
-  }
-}
-
-class _EmptyPlans extends StatelessWidget {
-  const _EmptyPlans({this.onGenerate});
-
-  final VoidCallback? onGenerate;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(18, 22, 18, 22),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.brandSoft),
-      ),
-      child: Column(
-        children: [
-          const Icon(Icons.calendar_month_outlined,
-              size: 34, color: AppColors.brand),
-          const SizedBox(height: 10),
-          const Text(
-            'No plans yet',
-            style: TextStyle(
-              fontWeight: FontWeight.w700,
-              fontSize: 16,
-              color: AppColors.ink,
-            ),
-          ),
-          const SizedBox(height: 6),
-          const Text(
-            'Generate a weekly study plan from your weak topics and learning signals.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.muted, height: 1.4),
-          ),
-          const SizedBox(height: 14),
-          FilledButton(
-            onPressed: onGenerate,
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.brand,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Generate weekly plan'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _EmptyDay extends StatelessWidget {
-  const _EmptyDay();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 20),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.brandSoft),
-      ),
-      child: const Text(
-        'No sessions scheduled for this day.',
-        textAlign: TextAlign.center,
-        style: TextStyle(color: AppColors.muted, height: 1.4),
-      ),
-    );
-  }
-}
-
-class _EmptyGoals extends StatelessWidget {
-  const _EmptyGoals();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 20),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.brandSoft),
-      ),
-      child: const Text(
-        'No learning goals yet. Goals appear when your institute or plan sets them.',
-        textAlign: TextAlign.center,
-        style: TextStyle(color: AppColors.muted, height: 1.4),
       ),
     );
   }

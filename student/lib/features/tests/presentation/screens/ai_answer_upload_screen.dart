@@ -49,14 +49,41 @@ class _AiAnswerUploadScreenState extends State<AiAnswerUploadScreen> {
   @override
   void initState() {
     super.initState();
-    _images = List<AnswerImageAttachment>.from(widget.args.existingImages);
+    _images = _copyImages(widget.args.existingImages);
     _textController = TextEditingController(text: widget.args.existingText ?? '');
+  }
+
+  @override
+  void reassemble() {
+    super.reassemble();
+    final dynamic raw = _images;
+    if (raw is! List<AnswerImageAttachment>) {
+      _images = const <AnswerImageAttachment>[];
+    }
   }
 
   @override
   void dispose() {
     _textController.dispose();
     super.dispose();
+  }
+
+  static List<AnswerImageAttachment> _copyImages(List<AnswerImageAttachment>? raw) {
+    if (raw == null || raw.isEmpty) return <AnswerImageAttachment>[];
+    return List<AnswerImageAttachment>.from(raw);
+  }
+
+  List<AnswerImageAttachment> get _safeImages {
+    try {
+      final dynamic raw = _images;
+      if (raw == null) return const <AnswerImageAttachment>[];
+      if (raw is! List) return const <AnswerImageAttachment>[];
+      return List<AnswerImageAttachment>.from(
+        raw.whereType<AnswerImageAttachment>(),
+      );
+    } catch (_) {
+      return const <AnswerImageAttachment>[];
+    }
   }
 
   List<String> get _chips {
@@ -83,9 +110,34 @@ class _AiAnswerUploadScreenState extends State<AiAnswerUploadScreen> {
 
   static String _prettyType(String raw) {
     final lower = raw.toLowerCase().replaceAll('-', '_');
-    if (lower.contains('long') || lower.contains('essay')) return 'Descriptive';
+    if (lower.contains('long') ||
+        lower.contains('essay') ||
+        lower.contains('descriptive') ||
+        lower.contains('subjective')) {
+      return 'Long answer';
+    }
     if (lower.contains('short')) return 'Short answer';
     return raw.replaceAll('_', ' ');
+  }
+
+  bool get _isMultiQuestion => widget.args.questionTotal > 1;
+
+  String get _submitButtonLabel {
+    if (!widget.args.finalizeOnSubmit) return 'Save answer pages';
+    if (_isMultiQuestion) {
+      return 'Submit all answers for AI';
+    }
+    return 'Submit for AI Evaluation';
+  }
+
+  String get _submitDialogBody {
+    if (_isMultiQuestion) {
+      return 'This submits the whole attempt (${widget.args.questionTotal} questions), '
+          'not just this page. Evaluation runs in the background — we will notify you when scores are ready.';
+    }
+    return 'Your answer was submitted successfully. '
+        'Evaluation is processing in the background. '
+        'We will notify you when it is ready.';
   }
 
   String get _questionText {
@@ -217,12 +269,10 @@ class _AiAnswerUploadScreenState extends State<AiAnswerUploadScreen> {
         barrierDismissible: false,
         builder: (context) {
           return AlertDialog(
-            title: const Text('Answer submitted'),
-            content: const Text(
-              'Your answer was submitted successfully. '
-              'Evaluation is processing in the background. '
-              'We will notify you when it is ready.',
+            title: Text(
+              _isMultiQuestion ? 'Attempt submitted' : 'Answer submitted',
             ),
+            content: Text(_submitDialogBody),
             actions: [
               FilledButton(
                 onPressed: () => Navigator.of(context).pop(),
@@ -320,7 +370,8 @@ class _AiAnswerUploadScreenState extends State<AiAnswerUploadScreen> {
         : (marks == marks.roundToDouble()
             ? '${marks.round()} Marks'
             : '${marks.toStringAsFixed(1)} Marks');
-    final canSubmit = _images.isNotEmpty && !_uploading && !_submitting;
+    final canSubmit = _safeImages.isNotEmpty && !_uploading && !_submitting;
+    final pages = _safeImages;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
@@ -365,23 +416,23 @@ class _AiAnswerUploadScreenState extends State<AiAnswerUploadScreen> {
                     ),
                     const SizedBox(height: 18),
                     _UploadedPagesHeader(
-                      count: _images.length,
+                      count: pages.length,
                       reorderMode: _reorderMode,
-                      onToggleReorder: _images.length < 2
+                      onToggleReorder: pages.length < 2
                           ? null
                           : () => setState(() => _reorderMode = !_reorderMode),
                     ),
                     const SizedBox(height: 10),
-                    if (_images.isEmpty)
+                    if (pages.isEmpty)
                       const _EmptyPages()
                     else if (_reorderMode)
                       ReorderableListView.builder(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
-                        itemCount: _images.length,
+                        itemCount: pages.length,
                         onReorderItem: _reorder,
                         itemBuilder: (context, index) {
-                          final image = _images[index];
+                          final image = pages[index];
                           return _PageTile(
                             key: ValueKey(image.mediaFileId),
                             index: index,
@@ -395,17 +446,16 @@ class _AiAnswerUploadScreenState extends State<AiAnswerUploadScreen> {
                     else
                       Column(
                         children: [
-                          for (var i = 0; i < _images.length; i++)
+                          for (var i = 0; i < pages.length; i++)
                             Padding(
                               padding: const EdgeInsets.only(bottom: 8),
                               child: _PageTile(
                                 index: i,
-                                label: _images[i].fileName,
-                                pageNumber:
-                                    _images[i].pageNumber ?? (i + 1),
+                                label: pages[i].fileName,
+                                pageNumber: pages[i].pageNumber ?? (i + 1),
                                 reorderable: false,
                                 onRemove: () =>
-                                    _removeImage(_images[i].mediaFileId),
+                                    _removeImage(pages[i].mediaFileId),
                               ),
                             ),
                         ],
@@ -470,9 +520,7 @@ class _AiAnswerUploadScreenState extends State<AiAnswerUploadScreen> {
                             children: [
                               Flexible(
                                 child: Text(
-                                  widget.args.finalizeOnSubmit
-                                      ? 'Submit for AI Evaluation'
-                                      : 'Save answer pages',
+                                  _submitButtonLabel,
                                   softWrap: false,
                                   overflow: TextOverflow.ellipsis,
                                   textAlign: TextAlign.center,

@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../core/config/app_config.dart';
 import '../core/session/auth_session_events.dart';
+import '../features/auth/presentation/auth_deep_link_controller.dart';
 import 'router/app_router.dart';
 import 'theme/app_theme.dart';
 
@@ -15,10 +18,15 @@ class PragyuApp extends StatefulWidget {
 }
 
 class _PragyuAppState extends State<PragyuApp> {
+  late final AuthDeepLinkController _authDeepLinks;
+
   @override
   void initState() {
     super.initState();
     AuthSessionEvents.onExpired = _onSessionExpired;
+    _authDeepLinks = AuthDeepLinkController();
+    // Catch cold-start email links before splash finishes.
+    unawaited(_authDeepLinks.start());
   }
 
   @override
@@ -26,6 +34,7 @@ class _PragyuAppState extends State<PragyuApp> {
     if (AuthSessionEvents.onExpired == _onSessionExpired) {
       AuthSessionEvents.onExpired = null;
     }
+    unawaited(_authDeepLinks.dispose());
     super.dispose();
   }
 

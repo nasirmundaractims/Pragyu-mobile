@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:student_mobile/app/router/app_router.dart';
-import 'package:student_mobile/app/theme/student_hub_colors.dart';
-import 'package:student_mobile/app/widgets/student_app_header.dart';
+import 'package:student_mobile/app/widgets/student_screen_kit.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/features/tutorials/data/tutorials_repository.dart';
 import 'package:student_mobile/features/tutorials/domain/tutorials_models.dart';
@@ -146,31 +145,13 @@ class _TutorialsBrowseScreenState extends State<TutorialsBrowseScreen> {
       child: StudentHubPage(
         title: _title,
         body: _loading
-              ? const Center(
-                  child: CircularProgressIndicator(color: StudentHubColors.blue),
-                )
+              ? const AppLoadingState(padding: EdgeInsets.zero)
               : _error != null
                   ? Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              _error!,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(color: StudentHubColors.muted),
-                            ),
-                            const SizedBox(height: 12),
-                            FilledButton(
-                              onPressed: _load,
-                              style: FilledButton.styleFrom(
-                                backgroundColor: StudentHubColors.blue,
-                              ),
-                              child: const Text('Retry'),
-                            ),
-                          ],
-                        ),
+                      child: AppErrorState(
+                        message: _error!,
+                        onRetry: _load,
+                        retryLabel: 'Retry',
                       ),
                     )
                   : RefreshIndicator(
@@ -202,12 +183,9 @@ class _TutorialsBrowseScreenState extends State<TutorialsBrowseScreen> {
                             ],
                             if (_subjects.isNotEmpty) ...[
                               const SizedBox(height: 16),
-                              const Text(
-                                'Subjects',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  color: StudentHubColors.ink,
-                                ),
+                              const StudentSectionHeader(
+                                title: 'Subjects',
+                                compact: true,
                               ),
                               const SizedBox(height: 8),
                               for (final subject in _subjects) ...[

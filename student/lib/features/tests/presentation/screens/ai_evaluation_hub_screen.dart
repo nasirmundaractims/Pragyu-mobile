@@ -81,13 +81,16 @@ class _AiEvaluationHubScreenState extends State<AiEvaluationHubScreen> {
       _error = null;
     });
     try {
-      final resultsFuture = _tests.loadPastResults();
-      final testsFuture = _tests.loadTests();
-      final snapshot = await resultsFuture;
-      final tests = await testsFuture;
+      final settled = await Future.wait<Object>([
+        _tests.loadPastResults(),
+        _tests.loadTests(),
+      ]);
       if (!mounted) return;
 
-      final aiTests = tests.items
+      final snapshot = settled[0] as PastResultsSnapshot;
+      final tests = settled[1] as TestsSnapshot;
+
+      final aiTests = (tests.items)
           .where(_isAiEvaluationTest)
           .toList(growable: false);
 
@@ -107,9 +110,9 @@ class _AiEvaluationHubScreenState extends State<AiEvaluationHubScreen> {
       final items = <AiEvalQuestionItem>[];
       for (final detail in details) {
         final assessment = detail.assessment;
-        final questions = assessment.questions
-            .where(isAiEvaluableQuestion)
-            .toList(growable: false);
+        final questions = List<AssessmentQuestionPreview>.from(
+          assessment.questions,
+        ).where(isAiEvaluableQuestion).toList(growable: false);
         if (questions.isEmpty) continue;
 
         final submission = _latestForAssessment(snapshot, assessment.id);
@@ -136,10 +139,10 @@ class _AiEvaluationHubScreenState extends State<AiEvaluationHubScreen> {
       }
 
       setState(() {
-        _items = items;
+        _items = List<AiEvalQuestionItem>.from(items);
         _loading = false;
         if (_subjectFilter != null &&
-            !items.any((item) => item.subjectLabel == _subjectFilter)) {
+            !_items.any((item) => item.subjectLabel == _subjectFilter)) {
           _subjectFilter = null;
         }
       });
@@ -147,6 +150,7 @@ class _AiEvaluationHubScreenState extends State<AiEvaluationHubScreen> {
       if (!mounted) return;
       setState(() {
         _loading = false;
+        _items = _safeItems; // keep last known-good list (never null)
         _error = error is ApiException
             ? error.message
             : 'Unable to load AI evaluations.';
@@ -221,41 +225,56 @@ class _AiEvaluationHubScreenState extends State<AiEvaluationHubScreen> {
   }
 
   List<AiEvalQuestionItem> get _safeItems {
-    final dynamic raw = _items;
-    if (raw is! List<AiEvalQuestionItem>) {
+    try {
+      final dynamic raw = _items;
+      if (raw == null) return const <AiEvalQuestionItem>[];
+      if (raw is! List) return const <AiEvalQuestionItem>[];
+      return List<AiEvalQuestionItem>.from(
+        raw.whereType<AiEvalQuestionItem>(),
+      );
+    } catch (_) {
       return const <AiEvalQuestionItem>[];
     }
-    return List<AiEvalQuestionItem>.from(raw);
   }
 
   List<AiEvalQuestionItem> get _visibleItems {
-    final query = _query.trim().toLowerCase();
-    return _safeItems.where((item) {
-      if (_kindFilter == _KindFilter.shortAnswer &&
-          item.kind != AiAnswerKind.shortAnswer) {
-        return false;
-      }
-      if (_kindFilter == _KindFilter.longAnswer &&
-          item.kind != AiAnswerKind.longAnswer) {
-        return false;
-      }
-      if (_subjectFilter != null && item.subjectLabel != _subjectFilter) {
-        return false;
-      }
-      if (query.isEmpty) return true;
-      return item.questionText.toLowerCase().contains(query) ||
-          item.subjectLabel.toLowerCase().contains(query) ||
-          item.assessmentTitle.toLowerCase().contains(query) ||
-          item.kindLabel.toLowerCase().contains(query);
-    }).toList(growable: false);
+    try {
+      final query = _query.trim().toLowerCase();
+      final items = _safeItems;
+      if (items.isEmpty) return const <AiEvalQuestionItem>[];
+      return items.where((item) {
+        if (_kindFilter == _KindFilter.shortAnswer &&
+            item.kind != AiAnswerKind.shortAnswer) {
+          return false;
+        }
+        if (_kindFilter == _KindFilter.longAnswer &&
+            item.kind != AiAnswerKind.longAnswer) {
+          return false;
+        }
+        if (_subjectFilter != null && item.subjectLabel != _subjectFilter) {
+          return false;
+        }
+        if (query.isEmpty) return true;
+        return item.questionText.toLowerCase().contains(query) ||
+            item.subjectLabel.toLowerCase().contains(query) ||
+            item.assessmentTitle.toLowerCase().contains(query) ||
+            item.kindLabel.toLowerCase().contains(query);
+      }).toList(growable: false);
+    } catch (_) {
+      return const <AiEvalQuestionItem>[];
+    }
   }
 
   List<String> get _subjects {
-    final items = _safeItems;
-    if (items.isEmpty) return const [];
-    final values = items.map((item) => item.subjectLabel).toSet().toList()
-      ..sort();
-    return values;
+    try {
+      final items = _safeItems;
+      if (items.isEmpty) return const [];
+      final values = items.map((item) => item.subjectLabel).toSet().toList()
+        ..sort();
+      return values;
+    } catch (_) {
+      return const [];
+    }
   }
 
   Future<void> _openQuestion(
@@ -498,7 +517,8 @@ class _AiEvaluationHubScreenState extends State<AiEvaluationHubScreen> {
                             ),
                             const SizedBox(height: 8),
                             const Text(
-                              'Pick a short or long answer question, upload your sheet, then review AI score, strengths, and improvements.',
+                              'Pick a question, upload your sheet, then review AI score and improvements.\n'
+                              'Short answer = concise written · Long answer = essay / descriptive.',
                               softWrap: true,
                               style: TextStyle(
                                 fontFamily: AppTheme.fontFamily,
@@ -568,6 +588,20 @@ class _AiEvaluationHubScreenState extends State<AiEvaluationHubScreen> {
                                 ],
                               ),
                             ),
+                            if (_kindFilter != _KindFilter.all) ...[
+                              const SizedBox(height: 8),
+                              Text(
+                                _kindFilter == _KindFilter.shortAnswer
+                                    ? 'Showing concise written questions only.'
+                                    : 'Showing essay / descriptive questions only.',
+                                style: const TextStyle(
+                                  fontFamily: AppTheme.fontFamily,
+                                  fontSize: 12,
+                                  color: _muted,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
                             if (subjects.isNotEmpty) ...[
                               const SizedBox(height: 10),
                               SingleChildScrollView(
@@ -613,8 +647,16 @@ class _AiEvaluationHubScreenState extends State<AiEvaluationHubScreen> {
                               ),
                             if (visible.isEmpty)
                               _EmptyState(
+                                hasItems: _safeItems.isNotEmpty,
                                 onPractice: () =>
                                     StudentShell.of(context)?.goToTab(2),
+                                onClearFilters: _safeItems.isNotEmpty
+                                    ? () => setState(() {
+                                          _kindFilter = _KindFilter.all;
+                                          _subjectFilter = null;
+                                          _query = '';
+                                        })
+                                    : null,
                               )
                             else ...[
                               Text(
@@ -831,6 +873,16 @@ class _QuestionCard extends StatelessWidget {
                     ),
                 ],
               ),
+              const SizedBox(height: 6),
+              Text(
+                item.kindHint,
+                style: const TextStyle(
+                  fontFamily: AppTheme.fontFamily,
+                  fontSize: 12,
+                  color: Color(0xFF7A8499),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
               const SizedBox(height: 10),
               Text(
                 'Q${item.questionIndex + 1}. ${item.questionText}',
@@ -902,11 +954,7 @@ class _QuestionCard extends StatelessWidget {
                         ),
                       ),
                       child: Text(
-                        item.status == AiEvalQuestionStatus.evaluated
-                            ? 'View score'
-                            : item.status == AiEvalQuestionStatus.evaluating
-                                ? 'Check status'
-                                : 'Upload answer',
+                        item.primaryActionLabel,
                         style: const TextStyle(
                           fontFamily: AppTheme.fontFamily,
                           fontWeight: FontWeight.w800,
@@ -927,9 +975,11 @@ class _QuestionCard extends StatelessWidget {
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        child: const Text(
-                          'Reattempt',
-                          style: TextStyle(
+                        child: Text(
+                          item.status == AiEvalQuestionStatus.failed
+                              ? 'Retry upload'
+                              : 'Reattempt',
+                          style: const TextStyle(
                             fontFamily: AppTheme.fontFamily,
                             fontWeight: FontWeight.w800,
                           ),
@@ -975,23 +1025,39 @@ class _MiniChip extends StatelessWidget {
 }
 
 class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.onPractice});
+  const _EmptyState({
+    required this.hasItems,
+    required this.onPractice,
+    this.onClearFilters,
+  });
 
+  final bool hasItems;
   final VoidCallback onPractice;
+  final VoidCallback? onClearFilters;
 
   @override
   Widget build(BuildContext context) {
+    final title = hasItems
+        ? 'No questions match these filters'
+        : 'No AI evaluation questions yet';
+    final body = hasItems
+        ? 'Try All, clear the subject filter, or search with a different keyword.'
+        : 'When your academy assigns short or long answer tests, they show up here for upload and AI scoring.';
+
     return Padding(
       padding: const EdgeInsets.only(top: 28),
       child: Column(
         children: [
-          const Icon(Icons.auto_awesome_outlined,
-              size: 40, color: Color(0xFF2F7BFF)),
+          Icon(
+            hasItems ? Icons.filter_alt_off_outlined : Icons.auto_awesome_outlined,
+            size: 40,
+            color: const Color(0xFF2F7BFF),
+          ),
           const SizedBox(height: 12),
-          const Text(
-            'No matching AI questions yet',
+          Text(
+            title,
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: const TextStyle(
               fontFamily: AppTheme.fontFamily,
               fontWeight: FontWeight.w800,
               fontSize: 16,
@@ -999,21 +1065,36 @@ class _EmptyState extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Pull to refresh, change filters, or open Practice for more tests.',
+          Text(
+            body,
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: const TextStyle(
               fontFamily: AppTheme.fontFamily,
               color: Color(0xFF7A8499),
               height: 1.4,
             ),
           ),
           const SizedBox(height: 14),
-          TextButton.icon(
-            onPressed: onPractice,
-            icon: const Icon(Icons.track_changes_rounded),
-            label: const Text('Go to Practice'),
-          ),
+          if (onClearFilters != null)
+            FilledButton(
+              onPressed: onClearFilters,
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF2F7BFF),
+              ),
+              child: const Text('Clear filters'),
+            )
+          else
+            TextButton.icon(
+              onPressed: onPractice,
+              icon: const Icon(Icons.track_changes_rounded),
+              label: const Text('Go to Practice'),
+            ),
+          if (onClearFilters != null)
+            TextButton.icon(
+              onPressed: onPractice,
+              icon: const Icon(Icons.track_changes_rounded),
+              label: const Text('Go to Practice'),
+            ),
         ],
       ),
     );

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:student_mobile/app/router/app_router.dart';
 import 'package:student_mobile/app/theme/app_theme.dart';
 import 'package:student_mobile/features/exam_series/data/exam_series_repository.dart';
 import 'package:student_mobile/features/exam_series/domain/exam_series_models.dart';
@@ -70,7 +71,8 @@ void main() {
     expect(find.textContaining('1 exam series pack'), findsOneWidget);
     expect(find.text('GPSC Full Pack'), findsOneWidget);
     expect(find.text('Continue'), findsOneWidget);
-    expect(find.text('Find more packs'), findsOneWidget);
+    expect(find.text('Exam Workspace'), findsOneWidget);
+    expect(find.text('Workspace'), findsOneWidget);
   });
 
   testWidgets('S-67 empty hub shows browse CTAs', (tester) async {
@@ -88,8 +90,46 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Your exam series hub'), findsOneWidget);
-    expect(find.text('Browse exam series'), findsOneWidget);
     expect(find.text('Browse individual tests'), findsOneWidget);
+    expect(find.text('Open Exam Workspace'), findsOneWidget);
+  });
+
+  testWidgets('S-67 workspace opens nested from series hub', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 1400));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: ExamSeriesScreen(
+          seriesRepository: _FakeSeries(
+            hub: const ExamSeriesHubSnapshot(
+              packs: [
+                ExamSeriesPack(
+                  id: 'es-1',
+                  title: 'GPSC Full Pack',
+                  itemCount: 2,
+                ),
+              ],
+            ),
+          ),
+        ),
+        onGenerateRoute: (settings) {
+          if (settings.name == AppRoutes.examWorkspace) {
+            return MaterialPageRoute<void>(
+              settings: settings,
+              builder: (_) => const Scaffold(body: Text('Exam Workspace page')),
+            );
+          }
+          return null;
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Exam Workspace'));
+    await tester.pumpAndSettle();
+    expect(find.text('Exam Workspace page'), findsOneWidget);
   });
 
   testWidgets('S-67 detail shows rank and take test', (tester) async {

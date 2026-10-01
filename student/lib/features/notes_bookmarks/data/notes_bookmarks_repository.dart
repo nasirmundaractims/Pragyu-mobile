@@ -14,6 +14,12 @@ abstract class NotesBookmarksGateway {
 
   Future<void> deleteNote(String noteId);
 
+  Future<ContentBookmark> addBookmark({
+    required String bookmarkableType,
+    required String bookmarkableId,
+    String? title,
+  });
+
   Future<void> removeBookmark(String bookmarkId);
 }
 
@@ -75,6 +81,31 @@ class NotesBookmarksRepository implements NotesBookmarksGateway {
       accessToken: session.accessToken,
       organizationId: session.organizationId,
     );
+  }
+
+  @override
+  Future<ContentBookmark> addBookmark({
+    required String bookmarkableType,
+    required String bookmarkableId,
+    String? title,
+  }) async {
+    final type = bookmarkableType.trim().toLowerCase();
+    final targetId = bookmarkableId.trim();
+    if (type.isEmpty || targetId.isEmpty) {
+      throw ArgumentError('Bookmark type and id are required');
+    }
+    final session = await _requireSession();
+    final envelope = await _api.post(
+      '/students/me/learning/bookmarks',
+      body: {
+        'bookmarkable_type': type,
+        'bookmarkable_id': targetId,
+        if (title != null && title.trim().isNotEmpty) 'title': title.trim(),
+      },
+      accessToken: session.accessToken,
+      organizationId: session.organizationId,
+    );
+    return ContentBookmark.fromJson(_asMap(envelope['data']));
   }
 
   @override

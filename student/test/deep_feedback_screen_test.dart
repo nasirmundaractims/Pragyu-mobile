@@ -232,6 +232,18 @@ void main() {
     }
 
     await reveal('Improve answer with AI');
+    expect(
+      find.textContaining('Uses about 4 AI credits', skipOffstage: false),
+      findsWidgets,
+    );
+    expect(
+      find.text('Regenerate AI answer · 4 credits', skipOffstage: false),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining('Advanced optional help', skipOffstage: false),
+      findsOneWidget,
+    );
     await reveal('Your answer');
     expect(
       find.text(
@@ -279,8 +291,58 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('No personalized suggestions yet.'), findsOneWidget);
-    await tester.tap(find.text('Generate suggestions'));
+    await tester.tap(
+      find.text('Generate suggestions · 3 credits'),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Generate suggestions?'), findsOneWidget);
+    await tester.tap(find.text('Generate · 3 credits'));
     await tester.pumpAndSettle();
     expect(find.text('Generated tip'), findsOneWidget);
+  });
+
+  testWidgets('2.3 rewrite confirms credit cost before requesting', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final fake = _FakeTests(
+      snapshot: const DeepFeedbackSnapshot(
+        originalAnswerText: 'Draft answer',
+      ),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: DeepFeedbackScreen(
+          args: const DeepFeedbackArgs(
+            submissionId: 'sub1',
+            evaluationId: 'ev1',
+          ),
+          testsRepository: fake,
+          pollInterval: const Duration(days: 1),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final requestBtn = find.text('Request AI answer · 4 credits');
+    await tester.scrollUntilVisible(
+      requestBtn,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.ensureVisible(requestBtn);
+    await tester.pumpAndSettle();
+    await tester.tap(requestBtn);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Request AI answer?'), findsOneWidget);
+    expect(find.textContaining('4 AI credits'), findsWidgets);
+    expect(fake.requestCalls, 0);
+
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(fake.requestCalls, 0);
   });
 }

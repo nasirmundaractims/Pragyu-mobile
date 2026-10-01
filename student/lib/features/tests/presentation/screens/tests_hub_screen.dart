@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:student_mobile/app/router/app_router.dart';
 import 'package:student_mobile/app/theme/app_theme.dart';
 import 'package:student_mobile/app/widgets/pragyu_logo.dart';
+import 'package:student_mobile/app/widgets/student_screen_kit.dart';
 import 'package:student_mobile/core/session/session_service.dart';
 import 'package:student_mobile/features/alerts/data/alerts_repository.dart';
 import 'package:student_mobile/features/auth/domain/auth_models.dart';
@@ -32,7 +33,7 @@ class TestsHubScreen extends StatefulWidget {
   State<TestsHubScreen> createState() => _TestsHubScreenState();
 }
 
-enum _PracticeMode { byTopic, mock, mixed, previousYear }
+enum _PracticeMode { all, practice, exams, pastPapers }
 
 enum _ChipTone { blue, teal, orange, red }
 
@@ -62,7 +63,7 @@ class _TestsHubScreenState extends State<TestsHubScreen> {
   String? _error;
   TestsSnapshot? _snapshot;
   TestsFilter _filter = TestsFilter.all;
-  _PracticeMode _mode = _PracticeMode.mixed;
+  _PracticeMode _mode = _PracticeMode.all;
   String? _typeKey;
   String? _selectedId;
   AuthUser? _user;
@@ -173,53 +174,61 @@ class _TestsHubScreenState extends State<TestsHubScreen> {
           .toList(growable: false);
     }
     switch (mode) {
-      case _PracticeMode.byTopic:
-        items = items.where((item) => item.isPractice).toList(growable: false);
-      case _PracticeMode.mock:
-        items = items
-            .where((item) => item.type == TestKind.exam)
-            .toList(growable: false);
-      case _PracticeMode.mixed:
+      case _PracticeMode.all:
         break;
-      case _PracticeMode.previousYear:
+      case _PracticeMode.practice:
+        items = items.where((item) => item.isPractice).toList(growable: false);
+      case _PracticeMode.exams:
         items = items
-            .where((item) => _looksLikePastYear(item.title))
+            .where(
+              (item) =>
+                  item.type == TestKind.exam ||
+                  item.title.toLowerCase().contains('mock'),
+            )
+            .toList(growable: false);
+      case _PracticeMode.pastPapers:
+        // No dedicated PYQ API yet — only show title/year matches.
+        // Empty state sends students to Exam Series instead of a fake list.
+        items = items
+            .where((item) => _looksLikePastYear(item))
             .toList(growable: false);
     }
     return items;
   }
 
-  static bool _looksLikePastYear(String title) {
-    final lower = title.toLowerCase();
-    return RegExp(r'\b(19|20)\d{2}\b').hasMatch(title) ||
-        lower.contains('previous year') ||
-        lower.contains('pyq') ||
-        lower.contains('past paper');
+  static bool _looksLikePastYear(TestListItem item) {
+    final haystack =
+        '${item.title} ${item.description ?? ''}'.toLowerCase();
+    return RegExp(r'\b(19|20)\d{2}\b').hasMatch(haystack) ||
+        haystack.contains('previous year') ||
+        haystack.contains('pyq') ||
+        haystack.contains('past paper') ||
+        haystack.contains('past year');
   }
 
   static String _modeTitle(_PracticeMode mode) {
     switch (mode) {
-      case _PracticeMode.byTopic:
-        return 'Topic practice';
-      case _PracticeMode.mock:
-        return 'Mock tests';
-      case _PracticeMode.mixed:
-        return 'All practice';
-      case _PracticeMode.previousYear:
-        return 'Previous year';
+      case _PracticeMode.all:
+        return 'All tests';
+      case _PracticeMode.practice:
+        return 'Practice & quizzes';
+      case _PracticeMode.exams:
+        return 'Exams & mocks';
+      case _PracticeMode.pastPapers:
+        return 'Past papers';
     }
   }
 
   static String _modeEmptyMessage(_PracticeMode mode) {
     switch (mode) {
-      case _PracticeMode.byTopic:
-        return 'No topic practice tests yet. Try Mixed or open Exam Series.';
-      case _PracticeMode.mock:
-        return 'No mock exams assigned yet.';
-      case _PracticeMode.mixed:
-        return 'No tests match this filter.';
-      case _PracticeMode.previousYear:
-        return 'No previous-year papers here yet. Open Exam Series for packs.';
+      case _PracticeMode.all:
+        return 'Nothing matches these filters. Clear a filter or browse Exam Series.';
+      case _PracticeMode.practice:
+        return 'No quizzes or practice drills here yet. Try All tests, or browse Exam Series.';
+      case _PracticeMode.exams:
+        return 'No full exams or mocks assigned yet. Try All tests, or browse Exam Series.';
+      case _PracticeMode.pastPapers:
+        return 'Past-year papers are not listed under Practice yet. Open Exam Series for PYQ packs.';
     }
   }
 
@@ -315,23 +324,17 @@ class _TestsHubScreenState extends State<TestsHubScreen> {
 
   Widget _buildBody(String initials) {
     if (_loading && _snapshot == null) {
-      return ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        children: const [
-          SizedBox(height: 140),
-          Center(child: CircularProgressIndicator(color: _blue)),
-        ],
-      );
+      return const AppLoadingState(scrollable: true);
     }
 
     if (_error != null && _snapshot == null) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(24),
         children: [
-          Text(
-            _error!,
-            style: const TextStyle(color: Color(0xFFC0392B), height: 1.45),
+          AppErrorState(
+            message: _error!,
+            onRetry: _load,
+            retryLabel: 'Retry',
           ),
         ],
       );
@@ -400,7 +403,7 @@ class _TestsHubScreenState extends State<TestsHubScreen> {
         SizedBox(height: short ? 16 : 20),
         KeyedSubtree(
           key: _topicsKey,
-          child: _SectionHeader(
+          child: StudentSectionHeader(
             title: '${_modeTitle(_mode)} · ${visible.length}',
             actionLabel: 'Exam Series',
             onAction: () =>
@@ -409,9 +412,37 @@ class _TestsHubScreenState extends State<TestsHubScreen> {
         ),
         const SizedBox(height: 12),
         if (snapshot.isEmpty)
-          const _InlineEmpty(message: 'No tests assigned yet.')
+          AppEmptyState(
+            icon: Icons.quiz_outlined,
+            title: 'No tests assigned yet',
+            message:
+                'Browse Exam Series for mocks and packs.',
+            actionLabel: 'Open Exam Series',
+            onAction: () =>
+                Navigator.of(context).pushNamed(AppRoutes.examSeries),
+          )
         else if (visible.isEmpty)
-          _InlineEmpty(message: _modeEmptyMessage(_mode))
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              AppEmptyState(
+                icon: Icons.filter_alt_outlined,
+                title: 'Nothing in this mode',
+                message: _modeEmptyMessage(_mode),
+                actionLabel: 'Open Exam Series',
+                onAction: () =>
+                    Navigator.of(context).pushNamed(AppRoutes.examSeries),
+              ),
+              if (_mode != _PracticeMode.all)
+                TextButton(
+                  onPressed: () => setState(() {
+                    _mode = _PracticeMode.all;
+                    _syncSelection(snapshot);
+                  }),
+                  child: const Text('Show all tests'),
+                ),
+            ],
+          )
         else
           _TopicGrid(
             items: visible,
@@ -420,17 +451,24 @@ class _TestsHubScreenState extends State<TestsHubScreen> {
             onOpen: _openTest,
           ),
         SizedBox(height: short ? 16 : 22),
-        _SectionHeader(
+        StudentSectionHeader(
           title: 'Selected test',
           actionLabel: 'Change Mode',
           onAction: _scrollToModes,
-          actionIcon: Icons.tune_rounded,
         ),
         const SizedBox(height: 12),
         if (selected == null)
-          const _InlineEmpty(
-            message: 'Choose a topic above to open practice.',
-          )
+          snapshot.isEmpty
+              ? const SizedBox.shrink()
+              : AppEmptyState(
+                  icon: Icons.touch_app_outlined,
+                  title: 'Pick a test',
+                  message:
+                      'Choose a test above, or open Exam Series for more packs.',
+                  actionLabel: 'Open Exam Series',
+                  onAction: () =>
+                      Navigator.of(context).pushNamed(AppRoutes.examSeries),
+                )
         else
           _QuestionsPreviewCard(
             item: selected,
@@ -813,28 +851,28 @@ class _ModeRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final cards = <(_PracticeMode, IconData, String, String)>[
       (
-        _PracticeMode.byTopic,
-        Icons.description_outlined,
-        'Practice by Topic',
-        'Practice & quiz tests',
-      ),
-      (
-        _PracticeMode.mock,
-        Icons.timer_outlined,
-        'Mock Test',
-        'Full exams only',
-      ),
-      (
-        _PracticeMode.mixed,
-        Icons.shuffle_rounded,
-        'Mixed Practice',
+        _PracticeMode.all,
+        Icons.apps_rounded,
+        'All',
         'Everything assigned',
       ),
       (
-        _PracticeMode.previousYear,
+        _PracticeMode.practice,
+        Icons.description_outlined,
+        'Practice',
+        'Quizzes & drills',
+      ),
+      (
+        _PracticeMode.exams,
+        Icons.timer_outlined,
+        'Exams',
+        'Full mocks',
+      ),
+      (
+        _PracticeMode.pastPapers,
         Icons.history_edu_outlined,
-        'Previous Year',
-        'PYQ / year papers',
+        'Past papers',
+        'Via Exam Series',
       ),
     ];
 
@@ -1238,65 +1276,6 @@ class _FilterChipButton extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({
-    required this.title,
-    required this.actionLabel,
-    required this.onAction,
-    this.actionIcon,
-  });
-
-  final String title;
-  final String actionLabel;
-  final VoidCallback onAction;
-  final IconData? actionIcon;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Text(
-            title,
-            softWrap: true,
-            style: const TextStyle(
-              fontFamily: AppTheme.fontFamily,
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-              color: _TestsHubScreenState._ink,
-            ),
-          ),
-        ),
-        TextButton(
-          onPressed: onAction,
-          style: TextButton.styleFrom(
-            foregroundColor: _TestsHubScreenState._blue,
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            visualDensity: VisualDensity.compact,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (actionIcon != null) ...[
-                Icon(actionIcon, size: 16),
-                const SizedBox(width: 4),
-              ],
-              Text(
-                actionLabel,
-                style: const TextStyle(
-                  fontFamily: AppTheme.fontFamily,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 13,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }
@@ -2019,28 +1998,6 @@ class _DueChip extends StatelessWidget {
           color: urgent
               ? const Color(0xFFC0392B)
               : _TestsHubScreenState._green,
-        ),
-      ),
-    );
-  }
-}
-
-class _InlineEmpty extends StatelessWidget {
-  const _InlineEmpty({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 28),
-      child: Text(
-        message,
-        softWrap: true,
-        style: const TextStyle(
-          fontFamily: AppTheme.fontFamily,
-          color: _TestsHubScreenState._muted,
-          height: 1.45,
         ),
       ),
     );

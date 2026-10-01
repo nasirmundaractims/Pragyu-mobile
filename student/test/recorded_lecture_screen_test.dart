@@ -186,4 +186,28 @@ void main() {
     expect(find.text('Get playback link'), findsNothing);
     expect(find.byType(FilledButton), findsNothing);
   });
+
+  testWidgets('S-26 no video is honest without playback CTA', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: RecordedLectureScreen(
+          args: const RecordedLectureArgs(lectureId: 'lec-4'),
+          lecturesRepository: _FakeLectures(
+            snapshot: const RecordedLectureSnapshot(
+              lectureId: 'lec-4',
+              title: 'Pending Upload',
+              hasVideo: false,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('No recording yet'), findsOneWidget);
+    expect(find.textContaining('doesn’t have a video file'), findsOneWidget);
+    expect(find.text('Get playback link'), findsNothing);
+    expect(find.text('Mark complete'), findsOneWidget);
+  });
 }

@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:student_mobile/app/router/app_router.dart';
-import 'package:student_mobile/app/theme/student_hub_colors.dart';
-import 'package:student_mobile/app/widgets/student_app_header.dart';
+import 'package:student_mobile/app/widgets/student_screen_kit.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/features/exam_workspace/data/exam_workspace_repository.dart';
 import 'package:student_mobile/features/exam_workspace/domain/exam_workspace_models.dart';
@@ -128,12 +127,16 @@ class _ExamWorkspaceScreenState extends State<ExamWorkspaceScreen> {
           ),
         ],
         body: _loading && snapshot == null
-              ? const Center(
-                  child: CircularProgressIndicator(color: StudentHubColors.blue),
-                )
-              : _error != null && snapshot == null
-                  ? _ErrorBody(message: _error!, onRetry: _load)
-                  : RefreshIndicator(
+            ? const AppLoadingState(padding: EdgeInsets.zero)
+            : _error != null && snapshot == null
+                ? Center(
+                    child: AppErrorState(
+                      message: _error!,
+                      onRetry: _load,
+                      retryLabel: 'Retry',
+                    ),
+                  )
+                : RefreshIndicator(
                       color: StudentHubColors.blue,
                       onRefresh: _load,
                       child: SingleChildScrollView(
@@ -644,14 +647,7 @@ class _PracticeSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Practice hub',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
-            color: StudentHubColors.ink,
-          ),
-        ),
+        const StudentSectionHeader(title: 'Practice hub'),
         const SizedBox(height: 4),
         Text(
           'Available practice for ${snapshot.display.exam.label}',
@@ -1170,38 +1166,6 @@ class _SectionLabel extends StatelessWidget {
         fontWeight: FontWeight.w600,
         letterSpacing: 1.0,
         color: StudentHubColors.muted,
-      ),
-    );
-  }
-}
-
-class _ErrorBody extends StatelessWidget {
-  const _ErrorBody({required this.message, required this.onRetry});
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: StudentHubColors.muted),
-            ),
-            const SizedBox(height: 12),
-            FilledButton(
-              onPressed: onRetry,
-              style: FilledButton.styleFrom(backgroundColor: StudentHubColors.blue),
-              child: const Text('Retry'),
-            ),
-          ],
-        ),
       ),
     );
   }

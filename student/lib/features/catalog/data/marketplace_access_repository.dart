@@ -7,6 +7,8 @@ abstract class MarketplaceAccessGateway {
 }
 
 /// Calls `GET /students/me/marketplace-access` (parity with student-web).
+///
+/// Slice 0.3: fail-closed — errors and missing session never grant access.
 class MarketplaceAccessRepository implements MarketplaceAccessGateway {
   MarketplaceAccessRepository({
     ApiClient? apiClient,
@@ -25,7 +27,7 @@ class MarketplaceAccessRepository implements MarketplaceAccessGateway {
     try {
       final session = await _session.read();
       if (session == null) {
-        return MarketplaceAccess.unknownOpen;
+        return MarketplaceAccess.unknownClosed;
       }
 
       final envelope = await _api.get(
@@ -44,11 +46,9 @@ class MarketplaceAccessRepository implements MarketplaceAccessGateway {
           envelope.map((key, value) => MapEntry(key, value)),
         );
       }
-      return MarketplaceAccess.unknownOpen;
+      return MarketplaceAccess.unknownClosed;
     } catch (_) {
-      // Fail-open: match student-web (query error → available true).
-      // Also covers missing AppConfig in widget tests.
-      return MarketplaceAccess.unknownOpen;
+      return MarketplaceAccess.unknownClosed;
     }
   }
 }

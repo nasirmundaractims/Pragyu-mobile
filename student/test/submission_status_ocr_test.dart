@@ -151,6 +151,7 @@ void main() {
             ),
           ),
           pollInterval: const Duration(days: 1),
+          stuckAfter: const Duration(days: 1),
         ),
       ),
     );
@@ -164,5 +165,6 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('OCR reading pages'), findsOneWidget);
+    expect(find.text('Reading your pages'), findsOneWidget);
   });
 }

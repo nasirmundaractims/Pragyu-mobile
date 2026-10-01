@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:student_mobile/app/router/app_router.dart';
-import 'package:student_mobile/app/theme/student_hub_colors.dart';
-import 'package:student_mobile/app/widgets/student_app_header.dart';
+import 'package:student_mobile/app/widgets/student_screen_kit.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/features/catalog/data/marketplace_access_service.dart';
 import 'package:student_mobile/features/exam_series/data/exam_series_repository.dart';
 import 'package:student_mobile/features/exam_series/domain/exam_series_models.dart';
+import 'package:student_mobile/features/home/presentation/screens/home_screen.dart';
 
 /// S-67 Exam Series hub — entitled test packs (Question Bank).
 class ExamSeriesScreen extends StatefulWidget {
@@ -54,6 +54,21 @@ class _ExamSeriesScreenState extends State<ExamSeriesScreen> {
   void _openCatalog() {
     if (!_marketplace.available) return;
     Navigator.of(context).pushNamed(AppRoutes.catalog);
+  }
+
+  void _openWorkspace() {
+    Navigator.of(context).pushNamed(AppRoutes.examWorkspace);
+  }
+
+  /// Practice tab is the primary home for assigned individual tests (slice 1.4).
+  void _openPractice() {
+    final shell = StudentShell.of(context);
+    if (shell != null) {
+      Navigator.of(context).popUntil((route) => route.isFirst);
+      shell.goToTab(2);
+      return;
+    }
+    Navigator.of(context).pushNamed(AppRoutes.home);
   }
 
   Future<void> _load() async {
@@ -130,57 +145,71 @@ class _ExamSeriesScreenState extends State<ExamSeriesScreen> {
       child: StudentHubPage(
         title: 'Exam Series',
         actions: [
-          IconButton(
-            tooltip: 'Exam Workspace',
-            onPressed: () =>
-                Navigator.of(context).pushNamed(AppRoutes.examWorkspace),
-            icon: const Icon(Icons.workspace_premium_outlined, color: StudentHubColors.ink),
+          TextButton.icon(
+            onPressed: _openWorkspace,
+            icon: const Icon(
+              Icons.workspace_premium_outlined,
+              size: 18,
+              color: StudentHubColors.ink,
+            ),
+            label: const Text(
+              'Workspace',
+              style: TextStyle(
+                color: StudentHubColors.ink,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ],
         body: _loading && _snapshot.packs.isEmpty && _error == null
-              ? const Center(
-                  child: CircularProgressIndicator(color: StudentHubColors.blue),
-                )
-              : _error != null && _snapshot.packs.isEmpty
-                  ? _ErrorBody(message: _error!, onRetry: _load)
-                  : RefreshIndicator(
-                      color: StudentHubColors.blue,
-                      onRefresh: _load,
-                      child: SingleChildScrollView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
-                        child: _snapshot.isEmpty
-                            ? _EmptyHub(
-                                onBrowseCatalog: _marketplace.available
-                                    ? _openCatalog
-                                    : null,
-                                onBrowseTests: () => Navigator.of(context)
-                                    .pushNamed(AppRoutes.home),
-                              )
-                            : Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  _HubHeader(
-                                    packCount: _snapshot.packs.length,
-                                    onFindMore: _marketplace.available
-                                        ? _openCatalog
-                                        : null,
-                                  ),
-                                  const SizedBox(height: 14),
-                                  for (final pack in _snapshot.packs) ...[
-                                    _PackCard(
-                                      pack: pack,
-                                      activeOrganizationId:
-                                          _snapshot.activeOrganizationId,
-                                      opening: _opening,
-                                      onOpen: () => _openPack(pack),
-                                    ),
-                                    const SizedBox(height: 12),
-                                  ],
-                                ],
-                              ),
-                      ),
+            ? const AppLoadingState(padding: EdgeInsets.zero)
+            : _error != null && _snapshot.packs.isEmpty
+                ? Center(
+                    child: AppErrorState(
+                      message: _error!,
+                      onRetry: _load,
+                      retryLabel: 'Retry',
                     ),
+                  )
+                : RefreshIndicator(
+                    color: StudentHubColors.blue,
+                    onRefresh: _load,
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+                      child: _snapshot.isEmpty
+                          ? _EmptyHub(
+                              onBrowseCatalog: _marketplace.available
+                                  ? _openCatalog
+                                  : null,
+                              onBrowseTests: _openPractice,
+                              onOpenWorkspace: _openWorkspace,
+                            )
+                          : Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                _HubHeader(
+                                  packCount: _snapshot.packs.length,
+                                  onFindMore: _marketplace.available
+                                      ? _openCatalog
+                                      : null,
+                                  onOpenWorkspace: _openWorkspace,
+                                ),
+                                const SizedBox(height: 14),
+                                for (final pack in _snapshot.packs) ...[
+                                  _PackCard(
+                                    pack: pack,
+                                    activeOrganizationId:
+                                        _snapshot.activeOrganizationId,
+                                    opening: _opening,
+                                    onOpen: () => _openPack(pack),
+                                  ),
+                                  const SizedBox(height: 12),
+                                ],
+                              ],
+                            ),
+                    ),
+                  ),
       ),
     );
   }
@@ -190,10 +219,12 @@ class _HubHeader extends StatelessWidget {
   const _HubHeader({
     required this.packCount,
     this.onFindMore,
+    required this.onOpenWorkspace,
   });
 
   final int packCount;
   final VoidCallback? onFindMore;
+  final VoidCallback onOpenWorkspace;
 
   @override
   Widget build(BuildContext context) {
@@ -229,6 +260,56 @@ class _HubHeader extends StatelessWidget {
           const Text(
             'Open a pack to take the included tests. Purchased packs open in the seller workspace when needed.',
             style: TextStyle(fontSize: 13, color: StudentHubColors.muted, height: 1.35),
+          ),
+          const SizedBox(height: 12),
+          Material(
+            color: const Color(0xFFF0EBFF),
+            borderRadius: BorderRadius.circular(12),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: onOpenWorkspace,
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.workspace_premium_outlined,
+                      size: 20,
+                      color: Color(0xFF7B61FF),
+                    ),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Exam Workspace',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: StudentHubColors.ink,
+                            ),
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            'Pattern-aware readiness for your target exam',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: StudentHubColors.muted,
+                              height: 1.3,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      color: StudentHubColors.muted,
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
           if (onFindMore != null) ...[
             const SizedBox(height: 10),
@@ -412,98 +493,37 @@ class _EmptyHub extends StatelessWidget {
   const _EmptyHub({
     this.onBrowseCatalog,
     required this.onBrowseTests,
+    required this.onOpenWorkspace,
   });
 
   final VoidCallback? onBrowseCatalog;
   final VoidCallback onBrowseTests;
+  final VoidCallback onOpenWorkspace;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(20, 28, 20, 28),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFFFFFFFF), Color(0xFFE8EEF6), Color(0xFFECFEFF)],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AppEmptyState(
+          icon: Icons.layers_outlined,
+          title: 'Your exam series hub',
+          message:
+              'Exam Series packs bundle multiple tests for focused practice. Purchase a pack from the catalog, or ask your academy to assign one — then open it here to start.',
+          actionLabel:
+              onBrowseCatalog != null ? 'Browse exam series' : null,
+          onAction: onBrowseCatalog,
         ),
-        border: Border.all(color: StudentHubColors.border),
-      ),
-      child: Column(
-        children: [
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: StudentHubColors.border),
-            ),
-            child: const Icon(Icons.layers_outlined, color: StudentHubColors.blue),
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            'Your exam series hub',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              color: StudentHubColors.ink,
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Exam Series packs bundle multiple tests for focused practice. Purchase a pack from the catalog, or ask your academy to assign one — then open it here to start.',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 13, color: StudentHubColors.muted, height: 1.4),
-          ),
-          const SizedBox(height: 18),
-          if (onBrowseCatalog != null)
-            FilledButton(
-              onPressed: onBrowseCatalog,
-              style: FilledButton.styleFrom(backgroundColor: StudentHubColors.blue),
-              child: const Text('Browse exam series'),
-            ),
-          if (onBrowseCatalog != null) const SizedBox(height: 8),
-          OutlinedButton(
-            onPressed: onBrowseTests,
-            child: const Text('Browse individual tests'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ErrorBody extends StatelessWidget {
-  const _ErrorBody({required this.message, required this.onRetry});
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: StudentHubColors.muted),
-            ),
-            const SizedBox(height: 12),
-            FilledButton(
-              onPressed: onRetry,
-              style: FilledButton.styleFrom(backgroundColor: StudentHubColors.blue),
-              child: const Text('Retry'),
-            ),
-          ],
+        SecondaryButton(
+          label: 'Browse individual tests',
+          onPressed: onBrowseTests,
         ),
-      ),
+        const SizedBox(height: 8),
+        TextButton(
+          onPressed: onOpenWorkspace,
+          child: const Text('Open Exam Workspace'),
+        ),
+      ],
     );
   }
 }

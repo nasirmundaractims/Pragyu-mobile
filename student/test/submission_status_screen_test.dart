@@ -156,6 +156,7 @@ void main() {
           ),
           testsRepository: fake,
           pollInterval: const Duration(milliseconds: 20),
+          stuckAfter: const Duration(days: 1),
         ),
         onGenerateRoute: (settings) {
           if (settings.name == AppRoutes.resultFeedback) {
@@ -177,7 +178,7 @@ void main() {
     expect(find.text('Polity Weekly Quiz'), findsOneWidget);
     // Hero label + pipeline step share this copy.
     expect(find.text('AI evaluating'), findsAtLeastNWidgets(1));
-    expect(find.text('Checking for updates…'), findsOneWidget);
+    expect(find.text('AI is scoring — checking automatically…'), findsOneWidget);
 
     // Fire scheduled poll → second status (evaluated).
     await tester.pump(const Duration(milliseconds: 30));
@@ -214,13 +215,94 @@ void main() {
           ),
           testsRepository: fake,
           pollInterval: const Duration(hours: 1),
+          stuckAfter: const Duration(days: 1),
         ),
       ),
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Needs attention'), findsOneWidget);
+    expect(find.text('Evaluation failed'), findsOneWidget);
     expect(find.text('OCR could not read the pages.'), findsOneWidget);
+    expect(find.text('Try again'), findsOneWidget);
+  });
+
+  testWidgets('S-45 surfaces failure_reason without endless spinner', (
+    tester,
+  ) async {
+    final fake = _FakeTests([
+      const SubmissionStatusPayload(
+        id: 'sub1',
+        status: 'ready_for_evaluation',
+        failureReason: 'AI evaluation is not configured for this organisation.',
+      ),
+    ]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: SubmissionStatusScreen(
+          args: const SubmissionStatusArgs(
+            submissionId: 'sub1',
+            initialStatus: 'ready_for_evaluation',
+          ),
+          testsRepository: fake,
+          pollInterval: const Duration(hours: 1),
+          stuckAfter: const Duration(days: 1),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Waiting on a fix'), findsOneWidget);
+    expect(
+      find.text('AI evaluation is not configured for this organisation.'),
+      findsAtLeastNWidgets(1),
+    );
+    expect(find.text('Evaluation paused'), findsOneWidget);
+    expect(find.text('Try again'), findsOneWidget);
+    expect(find.text('Checking for updates…'), findsNothing);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+  });
+
+  testWidgets('S-45 stops spinner after stuckAfter', (tester) async {
+    final fake = _FakeTests([
+      const SubmissionStatusPayload(
+        id: 'sub1',
+        status: 'ready_for_evaluation',
+      ),
+    ]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: SubmissionStatusScreen(
+          args: const SubmissionStatusArgs(
+            submissionId: 'sub1',
+            initialStatus: 'ready_for_evaluation',
+          ),
+          testsRepository: fake,
+          pollInterval: const Duration(hours: 1),
+          stuckAfter: const Duration(milliseconds: 40),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('Queued for AI'), findsAtLeastNWidgets(1));
+    expect(
+      find.text('In the AI queue — checking automatically…'),
+      findsOneWidget,
+    );
+
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.pump();
+
+    expect(find.text('Taking longer than usual'), findsOneWidget);
     expect(find.text('Check again'), findsOneWidget);
+    expect(
+      find.text('In the AI queue — checking automatically…'),
+      findsNothing,
+    );
   });
 }

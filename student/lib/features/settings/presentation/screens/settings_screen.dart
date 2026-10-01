@@ -3,8 +3,7 @@ import 'package:flutter/services.dart';
 
 import 'package:student_mobile/app/router/app_router.dart';
 import 'package:student_mobile/app/theme/app_theme.dart';
-import 'package:student_mobile/app/theme/student_hub_colors.dart';
-import 'package:student_mobile/app/widgets/student_app_header.dart';
+import 'package:student_mobile/app/widgets/student_screen_kit.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/features/me/data/me_repository.dart';
 import 'package:student_mobile/features/settings/data/settings_repository.dart';
@@ -291,121 +290,104 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
-      child: Scaffold(
-        backgroundColor: StudentHubColors.pageBg,
-        body: SafeArea(
-          child: Column(
-            children: [
-              StudentAppHeader(
-                title: 'Settings',
-                onBack: () => Navigator.of(context).maybePop(),
-              ),
-              Expanded(
-                child: !_ready && _loading
-                    ? const Center(
-                        child: CircularProgressIndicator(
-                          color: StudentHubColors.blue,
-                        ),
-                      )
-                    : !_ready && _error != null
-                        ? _ErrorBody(message: _error!, onRetry: _load)
-                        : RefreshIndicator(
-                            color: StudentHubColors.blue,
-                            onRefresh: _load,
-                            child: SingleChildScrollView(
-                              physics: const AlwaysScrollableScrollPhysics(),
-                              padding:
-                                  const EdgeInsets.fromLTRB(16, 4, 16, 28),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  const _IntroCard(),
-                                  const SizedBox(height: 18),
-                                  _PasswordCard(
-                                    currentController: _currentPassword,
-                                    newController: _newPassword,
-                                    confirmController: _confirmPassword,
-                                    saving: _savingPassword,
-                                    onSubmit: _submitPassword,
-                                  ),
-                                  const SizedBox(height: 12),
-                                  _LocaleCard(
-                                    locale: _locale,
-                                    timezone: _timezone,
-                                    saving: _savingLocale,
-                                    onLocaleChanged: (value) =>
-                                        setState(() => _locale = value),
-                                    onTimezoneChanged: (value) =>
-                                        setState(() => _timezone = value),
-                                    onSave: _saveLocale,
-                                  ),
-                                  const SizedBox(height: 12),
-                                  _SessionsCard(
-                                    sessions: _snapshot.sessions,
-                                    unavailable:
-                                        _snapshot.sessionsUnavailable,
-                                    busySessionId: _busySessionId,
-                                    revokingOthers: _revokingOthers,
-                                    onRevoke: _revokeSession,
-                                    onRevokeOthers: _revokeOthers,
-                                  ),
-                                  const SizedBox(height: 12),
-                                  _DevicesCard(
-                                    devices: _snapshot.devices,
-                                    unavailable:
-                                        _snapshot.devicesUnavailable,
-                                    busyDeviceId: _busyDeviceId,
-                                    onRevoke: _revokeDevice,
-                                  ),
-                                  const SizedBox(height: 20),
-                                  SizedBox(
-                                    height: 52,
-                                    child: OutlinedButton.icon(
-                                      onPressed:
-                                          _loggingOut ? null : _logout,
-                                      icon: Icon(
-                                        Icons.logout_rounded,
-                                        color: _loggingOut
-                                            ? StudentHubColors.muted
-                                            : StudentHubColors.danger,
-                                      ),
-                                      label: Text(
-                                        _loggingOut
-                                            ? 'Logging out…'
-                                            : 'Logout',
-                                        style: TextStyle(
-                                          fontFamily: AppTheme.fontFamily,
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 15,
-                                          color: _loggingOut
-                                              ? StudentHubColors.muted
-                                              : StudentHubColors.danger,
-                                        ),
-                                      ),
-                                      style: OutlinedButton.styleFrom(
-                                        side: BorderSide(
-                                          color: _loggingOut
-                                              ? StudentHubColors.muted
-                                                  .withValues(alpha: 0.4)
-                                              : StudentHubColors.danger
-                                                  .withValues(alpha: 0.45),
-                                          width: 1.4,
-                                        ),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(16),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
+      child: StudentHubPage(
+        title: 'Settings',
+        body: !_ready && _loading
+            ? const AppLoadingState(padding: EdgeInsets.zero)
+            : !_ready && _error != null
+                ? Center(
+                    child: AppErrorState(
+                      message: _error!,
+                      onRetry: _load,
+                      retryLabel: 'Retry',
+                    ),
+                  )
+                : RefreshIndicator(
+                    color: StudentHubColors.blue,
+                    onRefresh: _load,
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const _IntroCard(),
+                          const SizedBox(height: 18),
+                          _PasswordCard(
+                            currentController: _currentPassword,
+                            newController: _newPassword,
+                            confirmController: _confirmPassword,
+                            saving: _savingPassword,
+                            onSubmit: _submitPassword,
+                          ),
+                          const SizedBox(height: 12),
+                          _LocaleCard(
+                            locale: _locale,
+                            timezone: _timezone,
+                            saving: _savingLocale,
+                            onLocaleChanged: (value) =>
+                                setState(() => _locale = value),
+                            onTimezoneChanged: (value) =>
+                                setState(() => _timezone = value),
+                            onSave: _saveLocale,
+                          ),
+                          const SizedBox(height: 12),
+                          _SessionsCard(
+                            sessions: _snapshot.sessions,
+                            unavailable: _snapshot.sessionsUnavailable,
+                            busySessionId: _busySessionId,
+                            revokingOthers: _revokingOthers,
+                            onRevoke: _revokeSession,
+                            onRevokeOthers: _revokeOthers,
+                          ),
+                          const SizedBox(height: 12),
+                          _DevicesCard(
+                            devices: _snapshot.devices,
+                            unavailable: _snapshot.devicesUnavailable,
+                            busyDeviceId: _busyDeviceId,
+                            onRevoke: _revokeDevice,
+                          ),
+                          const SizedBox(height: 20),
+                          SizedBox(
+                            height: 52,
+                            child: OutlinedButton.icon(
+                              onPressed: _loggingOut ? null : _logout,
+                              icon: Icon(
+                                Icons.logout_rounded,
+                                color: _loggingOut
+                                    ? StudentHubColors.muted
+                                    : StudentHubColors.danger,
+                              ),
+                              label: Text(
+                                _loggingOut ? 'Logging out…' : 'Logout',
+                                style: TextStyle(
+                                  fontFamily: AppTheme.fontFamily,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 15,
+                                  color: _loggingOut
+                                      ? StudentHubColors.muted
+                                      : StudentHubColors.danger,
+                                ),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                side: BorderSide(
+                                  color: _loggingOut
+                                      ? StudentHubColors.muted
+                                          .withValues(alpha: 0.4)
+                                      : StudentHubColors.danger
+                                          .withValues(alpha: 0.45),
+                                  width: 1.4,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
                               ),
                             ),
                           ),
-              ),
-            ],
-          ),
-        ),
+                        ],
+                      ),
+                    ),
+                  ),
       ),
     );
   }
@@ -502,26 +484,9 @@ class _PasswordCard extends StatelessWidget {
             label: 'Confirm new password',
           ),
           const SizedBox(height: 14),
-          SizedBox(
-            width: double.infinity,
-            height: 48,
-            child: FilledButton(
-              onPressed: saving ? null : onSubmit,
-              style: FilledButton.styleFrom(
-                backgroundColor: StudentHubColors.blue,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: Text(
-                saving ? 'Updating…' : 'Update password',
-                style: const TextStyle(
-                  fontFamily: AppTheme.fontFamily,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
+          PrimaryButton(
+            label: saving ? 'Updating…' : 'Update password',
+            onPressed: saving ? null : onSubmit,
           ),
         ],
       ),
@@ -638,26 +603,9 @@ class _LocaleCard extends StatelessWidget {
             },
           ),
           const SizedBox(height: 14),
-          SizedBox(
-            width: double.infinity,
-            height: 48,
-            child: OutlinedButton(
-              onPressed: saving ? null : onSave,
-              style: OutlinedButton.styleFrom(
-                foregroundColor: StudentHubColors.blue,
-                side: const BorderSide(color: StudentHubColors.blue),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: Text(
-                saving ? 'Saving…' : 'Save locale',
-                style: const TextStyle(
-                  fontFamily: AppTheme.fontFamily,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
+          SecondaryButton(
+            label: saving ? 'Saving…' : 'Save locale',
+            onPressed: saving ? null : onSave,
           ),
         ],
       ),
@@ -987,61 +935,6 @@ class _IconWell extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
       ),
       child: Icon(icon, color: tint, size: 20),
-    );
-  }
-}
-
-class _ErrorBody extends StatelessWidget {
-  const _ErrorBody({required this.message, required this.onRetry});
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                color: StudentHubColors.blueSoft,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: const Icon(
-                Icons.settings_outlined,
-                color: StudentHubColors.blue,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontFamily: AppTheme.fontFamily,
-                color: StudentHubColors.muted,
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 16),
-            FilledButton(
-              onPressed: onRetry,
-              style: FilledButton.styleFrom(
-                backgroundColor: StudentHubColors.blue,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: const Text('Retry'),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

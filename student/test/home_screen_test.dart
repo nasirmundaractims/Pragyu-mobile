@@ -3,12 +3,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:student_mobile/app/router/app_router.dart';
 import 'package:student_mobile/app/theme/app_theme.dart';
 import 'package:student_mobile/core/config/app_config.dart';
+import 'package:student_mobile/features/announcements/data/announcements_repository.dart';
+import 'package:student_mobile/features/announcements/domain/announcements_models.dart';
 import 'package:student_mobile/features/auth/domain/auth_models.dart';
 import 'package:student_mobile/features/home/data/home_repository.dart';
 import 'package:student_mobile/features/home/domain/due_state.dart';
 import 'package:student_mobile/features/home/domain/home_models.dart';
 import 'package:student_mobile/features/home/presentation/screens/home_screen.dart';
 import 'package:student_mobile/features/home/presentation/screens/today_detail_screen.dart';
+import 'package:student_mobile/features/recommendations/data/recommendations_repository.dart';
+import 'package:student_mobile/features/recommendations/domain/recommendations_models.dart';
 
 class _FakeHome implements HomeGateway {
   _FakeHome({
@@ -24,6 +28,49 @@ class _FakeHome implements HomeGateway {
 
   @override
   Future<TodaySnapshot> loadToday() async => today;
+}
+
+class _FakeAnnouncements implements AnnouncementsGateway {
+  _FakeAnnouncements([this.snapshot = const AnnouncementsSnapshot()]);
+
+  final AnnouncementsSnapshot snapshot;
+
+  @override
+  Future<AnnouncementsSnapshot> loadAnnouncements() async => snapshot;
+
+  @override
+  Future<AnnouncementItem?> findById(String announcementId) async {
+    for (final item in snapshot.items) {
+      if (item.id == announcementId) return item;
+    }
+    return null;
+  }
+
+  @override
+  Future<void> markRead(String announcementId) async {}
+}
+
+class _FakeRecommendations implements RecommendationsGateway {
+  _FakeRecommendations([
+    this.snapshot = const RecommendationsSnapshot(studentProfileId: 'sp1'),
+  ]);
+
+  final RecommendationsSnapshot snapshot;
+
+  @override
+  Future<RecommendationsSnapshot> loadRecommendations() async => snapshot;
+
+  @override
+  Future<List<RecommendationItem>> generateRecommendations({
+    required String studentProfileId,
+  }) async =>
+      snapshot.items;
+
+  @override
+  Future<void> recordOutcome({
+    required String recommendationId,
+    required String outcome,
+  }) async {}
 }
 
 void main() {
@@ -73,6 +120,8 @@ void main() {
           coursesEnrolled: 12,
           testsAttempted: 28,
         ),
+        organizationName: 'Pragyu Demo Institute',
+        organizationType: 'institute',
         upcomingLectures: const [
           HomeLecture(
             id: 'lec-1',
@@ -86,20 +135,117 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light(),
-        home: StudentShell(homeRepository: fake),
+        home: StudentShell(
+          homeRepository: fake,
+          announcementsRepository: _FakeAnnouncements(),
+          recommendationsRepository: _FakeRecommendations(),
+        ),
       ),
     );
     await tester.pumpAndSettle();
 
     expect(find.textContaining('Alex'), findsOneWidget);
+    expect(find.textContaining('Pragyu Demo Institute · Organisation'), findsOneWidget);
     expect(find.text('Continue Learning'), findsWidgets);
     expect(find.text('Indian Constitution and Governance'), findsOneWidget);
     expect(find.text('Live Polity Doubt Session'), findsOneWidget);
     expect(find.text('Weekly Quiz 3'), findsOneWidget);
-    expect(find.text('Catalog'), findsOneWidget);
     expect(find.text('AI Mentor'), findsOneWidget);
     expect(find.text('Your Goal'), findsOneWidget);
     expect(find.textContaining('3'), findsWidgets);
+    // Catalog shortcut only appears when marketplace access is available.
+  });
+
+  testWidgets('S-10 home pulse shows notices and recommendation', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 1600));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final fake = _FakeHome(
+      home: const HomeSnapshot(
+        user: AuthUser(id: '1', email: 'a@b.com', firstName: 'Alex'),
+        continueLearning: HomeContinueItem(
+          courseId: 'c1',
+          title: 'Continue Course',
+          progressPercent: 40,
+        ),
+      ),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        onGenerateRoute: (settings) {
+          if (settings.name == AppRoutes.announcements) {
+            return MaterialPageRoute<void>(
+              settings: settings,
+              builder: (_) => const Scaffold(body: Text('All notices')),
+            );
+          }
+          if (settings.name == AppRoutes.recommendations) {
+            return MaterialPageRoute<void>(
+              settings: settings,
+              builder: (_) => const Scaffold(body: Text('All recommendations')),
+            );
+          }
+          return null;
+        },
+        home: StudentShell(
+          homeRepository: fake,
+          announcementsRepository: _FakeAnnouncements(
+            const AnnouncementsSnapshot(
+              items: [
+                AnnouncementItem(
+                  id: 'n1',
+                  title: 'Holiday notice',
+                  body: 'Institute closed on Friday.',
+                  isPinned: true,
+                ),
+                AnnouncementItem(
+                  id: 'n2',
+                  title: 'Fee reminder',
+                  body: 'Pay fees by month end.',
+                ),
+              ],
+            ),
+          ),
+          recommendationsRepository: _FakeRecommendations(
+            const RecommendationsSnapshot(
+              studentProfileId: 'sp1',
+              items: [
+                RecommendationItem(
+                  id: 'r1',
+                  title: 'Revise Fundamental Rights',
+                  reason: 'Weak score in last polity quiz.',
+                  estimatedMinutes: 25,
+                  whenLabel: 'Today',
+                  priority: RecommendationPriority.high,
+                  actions: [
+                    RecommendationAction(
+                      type: 'revise',
+                      label: 'Start revision',
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Continue Learning'), findsWidgets);
+    expect(find.text('Notices'), findsOneWidget);
+    expect(find.text('Holiday notice'), findsOneWidget);
+    expect(find.text('Fee reminder'), findsOneWidget);
+    expect(find.text('Recommended for you'), findsOneWidget);
+    expect(find.text('Revise Fundamental Rights'), findsOneWidget);
+    expect(find.text('Start revision'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Revise Fundamental Rights'));
+    await tester.tap(find.text('Revise Fundamental Rights'));
+    await tester.pumpAndSettle();
+    expect(find.text('All recommendations'), findsOneWidget);
   });
 
   testWidgets('S-10 empty schedule message', (tester) async {
@@ -114,6 +260,8 @@ void main() {
               user: AuthUser(id: '1', email: 'a@b.com', firstName: 'Sam'),
             ),
           ),
+          announcementsRepository: _FakeAnnouncements(),
+          recommendationsRepository: _FakeRecommendations(),
         ),
       ),
     );
@@ -166,7 +314,11 @@ void main() {
           }
           return onGenerateRoute(settings);
         },
-        home: StudentShell(homeRepository: fake),
+        home: StudentShell(
+          homeRepository: fake,
+          announcementsRepository: _FakeAnnouncements(),
+          recommendationsRepository: _FakeRecommendations(),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -219,7 +371,11 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.light(),
-          home: StudentShell(homeRepository: fake),
+          home: StudentShell(
+            homeRepository: fake,
+            announcementsRepository: _FakeAnnouncements(),
+            recommendationsRepository: _FakeRecommendations(),
+          ),
         ),
       );
       await tester.pumpAndSettle();

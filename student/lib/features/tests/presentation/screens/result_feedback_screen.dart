@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:student_mobile/app/router/app_router.dart';
-import 'package:student_mobile/app/share/pragyu_copy.dart';
+import 'package:student_mobile/app/share/pragyu_share.dart';
 import 'package:student_mobile/app/theme/app_theme.dart';
 import 'package:student_mobile/app/widgets/pragyu_logo.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/features/tests/data/tests_repository.dart';
+import 'package:student_mobile/features/tests/domain/ai_credit_costs.dart';
 import 'package:student_mobile/features/tests/domain/attempt_flow_models.dart';
 import 'package:student_mobile/features/tests/domain/cbt_player_models.dart';
 import 'package:student_mobile/features/tests/domain/deep_feedback_models.dart';
@@ -29,14 +30,12 @@ class ResultFeedbackScreen extends StatefulWidget {
 
 enum _MainTab { yourAnswer, aiEvaluation, modelAnswer, comparative }
 
-enum _DetailTab { detailed, strengths, improvements, suggested }
+enum _DetailTab { detailed, suggested }
 
 class _ResultFeedbackScreenState extends State<ResultFeedbackScreen> {
   static const _blue = Color(0xFF2F7BFF);
   static const _blueSoft = Color(0xFFE8F1FF);
   static const _pageBg = Color(0xFFF8FAFD);
-  static const _green = Color(0xFF22A06B);
-  static const _greenSoft = Color(0xFFE8F8EF);
   static const _purple = Color(0xFF7B5CFF);
   static const _purpleSoft = Color(0xFFF3E9FF);
 
@@ -103,8 +102,8 @@ class _ResultFeedbackScreenState extends State<ResultFeedbackScreen> {
   Future<void> _shareSummary() async {
     final snapshot = _snapshot;
     if (snapshot == null) return;
+    final assessmentId = snapshot.submission.assessmentId;
     final buffer = StringBuffer()
-      ..writeln('Pragyu AI Evaluation')
       ..writeln(_title)
       ..writeln('Score: ${snapshot.scoreLabel}');
     if (snapshot.percentageLabel != null) {
@@ -118,29 +117,119 @@ class _ResultFeedbackScreenState extends State<ResultFeedbackScreen> {
         ..writeln()
         ..writeln(snapshot.feedback!.summary!.trim());
     }
-    buffer
-      ..writeln()
-      ..writeln('— via Pragyu');
+    final detail = buffer.toString().trim();
     if (!mounted) return;
-    await copyPragyuText(
-      context,
-      text: buffer.toString().trim(),
-      message: PragyuCopyMessages.summaryCopied,
+    await PragyuShare.share(
+      title: 'AI Evaluation · $_title',
+      detail: detail,
+      url: assessmentId.trim().isEmpty
+          ? null
+          : PragyuShare.assessmentUrl(assessmentId),
+      subject: 'Pragyu result · $_title',
     );
   }
 
-  void _openDeepFeedback() {
+  Future<void> _openDeepFeedback() async {
     final snapshot = _snapshot;
     final evaluation = snapshot?.evaluation;
     if (evaluation == null || evaluation.id.isEmpty) return;
+
+    // Slice 2.3: advanced path is opt-in after the score is understood.
+    final proceed = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE2E8F0),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Advanced: Improve with AI',
+                  style: TextStyle(
+                    fontFamily: AppTheme.fontFamily,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF1A2B4C),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'You already have your score and feedback above. '
+                  'Deep Feedback can rewrite your answer and suggest improvements — it is optional.',
+                  style: TextStyle(
+                    fontFamily: AppTheme.fontFamily,
+                    fontSize: 14,
+                    height: 1.45,
+                    color: Color(0xFF7A8499),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF8EB),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFFFE0A3)),
+                  ),
+                  child: Text(
+                    'Uses AI credits (about ${AiCreditCosts.rewriteRequest} per rewrite; '
+                    'tips about ${AiCreditCosts.suggestionGenerate}). '
+                    'Buy more anytime under Me → Payments.',
+                    style: const TextStyle(
+                      fontFamily: AppTheme.fontFamily,
+                      fontSize: 13,
+                      height: 1.4,
+                      color: Color(0xFF8A5A00),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                FilledButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: _blue,
+                    minimumSize: const Size.fromHeight(48),
+                  ),
+                  child: const Text('Continue to Deep Feedback'),
+                ),
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Stay on this result'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    if (proceed != true || !mounted) return;
+
     Navigator.of(context).pushNamed(
       AppRoutes.deepFeedback,
       arguments: DeepFeedbackArgs(
         submissionId: widget.args.submissionId,
         evaluationId: evaluation.id,
         feedbackId: snapshot?.feedback?.id,
-        assessmentId:
-            widget.args.assessmentId ?? evaluation.assessmentId,
+        assessmentId: widget.args.assessmentId ?? evaluation.assessmentId,
         title: widget.args.title,
       ),
     );
@@ -224,18 +313,14 @@ class _ResultFeedbackScreenState extends State<ResultFeedbackScreen> {
                         ),
                         if (_snapshot != null)
                           _BottomActions(
-                            canDeep: _snapshot!.evaluation != null &&
-                                _snapshot!.evaluation!.id.isNotEmpty,
                             hasScores: _snapshot!.scores.isNotEmpty,
                             onModelAnswer: () {
                               setState(() => _mainTab = _MainTab.modelAnswer);
                             },
                             onDownload: _shareSummary,
-                            onPracticeAgain: _practiceAgain,
                             onNext: _snapshot!.scores.isNotEmpty
                                 ? _nextScore
                                 : null,
-                            onImprove: _openDeepFeedback,
                           ),
                       ],
                     ),
@@ -258,7 +343,14 @@ class _ResultFeedbackScreenState extends State<ResultFeedbackScreen> {
       scores: scores,
       feedback: feedback,
     );
+    final practiceAssessmentId = (widget.args.assessmentId ??
+            snapshot.evaluation?.assessmentId ??
+            snapshot.submission.assessmentId)
+        .trim();
+    final canPractice = practiceAssessmentId.isNotEmpty;
 
+    // Slice 2.1: first paint answers “how did I do?” — score + S/W + Practice Again.
+    // Explore tabs (answer / details / model) stay secondary below.
     return [
       _QuestionMeta(
         title: scores.isEmpty
@@ -271,6 +363,29 @@ class _ResultFeedbackScreenState extends State<ResultFeedbackScreen> {
         grade: snapshot.evaluation?.grade,
       ),
       const SizedBox(height: 14),
+      _OverallScoreCard(
+        snapshot: snapshot,
+        selectedScore: selectedScore,
+      ),
+      if (summaryText != null && summaryText.isNotEmpty) ...[
+        const SizedBox(height: 14),
+        _QuoteSummaryCard(summary: summaryText),
+      ],
+      const SizedBox(height: 14),
+      _HowDidIDoHighlights(feedback: feedback),
+      const SizedBox(height: 14),
+      FilledButton.icon(
+        onPressed: canPractice ? _practiceAgain : null,
+        style: FilledButton.styleFrom(
+          backgroundColor: _blue,
+          minimumSize: const Size.fromHeight(48),
+        ),
+        icon: const Icon(Icons.refresh_rounded, size: 18),
+        label: const Text('Practice Again'),
+      ),
+      const SizedBox(height: 20),
+      const _SectionTitle(title: 'Explore details'),
+      const SizedBox(height: 10),
       _MainTabBar(
         selected: _mainTab,
         onChanged: (tab) => setState(() => _mainTab = tab),
@@ -297,16 +412,10 @@ class _ResultFeedbackScreenState extends State<ResultFeedbackScreen> {
               : null,
         )
       else ...[
-        _ScoreAndAnswerRow(
-          snapshot: snapshot,
+        _AnswerPreviewCard(
           answerText: answerText,
           images: answerImages,
-          selectedScore: selectedScore,
         ),
-        if (summaryText != null && summaryText.isNotEmpty) ...[
-          const SizedBox(height: 14),
-          _QuoteSummaryCard(summary: summaryText),
-        ],
         const SizedBox(height: 16),
         _DetailTabBar(
           selected: _detailTab,
@@ -346,48 +455,6 @@ class _ResultFeedbackScreenState extends State<ResultFeedbackScreen> {
               }),
             ],
           ],
-        ] else if (_detailTab == _DetailTab.strengths) ...[
-          if (feedback?.strengths.isNotEmpty == true)
-            _BulletCard(
-              title: 'Key Strengths',
-              items: feedback!.strengths,
-              accent: _green,
-              soft: _greenSoft,
-            )
-          else
-            const _MutedCard(
-              child: Text(
-                'Strengths appear after AI scoring completes.',
-                style: TextStyle(color: Color(0xFF7A8499), height: 1.4),
-              ),
-            ),
-        ] else if (_detailTab == _DetailTab.improvements) ...[
-          if (feedback != null &&
-              (feedback.weaknesses.isNotEmpty ||
-                  feedback.improvementAreas.isNotEmpty)) ...[
-            if (feedback.weaknesses.isNotEmpty)
-              _BulletCard(
-                title: 'Areas for Improvement',
-                items: feedback.weaknesses,
-                accent: const Color(0xFFE85D75),
-                soft: const Color(0xFFFDE8EC),
-              ),
-            if (feedback.improvementAreas.isNotEmpty) ...[
-              const SizedBox(height: 10),
-              _BulletCard(
-                title: 'Missing concepts',
-                items: feedback.improvementAreas,
-                accent: _purple,
-                soft: _purpleSoft,
-              ),
-            ],
-          ] else
-            const _MutedCard(
-              child: Text(
-                'Improvement areas appear after AI scoring completes.',
-                style: TextStyle(color: Color(0xFF7A8499), height: 1.4),
-              ),
-            ),
         ] else ...[
           if (feedback?.tips.isNotEmpty == true)
             _BulletCard(
@@ -403,6 +470,15 @@ class _ResultFeedbackScreenState extends State<ResultFeedbackScreen> {
                 style: TextStyle(color: Color(0xFF7A8499), height: 1.4),
               ),
             ),
+          if (feedback != null && feedback.improvementAreas.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            _BulletCard(
+              title: 'Missing concepts',
+              items: feedback.improvementAreas,
+              accent: _purple,
+              soft: _purpleSoft,
+            ),
+          ],
           if (snapshot.evaluation != null &&
               snapshot.evaluation!.id.isNotEmpty) ...[
             const SizedBox(height: 12),
@@ -413,7 +489,7 @@ class _ResultFeedbackScreenState extends State<ResultFeedbackScreen> {
                 side: const BorderSide(color: _blue),
                 minimumSize: const Size.fromHeight(48),
               ),
-              child: const Text('Improve answer with AI'),
+              child: const Text('Advanced · Improve with AI'),
             ),
           ],
         ],
@@ -787,8 +863,6 @@ class _DetailTabBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final tabs = <(_DetailTab, String)>[
       (_DetailTab.detailed, 'Detailed Feedback'),
-      (_DetailTab.strengths, 'Key Strengths'),
-      (_DetailTab.improvements, 'Areas for Improvement'),
       (_DetailTab.suggested, 'Suggested Answer'),
     ];
     return SingleChildScrollView(
@@ -826,54 +900,6 @@ class _DetailTabBar extends StatelessWidget {
   }
 }
 
-class _ScoreAndAnswerRow extends StatelessWidget {
-  const _ScoreAndAnswerRow({
-    required this.snapshot,
-    required this.answerText,
-    required this.images,
-    required this.selectedScore,
-  });
-
-  final ResultFeedbackSnapshot snapshot;
-  final String? answerText;
-  final List<AnswerImageAttachment> images;
-  final EvaluationScoreItem? selectedScore;
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final stack = constraints.maxWidth < 640;
-        final answerCard = _AnswerPreviewCard(
-          answerText: answerText,
-          images: images,
-        );
-        final scoreCard = _OverallScoreCard(
-          snapshot: snapshot,
-          selectedScore: selectedScore,
-        );
-        if (stack) {
-          return Column(
-            children: [
-              answerCard,
-              const SizedBox(height: 12),
-              scoreCard,
-            ],
-          );
-        }
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(child: answerCard),
-            const SizedBox(width: 12),
-            Expanded(child: scoreCard),
-          ],
-        );
-      },
-    );
-  }
-}
-
 class _AnswerPreviewCard extends StatelessWidget {
   const _AnswerPreviewCard({
     required this.answerText,
@@ -886,10 +912,14 @@ class _AnswerPreviewCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = (answerText ?? '').trim();
-    final hasImage = images.any((img) => (img.url ?? '').trim().isNotEmpty);
-    final imageUrl = hasImage
-        ? images.firstWhere((img) => (img.url ?? '').trim().isNotEmpty).url!
-        : null;
+    String? imageUrl;
+    for (final img in images) {
+      final url = (img.url ?? '').trim();
+      if (url.isNotEmpty) {
+        imageUrl = url;
+        break;
+      }
+    }
 
     return Container(
       width: double.infinity,
@@ -1475,7 +1505,7 @@ class _ModelAnswerPanel extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Open AI rewrite tools to generate a model answer and compare improvements.',
+            'Optional advanced tools can rewrite your answer with AI after you understand your score. Uses AI credits.',
             softWrap: true,
             style: TextStyle(
               fontFamily: AppTheme.fontFamily,
@@ -1485,12 +1515,14 @@ class _ModelAnswerPanel extends StatelessWidget {
           ),
           if (canImprove) ...[
             const SizedBox(height: 12),
-            FilledButton(
+            OutlinedButton(
               onPressed: onImprove,
-              style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF2F7BFF),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFF2F7BFF),
+                side: const BorderSide(color: Color(0xFF2F7BFF)),
+                minimumSize: const Size.fromHeight(48),
               ),
-              child: const Text('Improve answer with AI'),
+              child: const Text('Advanced · Improve with AI'),
             ),
           ],
         ],
@@ -1544,7 +1576,7 @@ class _ComparativePanel extends StatelessWidget {
                 const SizedBox(height: 12),
                 OutlinedButton(
                   onPressed: onImprove,
-                  child: const Text('Improve answer with AI'),
+                  child: const Text('Advanced · Improve with AI'),
                 ),
               ],
             ],
@@ -1557,22 +1589,16 @@ class _ComparativePanel extends StatelessWidget {
 
 class _BottomActions extends StatelessWidget {
   const _BottomActions({
-    required this.canDeep,
     required this.hasScores,
     required this.onModelAnswer,
     required this.onDownload,
-    required this.onPracticeAgain,
     required this.onNext,
-    required this.onImprove,
   });
 
-  final bool canDeep;
   final bool hasScores;
   final VoidCallback onModelAnswer;
   final VoidCallback onDownload;
-  final VoidCallback onPracticeAgain;
   final VoidCallback? onNext;
-  final VoidCallback onImprove;
 
   @override
   Widget build(BuildContext context) {
@@ -1588,7 +1614,7 @@ class _BottomActions extends StatelessWidget {
               final wrap = constraints.maxWidth < 520;
               final buttons = <Widget>[
                 OutlinedButton.icon(
-                  onPressed: canDeep ? onImprove : onModelAnswer,
+                  onPressed: onModelAnswer,
                   icon: const Icon(Icons.menu_book_outlined, size: 16),
                   label: const Text('View Model Answer'),
                 ),
@@ -1596,11 +1622,6 @@ class _BottomActions extends StatelessWidget {
                   onPressed: onDownload,
                   icon: const Icon(Icons.copy_rounded, size: 16),
                   label: const Text('Copy report'),
-                ),
-                OutlinedButton.icon(
-                  onPressed: onPracticeAgain,
-                  icon: const Icon(Icons.refresh_rounded, size: 16),
-                  label: const Text('Practice Again'),
                 ),
                 FilledButton.icon(
                   onPressed: onNext,
@@ -1669,6 +1690,48 @@ class _ErrorBody extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _HowDidIDoHighlights extends StatelessWidget {
+  const _HowDidIDoHighlights({required this.feedback});
+
+  final EvaluationFeedbackReport? feedback;
+
+  @override
+  Widget build(BuildContext context) {
+    final strengths = feedback?.strengths ?? const <String>[];
+    final weaknesses = feedback?.weaknesses ?? const <String>[];
+    if (strengths.isEmpty && weaknesses.isEmpty) {
+      return const _MutedCard(
+        child: Text(
+          'Strengths and focus areas appear here after AI scoring completes.',
+          style: TextStyle(color: Color(0xFF7A8499), height: 1.4),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (strengths.isNotEmpty)
+          _BulletCard(
+            title: 'Key Strengths',
+            items: strengths.take(3).toList(growable: false),
+            accent: const Color(0xFF22A06B),
+            soft: const Color(0xFFE8F8EF),
+          ),
+        if (strengths.isNotEmpty && weaknesses.isNotEmpty)
+          const SizedBox(height: 10),
+        if (weaknesses.isNotEmpty)
+          _BulletCard(
+            title: 'Areas for Improvement',
+            items: weaknesses.take(3).toList(growable: false),
+            accent: const Color(0xFFE85D75),
+            soft: const Color(0xFFFDE8EC),
+          ),
+      ],
     );
   }
 }

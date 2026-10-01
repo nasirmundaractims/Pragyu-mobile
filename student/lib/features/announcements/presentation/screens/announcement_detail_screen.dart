@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'package:student_mobile/app/theme/student_hub_colors.dart';
-import 'package:student_mobile/app/widgets/student_app_header.dart';
+import 'package:student_mobile/app/widgets/student_screen_kit.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/features/announcements/data/announcements_repository.dart';
 import 'package:student_mobile/features/announcements/domain/announcements_models.dart';
@@ -97,31 +96,13 @@ class _AnnouncementDetailScreenState extends State<AnnouncementDetailScreen> {
       child: StudentHubPage(
         title: 'Announcement',
         body: _loading
-              ? const Center(
-                  child: CircularProgressIndicator(color: StudentHubColors.blue),
-                )
+              ? const AppLoadingState(padding: EdgeInsets.zero)
               : _error != null && item == null
                   ? Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              _error!,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(color: StudentHubColors.muted),
-                            ),
-                            const SizedBox(height: 12),
-                            FilledButton(
-                              onPressed: _resolve,
-                              style: FilledButton.styleFrom(
-                                backgroundColor: StudentHubColors.blue,
-                              ),
-                              child: const Text('Retry'),
-                            ),
-                          ],
-                        ),
+                      child: AppErrorState(
+                        message: _error!,
+                        onRetry: _resolve,
+                        retryLabel: 'Retry',
                       ),
                     )
                   : ListView(

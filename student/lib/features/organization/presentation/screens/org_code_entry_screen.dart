@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'package:student_mobile/app/router/app_router.dart';
-import 'package:student_mobile/app/theme/app_colors.dart';
-import 'package:student_mobile/app/widgets/primary_button.dart';
+import 'package:student_mobile/app/widgets/student_screen_kit.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/core/session/auth_navigation.dart';
 import 'package:student_mobile/core/session/session_service.dart';
@@ -64,7 +62,7 @@ class _OrgCodeEntryScreenState extends State<OrgCodeEntryScreen> {
       final redeemed = await _orgs.redeemMembershipCode(code);
       await _orgs.selectOrganization(redeemed.toOrganizationSummary());
       if (!mounted) return;
-      AuthNavigation.goAndClear(context, AppRoutes.home);
+      await AuthNavigation.goToResolvedWorkspace(context);
     } on ApiException catch (error) {
       if (!mounted) return;
       setState(() {
@@ -100,7 +98,7 @@ class _OrgCodeEntryScreenState extends State<OrgCodeEntryScreen> {
       );
       await _orgs.selectOrganization(workspace);
       if (!mounted) return;
-      AuthNavigation.goAndClear(context, AppRoutes.home);
+      await AuthNavigation.goToResolvedWorkspace(context);
     } on ApiException catch (error) {
       if (!mounted) return;
       setState(() {
@@ -121,14 +119,9 @@ class _OrgCodeEntryScreenState extends State<OrgCodeEntryScreen> {
     final busy = _submitting || _creatingIndividual;
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
-      child: Scaffold(
-        backgroundColor: AppColors.background,
-        appBar: AppBar(
-          backgroundColor: AppColors.background,
-          title: const Text('Enter organisation code'),
-        ),
-        body: SafeArea(
-          child: Padding(
+      child: StudentHubPage(
+        title: 'Enter organisation code',
+        body: Padding(
             padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -136,7 +129,7 @@ class _OrgCodeEntryScreenState extends State<OrgCodeEntryScreen> {
                 Text(
                   'Ask your academy for their organisation code, then enter it below.',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.muted,
+                        color: StudentHubColors.muted,
                         height: 1.45,
                       ),
                 ),
@@ -157,7 +150,7 @@ class _OrgCodeEntryScreenState extends State<OrgCodeEntryScreen> {
                   Text(
                     'Joining ${_preview!.organizationName}',
                     style: const TextStyle(
-                      color: AppColors.success,
+                      color: StudentHubColors.success,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -167,7 +160,7 @@ class _OrgCodeEntryScreenState extends State<OrgCodeEntryScreen> {
                   Text(
                     _error!,
                     style: const TextStyle(
-                      color: AppColors.danger,
+                      color: StudentHubColors.danger,
                       height: 1.4,
                     ),
                   ),
@@ -178,18 +171,15 @@ class _OrgCodeEntryScreenState extends State<OrgCodeEntryScreen> {
                   onPressed: busy ? null : _submit,
                 ),
                 const SizedBox(height: 12),
-                TextButton(
+                SecondaryButton(
+                  label: _creatingIndividual
+                      ? 'Opening Individual…'
+                      : 'Continue as Individual instead',
                   onPressed: busy ? null : _continueAsIndividual,
-                  child: Text(
-                    _creatingIndividual
-                        ? 'Opening Individual…'
-                        : 'Continue as Individual instead',
-                  ),
                 ),
               ],
             ),
           ),
-        ),
       ),
     );
   }

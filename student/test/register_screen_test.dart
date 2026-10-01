@@ -7,6 +7,7 @@ import 'package:student_mobile/core/session/auth_navigation.dart';
 import 'package:student_mobile/features/auth/data/auth_repository.dart';
 import 'package:student_mobile/features/auth/domain/auth_models.dart';
 import 'package:student_mobile/features/auth/presentation/screens/register_screen.dart';
+import 'package:student_mobile/features/onboarding/data/memory_onboarding_store.dart';
 import 'package:student_mobile/features/organization/domain/organization_summary.dart';
 
 import 'support/fake_organization_gateway.dart';
@@ -154,10 +155,13 @@ void main() {
 
   setUp(() {
     AuthNavigation.organizationGatewayOverride = _FakeOrgs();
+    AuthNavigation.onboardingStoreOverride =
+        MemoryOnboardingStore(completed: true);
   });
 
   tearDown(() {
     AuthNavigation.organizationGatewayOverride = null;
+    AuthNavigation.onboardingStoreOverride = null;
   });
 
   testWidgets('S-04 register validates required fields', (tester) async {

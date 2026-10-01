@@ -1,13 +1,18 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:student_mobile/app/router/app_router.dart';
 import 'package:student_mobile/app/theme/app_theme.dart';
+import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/features/home/presentation/screens/home_screen.dart';
 import 'package:student_mobile/features/learn/data/learn_repository.dart';
 import 'package:student_mobile/features/learn/domain/learn_models.dart';
 import 'package:student_mobile/features/materials/domain/material_models.dart';
 import 'package:student_mobile/features/media/presentation/widgets/network_media_player.dart';
+import 'package:student_mobile/features/notes_bookmarks/data/notes_bookmarks_repository.dart';
+import 'package:student_mobile/features/notes_bookmarks/domain/notes_bookmarks_models.dart';
 import 'package:student_mobile/features/tests/domain/assessment_detail_models.dart';
 
 /// S-22 Lesson / content player — redesigned from Pragyu Lesson reference.
@@ -16,10 +21,12 @@ class LessonPlayerScreen extends StatefulWidget {
     super.key,
     required this.args,
     this.learnRepository,
+    this.bookmarksRepository,
   });
 
   final LessonDetailArgs args;
   final LearnGateway? learnRepository;
+  final NotesBookmarksGateway? bookmarksRepository;
 
   @override
   State<LessonPlayerScreen> createState() => _LessonPlayerScreenState();
@@ -37,12 +44,16 @@ class _LessonPlayerScreenState extends State<LessonPlayerScreen> {
 
   late final LearnGateway _learn =
       widget.learnRepository ?? LearnRepository();
+  late final NotesBookmarksGateway _bookmarks =
+      widget.bookmarksRepository ?? NotesBookmarksRepository();
 
   bool _loading = true;
   bool _completing = false;
+  bool _bookmarkBusy = false;
   String? _error;
   LessonDetailSnapshot? _snapshot;
   CourseDetailSnapshot? _course;
+  String? _lessonBookmarkId;
   _LessonTab _tab = _LessonTab.video;
   bool _chapterExpanded = true;
 
@@ -76,12 +87,90 @@ class _LessonPlayerScreenState extends State<LessonPlayerScreen> {
         _course = course;
         _loading = false;
       });
+      unawaited(_refreshLessonBookmarkState(snapshot.lessonId));
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _error = 'Unable to open this lesson. Pull to retry.';
         _loading = false;
       });
+    }
+  }
+
+  Future<void> _refreshLessonBookmarkState(String lessonId) async {
+    try {
+      final library = await _bookmarks.loadLibrary();
+      if (!mounted) return;
+      ContentBookmark? match;
+      for (final bookmark in library.bookmarks) {
+        if (bookmark.matches(type: 'lesson', id: lessonId)) {
+          match = bookmark;
+          break;
+        }
+      }
+      setState(() => _lessonBookmarkId = match?.id);
+    } catch (_) {
+      // Bookmark state is best-effort; lesson still usable.
+    }
+  }
+
+  Future<void> _toggleLessonBookmark() async {
+    final snapshot = _snapshot;
+    if (snapshot == null || _bookmarkBusy) return;
+
+    setState(() => _bookmarkBusy = true);
+    try {
+      final existingId = _lessonBookmarkId;
+      if (existingId != null && existingId.isNotEmpty) {
+        await _bookmarks.removeBookmark(existingId);
+        if (!mounted) return;
+        setState(() {
+          _lessonBookmarkId = null;
+          _bookmarkBusy = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Removed from bookmarks'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+
+      final saved = await _bookmarks.addBookmark(
+        bookmarkableType: 'lesson',
+        bookmarkableId: snapshot.lessonId,
+        title: snapshot.title,
+      );
+      if (!mounted) return;
+      setState(() {
+        _lessonBookmarkId = saved.id;
+        _bookmarkBusy = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Saved to bookmarks'),
+          behavior: SnackBarBehavior.floating,
+          action: SnackBarAction(
+            label: 'View',
+            onPressed: () {
+              Navigator.of(context).pushNamed(AppRoutes.notesBookmarks);
+            },
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _bookmarkBusy = false);
+      final message = error is ApiException
+          ? error.message
+          : 'Unable to update bookmark. Try again.';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 
@@ -381,10 +470,23 @@ class _LessonPlayerScreenState extends State<LessonPlayerScreen> {
           ),
           actions: [
             IconButton(
-              tooltip: 'Bookmark',
-              onPressed: () =>
-                  Navigator.of(context).pushNamed(AppRoutes.notesBookmarks),
-              icon: const Icon(Icons.bookmark_border_rounded),
+              tooltip: _lessonBookmarkId == null
+                  ? 'Save bookmark'
+                  : 'Remove bookmark',
+              onPressed: _snapshot == null || _bookmarkBusy
+                  ? null
+                  : _toggleLessonBookmark,
+              icon: _bookmarkBusy
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Icon(
+                      _lessonBookmarkId == null
+                          ? Icons.bookmark_border_rounded
+                          : Icons.bookmark_rounded,
+                    ),
             ),
             IconButton(
               tooltip: 'Download',
@@ -414,9 +516,16 @@ class _LessonPlayerScreenState extends State<LessonPlayerScreen> {
               icon: const Icon(Icons.more_vert_rounded),
               onSelected: (value) {
                 if (value == 'refresh') _load();
+                if (value == 'bookmarks') {
+                  Navigator.of(context).pushNamed(AppRoutes.notesBookmarks);
+                }
               },
               itemBuilder: (context) => const [
                 PopupMenuItem(value: 'refresh', child: Text('Refresh')),
+                PopupMenuItem(
+                  value: 'bookmarks',
+                  child: Text('My bookmarks'),
+                ),
               ],
             ),
           ],

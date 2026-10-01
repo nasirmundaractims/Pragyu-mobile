@@ -9,18 +9,27 @@ import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/features/tests/data/tests_repository.dart';
 import 'package:student_mobile/features/tests/domain/submission_status_models.dart';
 
-/// S-45 Submission status — processing / AI evaluating / ready.
+/// S-45 Submission status — processing / queued / evaluating / ready / failed.
+///
+/// Honesty rules (slice 0.2):
+/// - Distinct queued vs evaluating copy
+/// - Surface `failure_reason` when present
+/// - After [stuckAfter], stop the endless spinner and explain next steps
 class SubmissionStatusScreen extends StatefulWidget {
   const SubmissionStatusScreen({
     super.key,
     required this.args,
     this.testsRepository,
     this.pollInterval = const Duration(seconds: 5),
+    this.stuckAfter = const Duration(seconds: 45),
   });
 
   final SubmissionStatusArgs args;
   final TestsGateway? testsRepository;
   final Duration pollInterval;
+
+  /// How long the same pending status may spin before we show a delayed UI.
+  final Duration stuckAfter;
 
   @override
   State<SubmissionStatusScreen> createState() => _SubmissionStatusScreenState();
@@ -31,8 +40,11 @@ class _SubmissionStatusScreenState extends State<SubmissionStatusScreen> {
       widget.testsRepository ?? TestsRepository();
 
   Timer? _poll;
+  Timer? _stuckTimer;
   bool _loading = true;
+  bool _takingLonger = false;
   String? _error;
+  String? _trackedStatus;
   late SubmissionStatusPayload _payload;
 
   @override
@@ -42,13 +54,29 @@ class _SubmissionStatusScreenState extends State<SubmissionStatusScreen> {
       id: widget.args.submissionId,
       status: widget.args.initialStatus ?? 'pending',
     );
+    _trackStatus(_payload.status);
     _refresh(initial: true);
   }
 
   @override
   void dispose() {
     _poll?.cancel();
+    _stuckTimer?.cancel();
     super.dispose();
+  }
+
+  void _trackStatus(String status) {
+    if (_trackedStatus == status) return;
+    _trackedStatus = status;
+    _stuckTimer?.cancel();
+    _takingLonger = false;
+    if (!SubmissionPipeline.isPending(status)) return;
+    _stuckTimer = Timer(widget.stuckAfter, () {
+      if (!mounted) return;
+      if (!_payload.isPending) return;
+      if (_payload.status != status) return;
+      setState(() => _takingLonger = true);
+    });
   }
 
   void _schedulePoll() {
@@ -71,6 +99,7 @@ class _SubmissionStatusScreenState extends State<SubmissionStatusScreen> {
         _payload = next;
         _loading = false;
         _error = null;
+        _trackStatus(next.status);
       });
       _schedulePoll();
     } catch (error) {
@@ -98,12 +127,18 @@ class _SubmissionStatusScreenState extends State<SubmissionStatusScreen> {
     );
   }
 
+  bool get _needsHonestWaitUi {
+    if (!_payload.isPending) return false;
+    return _payload.isBlocked || _takingLonger;
+  }
+
   @override
   Widget build(BuildContext context) {
     final title = widget.args.title?.trim().isNotEmpty == true
         ? widget.args.title!.trim()
         : 'Submission';
     final stage = SubmissionPipeline.stageFor(_payload.status);
+    final phaseTitle = _payload.phaseTitle;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
@@ -136,28 +171,37 @@ class _SubmissionStatusScreenState extends State<SubmissionStatusScreen> {
                     includesMedia: widget.args.includesMedia,
                     isOcr: _payload.isOcrStage,
                     failureReason: _payload.failureReason,
+                    takingLonger: _takingLonger,
                   ),
-                  style: const TextStyle(color: StudentHubColors.muted, height: 1.4),
+                  style: const TextStyle(
+                    color: StudentHubColors.muted,
+                    height: 1.4,
+                  ),
                 ),
                 const SizedBox(height: 20),
                 if (_loading && widget.args.initialStatus == null)
                   const Padding(
                     padding: EdgeInsets.symmetric(vertical: 40),
                     child: Center(
-                      child: CircularProgressIndicator(color: StudentHubColors.blue),
+                      child: CircularProgressIndicator(
+                        color: StudentHubColors.blue,
+                      ),
                     ),
                   )
                 else ...[
                   _StatusHero(
-                    label: _payload.statusLabel,
+                    label: phaseTitle,
                     stage: stage,
                     failureReason: _payload.failureReason,
+                    takingLonger: _takingLonger,
+                    blocked: _payload.isBlocked,
                   ),
                   const SizedBox(height: 20),
                   _PipelineSteps(
                     stage: stage,
                     includesMedia: widget.args.includesMedia ||
                         _payload.isOcrStage,
+                    blocked: _payload.isBlocked || _takingLonger,
                   ),
                   if (_error != null) ...[
                     const SizedBox(height: 16),
@@ -181,57 +225,61 @@ class _SubmissionStatusScreenState extends State<SubmissionStatusScreen> {
                       child: const Text('View result'),
                     )
                   else if (stage == SubmissionPipelineStage.failed)
-                    OutlinedButton(
-                      onPressed: () => _refresh(initial: true),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: StudentHubColors.ink,
-                        minimumSize: const Size.fromHeight(48),
-                        side: const BorderSide(color: StudentHubColors.border),
-                      ),
-                      child: const Text('Check again'),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        FilledButton(
+                          onPressed: () => _refresh(initial: true),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: StudentHubColors.blue,
+                            foregroundColor: Colors.white,
+                            minimumSize: const Size.fromHeight(48),
+                          ),
+                          child: const Text('Try again'),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          _failedNextSteps(_payload.failureReason),
+                          style: const TextStyle(
+                            color: StudentHubColors.muted,
+                            height: 1.45,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    )
+                  else if (_needsHonestWaitUi)
+                    _HonestWaitPanel(
+                      failureReason: _payload.failureReason,
+                      takingLonger: _takingLonger,
+                      stage: stage,
+                      onRetry: () => _refresh(initial: true),
                     )
                   else
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    Row(
                       children: [
-                        Row(
-                          children: [
-                            const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: StudentHubColors.blue,
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                _payload.failureReason != null &&
-                                        _payload.failureReason!.isNotEmpty
-                                    ? 'Waiting on a fix before AI can continue…'
-                                    : (_payload.isPending
-                                        ? 'Checking for updates…'
-                                        : 'Waiting…'),
-                                softWrap: true,
-                                style: const TextStyle(color: StudentHubColors.muted),
-                              ),
-                            ),
-                          ],
-                        ),
-                        if (_payload.failureReason != null &&
-                            _payload.failureReason!.isNotEmpty) ...[
-                          const SizedBox(height: 12),
-                          OutlinedButton(
-                            onPressed: () => _refresh(initial: true),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: StudentHubColors.ink,
-                              minimumSize: const Size.fromHeight(44),
-                              side: const BorderSide(color: StudentHubColors.border),
-                            ),
-                            child: const Text('Check again'),
+                        const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: StudentHubColors.blue,
                           ),
-                        ],
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            stage == SubmissionPipelineStage.queued
+                                ? 'In the AI queue — checking automatically…'
+                                : stage == SubmissionPipelineStage.evaluating
+                                    ? 'AI is scoring — checking automatically…'
+                                    : 'Processing — checking automatically…',
+                            softWrap: true,
+                            style: const TextStyle(
+                              color: StudentHubColors.muted,
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   const SizedBox(height: 12),
@@ -248,30 +296,167 @@ class _SubmissionStatusScreenState extends State<SubmissionStatusScreen> {
     );
   }
 
+  static String _failedNextSteps(String? failureReason) {
+    final hasReason =
+        failureReason != null && failureReason.trim().isNotEmpty;
+    if (hasReason) {
+      return 'If this keeps failing, contact your institute with the message above.';
+    }
+    return 'Pull to refresh later, or contact your institute if it does not clear.';
+  }
+
   static String _subtitle({
     required SubmissionPipelineStage stage,
     required bool includesMedia,
     required bool isOcr,
     String? failureReason,
+    required bool takingLonger,
   }) {
     if (stage == SubmissionPipelineStage.ready) {
       return 'Your AI evaluation is ready. Open the result to review scores and feedback.';
     }
     if (stage == SubmissionPipelineStage.failed) {
-      return 'We could not finish evaluating this attempt. Please try again or contact support.';
+      return 'We could not finish evaluating this attempt. You can try checking again.';
     }
     if (failureReason != null && failureReason.trim().isNotEmpty) {
-      return 'Evaluation could not start yet. Pull to refresh after the issue is resolved, or contact your institute.';
+      return 'Evaluation could not start yet. See the reason below, then pull to refresh or contact your institute.';
+    }
+    if (takingLonger) {
+      switch (stage) {
+        case SubmissionPipelineStage.queued:
+          return 'Still waiting in the AI queue longer than usual. You can leave and come back — we will keep working in the background.';
+        case SubmissionPipelineStage.evaluating:
+          return 'AI evaluation is taking longer than usual. You can leave this screen; we will notify you when it finishes.';
+        case SubmissionPipelineStage.processing:
+          return 'Processing is taking longer than usual. Pull to refresh, or return later.';
+        case SubmissionPipelineStage.ready:
+        case SubmissionPipelineStage.failed:
+          break;
+      }
     }
     if (includesMedia || isOcr) {
       if (stage == SubmissionPipelineStage.processing) {
-        return 'Your answer was submitted successfully. Handwritten pages are being read with OCR in the background. We will notify you when evaluation is ready.';
+        return 'Your handwritten pages are being read with OCR before AI scoring.';
+      }
+      if (stage == SubmissionPipelineStage.queued) {
+        return 'OCR finished. Your answer is queued for AI evaluation.';
       }
       if (stage == SubmissionPipelineStage.evaluating) {
-        return 'OCR finished. AI evaluation is processing in the background. You will be notified when it completes.';
+        return 'AI evaluation is processing. You will be notified when it completes.';
       }
     }
-    return 'Your answer was submitted successfully. Evaluation is processing in the background and we will notify you when it is ready.';
+    switch (stage) {
+      case SubmissionPipelineStage.queued:
+        return 'Your answer is in the AI queue. Scoring starts automatically when a worker is available.';
+      case SubmissionPipelineStage.evaluating:
+        return 'AI is scoring your answers now. This usually finishes within a few minutes.';
+      case SubmissionPipelineStage.processing:
+        return 'Your answer was submitted successfully. Evaluation will start shortly.';
+      case SubmissionPipelineStage.ready:
+      case SubmissionPipelineStage.failed:
+        break;
+    }
+    return 'Your answer was submitted successfully.';
+  }
+}
+
+class _HonestWaitPanel extends StatelessWidget {
+  const _HonestWaitPanel({
+    required this.failureReason,
+    required this.takingLonger,
+    required this.stage,
+    required this.onRetry,
+  });
+
+  final String? failureReason;
+  final bool takingLonger;
+  final SubmissionPipelineStage stage;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasReason =
+        failureReason != null && failureReason!.trim().isNotEmpty;
+    final headline = hasReason
+        ? 'Evaluation paused'
+        : 'Taking longer than usual';
+    final body = hasReason
+        ? 'Pull to refresh after the issue is fixed, or contact your institute.'
+        : (stage == SubmissionPipelineStage.queued
+            ? 'Still queued. Leave and open AI Eval later, or check again now.'
+            : 'Still working. Leave this screen — check AI Eval or pull to refresh later.');
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF8E8),
+        borderRadius: BorderRadius.circular(StudentHubColors.cardRadius),
+        border: Border.all(color: const Color(0xFFF0D9A0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(
+                Icons.info_outline_rounded,
+                color: Color(0xFFB7791F),
+                size: 22,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      headline,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: StudentHubColors.ink,
+                        fontSize: 15,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      body,
+                      style: const TextStyle(
+                        color: StudentHubColors.muted,
+                        height: 1.4,
+                        fontSize: 13,
+                      ),
+                    ),
+                    if (hasReason) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        failureReason!.trim(),
+                        style: const TextStyle(
+                          color: StudentHubColors.danger,
+                          height: 1.4,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          OutlinedButton(
+            onPressed: onRetry,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: StudentHubColors.ink,
+              minimumSize: const Size.fromHeight(44),
+              side: const BorderSide(color: StudentHubColors.border),
+            ),
+            child: Text(takingLonger && !hasReason ? 'Check again' : 'Try again'),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -280,14 +465,19 @@ class _StatusHero extends StatelessWidget {
     required this.label,
     required this.stage,
     this.failureReason,
+    this.takingLonger = false,
+    this.blocked = false,
   });
 
   final String label;
   final SubmissionPipelineStage stage;
   final String? failureReason;
+  final bool takingLonger;
+  final bool blocked;
 
   @override
   Widget build(BuildContext context) {
+    final warn = blocked || takingLonger;
     final colors = switch (stage) {
       SubmissionPipelineStage.ready => (
           const Color(0xFFE6F5EE),
@@ -298,6 +488,16 @@ class _StatusHero extends StatelessWidget {
           const Color(0xFFFDECEC),
           StudentHubColors.danger,
           Icons.error_outline,
+        ),
+      _ when warn => (
+          const Color(0xFFFFF8E8),
+          const Color(0xFFB7791F),
+          Icons.schedule_rounded,
+        ),
+      SubmissionPipelineStage.queued => (
+          StudentHubColors.blueSoft,
+          StudentHubColors.blue,
+          Icons.hourglass_bottom_rounded,
         ),
       SubmissionPipelineStage.evaluating => (
           StudentHubColors.blueSoft,
@@ -336,7 +536,10 @@ class _StatusHero extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               failureReason!,
-              style: const TextStyle(color: StudentHubColors.danger, height: 1.4),
+              style: const TextStyle(
+                color: StudentHubColors.danger,
+                height: 1.4,
+              ),
             ),
           ],
         ],
@@ -349,82 +552,120 @@ class _PipelineSteps extends StatelessWidget {
   const _PipelineSteps({
     required this.stage,
     this.includesMedia = false,
+    this.blocked = false,
   });
 
   final SubmissionPipelineStage stage;
   final bool includesMedia;
+  final bool blocked;
 
   @override
   Widget build(BuildContext context) {
-    final steps = includesMedia
-        ? <(String, bool)>[
-            (
-              'Submitted',
-              stage == SubmissionPipelineStage.processing ||
-                  stage == SubmissionPipelineStage.evaluating ||
-                  stage == SubmissionPipelineStage.ready,
-            ),
-            (
-              'OCR reading pages',
-              stage == SubmissionPipelineStage.processing ||
-                  stage == SubmissionPipelineStage.evaluating ||
-                  stage == SubmissionPipelineStage.ready,
-            ),
-            (
-              'AI evaluating',
-              stage == SubmissionPipelineStage.evaluating ||
-                  stage == SubmissionPipelineStage.ready,
-            ),
-            (
-              'Ready',
-              stage == SubmissionPipelineStage.ready,
-            ),
-          ]
-        : <(String, bool)>[
-            (
-              'Processing',
-              stage == SubmissionPipelineStage.processing ||
-                  stage == SubmissionPipelineStage.evaluating ||
-                  stage == SubmissionPipelineStage.ready,
-            ),
-            (
-              'AI evaluating',
-              stage == SubmissionPipelineStage.evaluating ||
-                  stage == SubmissionPipelineStage.ready,
-            ),
-            (
-              'Ready',
-              stage == SubmissionPipelineStage.ready,
-            ),
-          ];
-
     if (stage == SubmissionPipelineStage.failed) {
       return const Text(
-        'Evaluation could not finish. You can check again or return later.',
+        'Evaluation could not finish. Try again, or return later.',
         style: TextStyle(color: StudentHubColors.muted, height: 1.4),
       );
     }
 
+    final steps = includesMedia
+        ? <(String, bool, bool)>[
+            (
+              'Submitted',
+              true,
+              false,
+            ),
+            (
+              'OCR reading pages',
+              stage != SubmissionPipelineStage.processing,
+              stage == SubmissionPipelineStage.processing,
+            ),
+            (
+              'Queued for AI',
+              stage == SubmissionPipelineStage.evaluating ||
+                  stage == SubmissionPipelineStage.ready,
+              stage == SubmissionPipelineStage.queued,
+            ),
+            (
+              'AI evaluating',
+              stage == SubmissionPipelineStage.ready,
+              stage == SubmissionPipelineStage.evaluating,
+            ),
+            (
+              'Ready',
+              stage == SubmissionPipelineStage.ready,
+              false,
+            ),
+          ]
+        : <(String, bool, bool)>[
+            (
+              'Submitted',
+              stage != SubmissionPipelineStage.processing,
+              stage == SubmissionPipelineStage.processing,
+            ),
+            (
+              'Queued for AI',
+              stage == SubmissionPipelineStage.evaluating ||
+                  stage == SubmissionPipelineStage.ready,
+              stage == SubmissionPipelineStage.queued,
+            ),
+            (
+              'AI evaluating',
+              stage == SubmissionPipelineStage.ready,
+              stage == SubmissionPipelineStage.evaluating,
+            ),
+            (
+              'Ready',
+              stage == SubmissionPipelineStage.ready,
+              false,
+            ),
+          ];
+
+    // Mark "done" for earlier steps when further along.
+    final normalized = <(String, bool, bool)>[];
+    for (var i = 0; i < steps.length; i++) {
+      final label = steps[i].$1;
+      var done = steps[i].$2;
+      final active = steps[i].$3;
+      // Any later active/ready implies earlier steps done.
+      if (!done) {
+        for (var j = i + 1; j < steps.length; j++) {
+          if (steps[j].$2 || steps[j].$3) {
+            done = true;
+            break;
+          }
+        }
+      }
+      if (stage == SubmissionPipelineStage.ready && i < steps.length - 1) {
+        done = true;
+      }
+      if (stage == SubmissionPipelineStage.processing && i == 0 && !includesMedia) {
+        // first step active/done handling already set
+      }
+      if (includesMedia && i == 0) {
+        done = true;
+      }
+      if (includesMedia &&
+          i == 1 &&
+          (stage == SubmissionPipelineStage.queued ||
+              stage == SubmissionPipelineStage.evaluating ||
+              stage == SubmissionPipelineStage.ready)) {
+        done = true;
+      }
+      normalized.add((label, done, active));
+    }
+
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        for (var i = 0; i < steps.length; i++) ...[
+        for (var i = 0; i < normalized.length; i++) ...[
           _StepRow(
-            label: steps[i].$1,
-            done: steps[i].$2,
-            active: includesMedia
-                ? switch (i) {
-                    0 => false,
-                    1 => stage == SubmissionPipelineStage.processing,
-                    2 => stage == SubmissionPipelineStage.evaluating,
-                    _ => stage == SubmissionPipelineStage.ready,
-                  }
-                : i == 0
-                    ? stage == SubmissionPipelineStage.processing
-                    : i == 1
-                        ? stage == SubmissionPipelineStage.evaluating
-                        : stage == SubmissionPipelineStage.ready,
+            label: normalized[i].$1,
+            done: normalized[i].$2 && !normalized[i].$3,
+            active: normalized[i].$3,
+            delayed: blocked && normalized[i].$3,
           ),
-          if (i < steps.length - 1) const SizedBox(height: 8),
+          if (i < normalized.length - 1) const SizedBox(height: 8),
         ],
       ],
     );
@@ -436,19 +677,28 @@ class _StepRow extends StatelessWidget {
     required this.label,
     required this.done,
     required this.active,
+    this.delayed = false,
   });
 
   final String label;
   final bool done;
   final bool active;
+  final bool delayed;
 
   @override
   Widget build(BuildContext context) {
+    final color = delayed
+        ? const Color(0xFFB7791F)
+        : (done || active ? StudentHubColors.blue : StudentHubColors.muted);
     return Row(
       children: [
         Icon(
-          done ? Icons.check_circle : Icons.radio_button_unchecked,
-          color: done || active ? StudentHubColors.blue : StudentHubColors.muted,
+          done
+              ? Icons.check_circle
+              : (delayed
+                  ? Icons.schedule_rounded
+                  : Icons.radio_button_unchecked),
+          color: color,
           size: 22,
         ),
         const SizedBox(width: 10),
@@ -456,7 +706,9 @@ class _StepRow extends StatelessWidget {
           label,
           style: TextStyle(
             fontWeight: active || done ? FontWeight.w700 : FontWeight.w500,
-            color: done || active ? StudentHubColors.ink : StudentHubColors.muted,
+            color: done || active || delayed
+                ? StudentHubColors.ink
+                : StudentHubColors.muted,
           ),
         ),
       ],

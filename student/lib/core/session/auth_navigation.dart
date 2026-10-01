@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:student_mobile/app/router/app_router.dart';
 import 'package:student_mobile/core/session/session_service.dart';
 import 'package:student_mobile/features/onboarding/data/onboarding_store.dart';
+import 'package:student_mobile/features/onboarding/data/prefs_onboarding_store.dart';
 import 'package:student_mobile/features/organization/data/organization_repository.dart';
 import 'package:student_mobile/features/organization/domain/organization_summary.dart';
 
@@ -10,6 +11,9 @@ import 'package:student_mobile/features/organization/domain/organization_summary
 abstract final class AuthNavigation {
   /// Optional override for tests / DI without changing screen constructors.
   static OrganizationGateway? organizationGatewayOverride;
+
+  /// Optional override for tests / DI (slice 1.5 onboarding gate).
+  static OnboardingStore? onboardingStoreOverride;
 
   /// Clears the entire stack and opens [route].
   static void goAndClear(BuildContext context, String route) {
@@ -38,9 +42,12 @@ abstract final class AuthNavigation {
   /// Resolves organisation vs individual workspace after authentication.
   ///
   /// Priority:
-  /// 1. Active organisation (non-individual) learner membership → Home
-  /// 2. Individual workspace → Home
+  /// 1. Active organisation (non-individual) learner membership → Home/Onboarding
+  /// 2. Individual workspace → Home/Onboarding
   /// 3. No learner memberships → organisation association (code or Individual)
+  ///
+  /// Slice 1.5: when a workspace is ready and tips are not completed, land on
+  /// `/onboarding` once. Completing or skipping tips marks the store and opens Home.
   ///
   /// Never opens the all-organisations picker after login. When multiple learner
   /// workspaces exist, the stored org (if still valid) or the first one is used.
@@ -73,7 +80,7 @@ abstract final class AuthNavigation {
           storedId: storedId,
         );
         await orgs.selectOrganization(selected ?? institutes.first);
-        return AppRoutes.home;
+        return await homeOrOnboarding(onboardingStore: onboardingStore);
       }
 
       if (individuals.isNotEmpty) {
@@ -82,26 +89,40 @@ abstract final class AuthNavigation {
           storedId: storedId,
         );
         await orgs.selectOrganization(selected ?? individuals.first);
-        return AppRoutes.home;
+        return await homeOrOnboarding(onboardingStore: onboardingStore);
       }
 
       return AppRoutes.orgAssociation;
     } catch (_) {
       final full = await session.read();
       if (full != null) {
-        return AppRoutes.home;
+        return await homeOrOnboarding(onboardingStore: onboardingStore);
       }
       return AppRoutes.orgAssociation;
     }
+  }
+
+  /// Home when tips are done; otherwise onboarding (once).
+  static Future<String> homeOrOnboarding({
+    OnboardingStore? onboardingStore,
+  }) async {
+    final store =
+        onboardingStore ?? onboardingStoreOverride ?? PrefsOnboardingStore();
+    if (!await store.hasCompleted()) {
+      return AppRoutes.onboarding;
+    }
+    return AppRoutes.home;
   }
 
   /// Navigates to the resolved workspace after login/register.
   static Future<void> goToResolvedWorkspace(
     BuildContext context, {
     OrganizationGateway? organizationRepository,
+    OnboardingStore? onboardingStore,
   }) async {
     final route = await resolveWorkspaceRoute(
       organizationRepository: organizationRepository,
+      onboardingStore: onboardingStore,
     );
     if (!context.mounted) return;
     goAndClear(context, route);

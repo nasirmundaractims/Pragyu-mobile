@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:student_mobile/app/theme/app_theme.dart';
-import 'package:student_mobile/app/theme/student_hub_colors.dart';
-import 'package:student_mobile/app/widgets/student_app_header.dart';
+import 'package:student_mobile/app/widgets/student_screen_kit.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/features/notification_preferences/data/notification_preferences_repository.dart';
 import 'package:student_mobile/features/notification_preferences/domain/notification_preferences_models.dart';
@@ -101,73 +100,24 @@ class _NotificationPreferencesScreenState
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
-      child: Scaffold(
-        backgroundColor: StudentHubColors.pageBg,
-        body: SafeArea(
-          child: Column(
-            children: [
-              StudentAppHeader(
-                title: 'Notification preferences',
-                onBack: () => Navigator.of(context).maybePop(),
-              ),
-              Expanded(child: _buildBody()),
-            ],
-          ),
-        ),
+      child: StudentHubPage(
+        title: 'Notification preferences',
+        body: _buildBody(),
       ),
     );
   }
 
   Widget _buildBody() {
     if (_loading) {
-      return const Center(
-        child: CircularProgressIndicator(color: StudentHubColors.blue),
-      );
+      return const AppLoadingState(padding: EdgeInsets.zero);
     }
 
     if (_error != null && _snapshot.channels.isEmpty) {
       return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  color: StudentHubColors.blueSoft,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Icon(
-                  Icons.notifications_off_outlined,
-                  color: StudentHubColors.blue,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                _error!,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontFamily: AppTheme.fontFamily,
-                  color: StudentHubColors.muted,
-                  height: 1.4,
-                ),
-              ),
-              const SizedBox(height: 16),
-              FilledButton(
-                onPressed: _load,
-                style: FilledButton.styleFrom(
-                  backgroundColor: StudentHubColors.blue,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: const Text('Retry'),
-              ),
-            ],
-          ),
+        child: AppErrorState(
+          message: _error!,
+          onRetry: _load,
+          retryLabel: 'Retry',
         ),
       );
     }

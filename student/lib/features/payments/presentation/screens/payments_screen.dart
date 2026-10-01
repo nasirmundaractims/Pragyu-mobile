@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:student_mobile/app/router/app_router.dart';
-import 'package:student_mobile/app/theme/student_hub_colors.dart';
-import 'package:student_mobile/app/widgets/student_app_header.dart';
+import 'package:student_mobile/app/widgets/student_screen_kit.dart';
 import 'package:student_mobile/core/config/app_config.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/features/catalog/data/marketplace_access_service.dart';
@@ -280,11 +279,15 @@ class _PaymentsScreenState extends State<PaymentsScreen>
       child: StudentHubPage(
         title: 'Payments',
         body: _loading && _error == null
-              ? const Center(
-                  child: CircularProgressIndicator(color: StudentHubColors.blue),
-                )
+              ? const AppLoadingState(padding: EdgeInsets.zero)
               : _error != null && !_loading
-                  ? _ErrorBody(message: _error!, onRetry: _load)
+                  ? Center(
+                      child: AppErrorState(
+                        message: _error!,
+                        onRetry: _load,
+                        retryLabel: 'Retry',
+                      ),
+                    )
                   : RefreshIndicator(
                       color: StudentHubColors.blue,
                       onRefresh: _load,
@@ -295,7 +298,7 @@ class _PaymentsScreenState extends State<PaymentsScreen>
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             const Text(
-                              'Fees, invoices, and AI credits — switch tabs to manage each area.',
+                              'Fees, my purchases, and AI credits — switch tabs to manage each area.',
                               style: TextStyle(
                                 fontSize: 13,
                                 color: StudentHubColors.muted,
@@ -663,7 +666,7 @@ class _BillingPanel extends StatelessWidget {
           children: [
             OutlinedButton(
               onPressed: onCourses,
-              child: const Text('Purchased courses'),
+              child: const Text('Open my learning'),
             ),
             if (onCatalog != null)
               OutlinedButton(
@@ -674,13 +677,15 @@ class _BillingPanel extends StatelessWidget {
         ),
         const SizedBox(height: 14),
         _Section(
-          title: 'Payments & invoices',
+          title: 'My purchases',
           subtitle:
-              'Course enrollments, AI plan invoices, and credit pack purchases.',
+              'Course buys, exam packs, AI plan invoices, and credit pack purchases live here.',
           child: billing.rows.isEmpty
-              ? const Text(
-                  'No payments yet. Purchase a course or AI plan to see your history here.',
-                  style: TextStyle(fontSize: 13, color: StudentHubColors.muted),
+              ? const AppEmptyState(
+                  icon: Icons.receipt_long_outlined,
+                  title: 'No purchases yet',
+                  message:
+                      'Buy a course or pack from Catalog — receipts show up here.',
                 )
               : Column(
                   children: [
@@ -780,9 +785,9 @@ class _BalancePanel extends StatelessWidget {
           title: 'Renew AI credits',
           subtitle: 'Top up when you hit plan limits or run out of wallet credits.',
           child: balance.packages.isEmpty
-              ? const Text(
-                  'No credit packs are available right now.',
-                  style: TextStyle(fontSize: 13, color: StudentHubColors.muted),
+              ? const AppEmptyState(
+                  icon: Icons.card_giftcard_outlined,
+                  title: 'No credit packs are available right now.',
                 )
               : Column(
                   children: [
@@ -1063,34 +1068,3 @@ class _InfoCard extends StatelessWidget {
   }
 }
 
-class _ErrorBody extends StatelessWidget {
-  const _ErrorBody({required this.message, required this.onRetry});
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: StudentHubColors.muted),
-            ),
-            const SizedBox(height: 12),
-            FilledButton(
-              onPressed: onRetry,
-              style: FilledButton.styleFrom(backgroundColor: StudentHubColors.blue),
-              child: const Text('Retry'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}

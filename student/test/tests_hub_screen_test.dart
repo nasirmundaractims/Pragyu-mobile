@@ -192,14 +192,24 @@ void main() {
     expect(find.text('Due today'), findsWidgets);
     expect(find.textContaining('Quiz'), findsWidgets);
     expect(find.text('GS Mock Exam'), findsWidgets);
-    expect(find.text('All'), findsOneWidget);
+    expect(find.text('All'), findsWidgets);
     expect(find.text('Due soon'), findsOneWidget);
+    expect(find.text('Past papers'), findsWidgets);
   });
 
   testWidgets('S-40 empty assigned list', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light(),
+        onGenerateRoute: (settings) {
+          if (settings.name == AppRoutes.examSeries) {
+            return MaterialPageRoute<void>(
+              settings: settings,
+              builder: (_) => const Scaffold(body: Text('Exam Series page')),
+            );
+          }
+          return null;
+        },
         home: TestsHubScreen(
           testsRepository: _FakeTests(const TestsSnapshot()),
         ),
@@ -207,10 +217,74 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('No tests assigned yet.'), findsOneWidget);
+    expect(
+      find.textContaining('No tests assigned yet'),
+      findsOneWidget,
+    );
+    expect(find.text('Open Exam Series'), findsWidgets);
+  });
+
+  testWidgets('S-40 past papers empty is honest with Exam Series CTA', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        onGenerateRoute: (settings) {
+          if (settings.name == AppRoutes.examSeries) {
+            return MaterialPageRoute<void>(
+              settings: settings,
+              builder: (_) => const Scaffold(body: Text('Exam Series page')),
+            );
+          }
+          return null;
+        },
+        home: TestsHubScreen(
+          testsRepository: _FakeTests(
+            const TestsSnapshot(
+              items: [
+                TestListItem(
+                  id: 'a1',
+                  title: 'Polity Weekly Quiz',
+                  type: TestKind.quiz,
+                ),
+                TestListItem(
+                  id: 'a2',
+                  title: 'GS Mock Exam',
+                  type: TestKind.exam,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('All'), findsWidgets);
+    expect(find.text('Practice'), findsWidgets);
+    expect(find.text('Exams'), findsWidgets);
+    expect(find.text('Past papers'), findsWidgets);
+
+    await tester.ensureVisible(find.text('Past papers').first);
+    await tester.tap(find.text('Past papers').first);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining('Past-year papers are not listed under Practice yet'),
+      findsOneWidget,
+    );
+    expect(find.text('Show all tests'), findsOneWidget);
+
+    await tester.tap(find.text('Open Exam Series').first);
+    await tester.pumpAndSettle();
+    expect(find.text('Exam Series page'), findsOneWidget);
   });
 
   testWidgets('S-40 Tests tab shows hub', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light(),
@@ -234,11 +308,22 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Practice'), findsWidgets);
-    expect(find.text('Current Affairs Drill'), findsWidgets);
     expect(find.text('S-40 is next'), findsNothing);
+
+    // Topic cards sit below the hero/mode fold inside the shell; scroll to build.
+    await tester.scrollUntilVisible(
+      find.text('Current Affairs Drill'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Current Affairs Drill'), findsWidgets);
   });
 
   testWidgets('S-40 filter Due soon and row opens S-41', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
     Object? pushedArgs;
     await tester.pumpWidget(
       MaterialApp(
@@ -282,14 +367,18 @@ void main() {
     await tester.tap(find.text('Due soon'));
     await tester.pumpAndSettle();
 
+    // Pull content above the fold so topic cards are built/hit-testable.
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -500));
+    await tester.pumpAndSettle();
+
     expect(find.text('Due Quiz'), findsWidgets);
     expect(find.text('Later Exam'), findsNothing);
 
-    await tester.ensureVisible(find.text('Due Quiz').first);
     await tester.tap(find.text('Due Quiz').first);
     await tester.pumpAndSettle();
     // Topic card selects; open via Start / Submit Test CTA.
-    await tester.ensureVisible(find.text('Submit Test'));
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -400));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Submit Test'));
     await tester.pumpAndSettle();
 

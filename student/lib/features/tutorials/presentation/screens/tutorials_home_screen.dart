@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:student_mobile/app/router/app_router.dart';
-import 'package:student_mobile/app/theme/student_hub_colors.dart';
-import 'package:student_mobile/app/widgets/student_app_header.dart';
+import 'package:student_mobile/app/widgets/student_screen_kit.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/features/tutorials/data/tutorials_repository.dart';
 import 'package:student_mobile/features/tutorials/domain/tutorials_models.dart';
@@ -81,11 +80,15 @@ class _TutorialsHomeScreenState extends State<TutorialsHomeScreen> {
       child: StudentHubPage(
         title: 'Tutorials',
         body: _loading && _error == null
-              ? const Center(
-                  child: CircularProgressIndicator(color: StudentHubColors.blue),
-                )
+              ? const AppLoadingState(padding: EdgeInsets.zero)
               : _error != null && _snapshot.contexts.isEmpty
-                  ? _ErrorBody(message: _error!, onRetry: _load)
+                  ? Center(
+                      child: AppErrorState(
+                        message: _error!,
+                        onRetry: _load,
+                        retryLabel: 'Retry',
+                      ),
+                    )
                   : RefreshIndicator(
                       color: StudentHubColors.blue,
                       onRefresh: _load,
@@ -137,13 +140,8 @@ class _TutorialsHomeScreenState extends State<TutorialsHomeScreen> {
                               ),
                             ],
                             const SizedBox(height: 18),
-                            const Text(
-                              'Browse by category',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w700,
-                                color: StudentHubColors.ink,
-                              ),
+                            const StudentSectionHeader(
+                              title: 'Browse by category',
                             ),
                             const SizedBox(height: 4),
                             const Text(
@@ -155,9 +153,10 @@ class _TutorialsHomeScreenState extends State<TutorialsHomeScreen> {
                             ),
                             const SizedBox(height: 12),
                             if (_snapshot.contexts.isEmpty)
-                              const Text(
-                                'No published tutorials yet. Check back soon.',
-                                style: TextStyle(color: StudentHubColors.muted),
+                              const AppEmptyState(
+                                icon: Icons.menu_book_outlined,
+                                title: 'No published tutorials yet',
+                                message: 'Check back soon.',
                               )
                             else
                               for (final item in _snapshot.contexts) ...[
@@ -309,34 +308,3 @@ class _ArticleStrip extends StatelessWidget {
   }
 }
 
-class _ErrorBody extends StatelessWidget {
-  const _ErrorBody({required this.message, required this.onRetry});
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: StudentHubColors.muted),
-            ),
-            const SizedBox(height: 12),
-            FilledButton(
-              onPressed: onRetry,
-              style: FilledButton.styleFrom(backgroundColor: StudentHubColors.blue),
-              child: const Text('Retry'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}

@@ -204,9 +204,24 @@ void main() {
     expect(find.textContaining('70%'), findsWidgets);
     expect(find.textContaining('Grade B'), findsWidgets);
     expect(find.text('Solid attempt with room to deepen concepts.'), findsOneWidget);
+    // Slice 2.1: strengths / weaknesses on first paint (above Explore tabs).
+    expect(find.text('Key Strengths'), findsOneWidget);
+    expect(find.text('Structured answers'), findsOneWidget);
+    expect(find.text('Areas for Improvement'), findsOneWidget);
+    expect(find.text('Thin on definitions'), findsOneWidget);
+    expect(find.text('Practice Again'), findsOneWidget);
+    expect(find.text('Explore details'), findsOneWidget);
+    // Slice 2.3: deep feedback is not forced on first paint.
+    expect(find.text('Advanced · Improve with AI'), findsNothing);
+    expect(find.text('Continue to Deep Feedback'), findsNothing);
+
+    await tester.scrollUntilVisible(
+      find.text('Accuracy'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('Accuracy'), findsOneWidget);
     expect(find.text('Clear structure and relevant examples.'), findsWidgets);
-    expect(find.text('Practice Again'), findsOneWidget);
   });
 
   testWidgets('S-46 shows empty-state when feedback missing', (tester) async {
@@ -233,6 +248,12 @@ void main() {
 
     expect(find.text('Overall Score'), findsOneWidget);
     expect(find.text('—'), findsOneWidget);
+    expect(
+      find.textContaining(
+        'Strengths and focus areas appear here after AI scoring completes.',
+      ),
+      findsOneWidget,
+    );
     await tester.scrollUntilVisible(
       find.text('Detailed feedback appears after AI scoring completes.'),
       300,

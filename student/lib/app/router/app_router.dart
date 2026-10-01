@@ -162,7 +162,9 @@ Route<dynamic> onGenerateRoute(RouteSettings settings) {
     case AppRoutes.orgPicker:
       return MaterialPageRoute<void>(
         settings: settings,
-        builder: (_) => const OrgPickerScreen(),
+        builder: (_) => OrgPickerScreen.fromArgs(
+          OrgPickerArgs.fromObject(settings.arguments),
+        ),
       );
     case AppRoutes.orgAssociation:
       return MaterialPageRoute<void>(

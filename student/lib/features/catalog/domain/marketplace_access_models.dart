@@ -10,12 +10,18 @@ class MarketplaceAccess {
   final String? reason;
   final bool ready;
 
-  static const unknownOpen = MarketplaceAccess(available: true, ready: true);
+  /// Used when the access check fails (network, auth, parse). Never opens store.
+  static const unknownClosed = MarketplaceAccess(
+    available: false,
+    ready: true,
+    reason: 'Marketplace access could not be verified right now.',
+  );
 
-  static const loading = MarketplaceAccess(available: true, ready: false);
+  /// While fetching — treat as unavailable so UI does not flash open.
+  static const loading = MarketplaceAccess(available: false, ready: false);
 
   factory MarketplaceAccess.fromJson(Map<String, dynamic>? json) {
-    if (json == null) return MarketplaceAccess.unknownOpen;
+    if (json == null) return MarketplaceAccess.unknownClosed;
     final available = json['available'] != false;
     final reason = json['reason']?.toString();
     return MarketplaceAccess(

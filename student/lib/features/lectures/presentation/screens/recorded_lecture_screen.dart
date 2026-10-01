@@ -277,10 +277,11 @@ class _RecordedLectureScreenState extends State<RecordedLectureScreen> {
             },
           )
         else
-          _PlayerStub(
+          _PlayerFallback(
             locked: snapshot.isLocked,
             hasVideo: snapshot.hasVideo,
             urlLoaded: url != null,
+            embedDisabled: !widget.embedInAppMedia && url != null,
           ),
         const SizedBox(height: 14),
         _ProgressCard(snapshot: snapshot),
@@ -288,6 +289,11 @@ class _RecordedLectureScreenState extends State<RecordedLectureScreen> {
         if (snapshot.isLocked)
           const Text(
             'This recording is locked for your enrollment.',
+            style: TextStyle(color: AppColors.muted, height: 1.45),
+          )
+        else if (!snapshot.hasVideo)
+          const Text(
+            'No recording has been uploaded for this lecture yet. Check back later or ask your institute.',
             style: TextStyle(color: AppColors.muted, height: 1.45),
           )
         else ...[
@@ -405,22 +411,50 @@ class _RecordedLectureScreenState extends State<RecordedLectureScreen> {
   }
 }
 
-class _PlayerStub extends StatelessWidget {
-  const _PlayerStub({
+class _PlayerFallback extends StatelessWidget {
+  const _PlayerFallback({
     required this.locked,
     required this.hasVideo,
     required this.urlLoaded,
+    required this.embedDisabled,
   });
 
   final bool locked;
   final bool hasVideo;
   final bool urlLoaded;
+  final bool embedDisabled;
 
   @override
   Widget build(BuildContext context) {
+    final IconData icon;
+    final String title;
+    final String body;
+
+    if (locked) {
+      icon = Icons.lock_outline_rounded;
+      title = 'Locked';
+      body = 'Enrollment access is required to watch this recording.';
+    } else if (!hasVideo) {
+      icon = Icons.videocam_off_outlined;
+      title = 'No recording yet';
+      body = 'This lecture doesn’t have a video file attached.';
+    } else if (embedDisabled) {
+      icon = Icons.open_in_new_rounded;
+      title = 'Link ready';
+      body = 'Copy the playback link below to watch outside the in-app player.';
+    } else if (urlLoaded) {
+      icon = Icons.ondemand_video_outlined;
+      title = 'Link ready';
+      body = 'Playback link is available below.';
+    } else {
+      icon = Icons.ondemand_video_outlined;
+      title = 'Recording available';
+      body = 'Tap Get playback link below to load the video.';
+    }
+
     return Container(
       width: double.infinity,
-      height: 180,
+      padding: const EdgeInsets.fromLTRB(20, 28, 20, 24),
       decoration: BoxDecoration(
         color: const Color(0xFF1A2433),
         borderRadius: BorderRadius.circular(16),
@@ -428,35 +462,22 @@ class _PlayerStub extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            locked
-                ? Icons.lock_outline_rounded
-                : Icons.ondemand_video_outlined,
-            color: Colors.white70,
-            size: 36,
-          ),
+          Icon(icon, color: Colors.white70, size: 36),
           const SizedBox(height: 10),
           Text(
-            locked
-                ? 'Locked'
-                : urlLoaded
-                    ? 'Link ready'
-                    : hasVideo
-                        ? 'Recorded lecture'
-                        : 'No video yet',
+            title,
+            textAlign: TextAlign.center,
             style: const TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.w700,
               fontSize: 16,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           Text(
-            locked
-                ? 'Enrollment access required.'
-                : 'Tap Get playback link to start watching.',
+            body,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.white70, fontSize: 13),
+            style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.35),
           ),
         ],
       ),

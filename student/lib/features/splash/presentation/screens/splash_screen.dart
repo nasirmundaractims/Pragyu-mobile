@@ -8,6 +8,7 @@ import 'package:student_mobile/app/theme/app_theme.dart';
 import 'package:student_mobile/app/widgets/pragyu_logo.dart';
 import 'package:student_mobile/core/constants/app_constants.dart';
 import 'package:student_mobile/core/session/auth_navigation.dart';
+import 'package:student_mobile/features/auth/presentation/auth_deep_link_controller.dart';
 
 /// S-01 Splash — centered brand logo + tagline + session handoff.
 ///
@@ -72,6 +73,23 @@ class _SplashScreenState extends State<SplashScreen>
     }
 
     if (!mounted) return;
+
+    // Prefer auth email deep links (reset / verify) over session entry.
+    if (AuthDeepLinkController.isStarted) {
+      final pending = AuthDeepLinkController.instance.consumePending();
+      if (pending != null) {
+        Navigator.of(context).pushReplacementNamed(
+          pending.route,
+          arguments: pending.arguments,
+        );
+        AuthDeepLinkController.instance.markNavigationReady();
+        return;
+      }
+      Navigator.of(context).pushReplacementNamed(nextRoute);
+      AuthDeepLinkController.instance.markNavigationReady();
+      return;
+    }
+
     Navigator.of(context).pushReplacementNamed(nextRoute);
   }
 

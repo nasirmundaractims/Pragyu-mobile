@@ -8,7 +8,7 @@ extension PaymentsViewIdX on PaymentsViewId {
       case PaymentsViewId.fees:
         return 'Fees';
       case PaymentsViewId.billing:
-        return 'Billing';
+        return 'Purchases';
       case PaymentsViewId.balance:
         return 'AI Balance';
     }
@@ -19,7 +19,7 @@ extension PaymentsViewIdX on PaymentsViewId {
       case PaymentsViewId.fees:
         return 'Tuition and installments';
       case PaymentsViewId.billing:
-        return 'Course and plan invoices';
+        return 'My purchases and invoices';
       case PaymentsViewId.balance:
         return 'Credits left and usage';
     }
@@ -36,6 +36,9 @@ extension PaymentsViewIdX on PaymentsViewId {
       case 'billing':
       case 'invoices':
       case 'plan':
+      case 'purchases':
+      case 'my-purchases':
+      case 'my_purchases':
         return PaymentsViewId.billing;
       case 'balance':
       case 'ai':

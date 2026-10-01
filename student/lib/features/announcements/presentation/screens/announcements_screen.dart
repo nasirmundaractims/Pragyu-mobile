@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:student_mobile/app/router/app_router.dart';
-import 'package:student_mobile/app/theme/student_hub_colors.dart';
-import 'package:student_mobile/app/widgets/student_app_header.dart';
-import 'package:student_mobile/app/theme/app_theme.dart';
+import 'package:student_mobile/app/widgets/student_screen_kit.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/features/announcements/data/announcements_repository.dart';
 import 'package:student_mobile/features/announcements/domain/announcements_models.dart';
@@ -76,44 +74,27 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
       child: StudentHubPage(
         title: 'Announcements',
         body: _loading
-              ? const Center(
-                  child: CircularProgressIndicator(color: StudentHubColors.blue),
-                )
+              ? const AppLoadingState(padding: EdgeInsets.zero)
               : _error != null && _snapshot.items.isEmpty
-                  ? _ErrorBody(message: _error!, onRetry: _load)
+                  ? Center(
+                      child: AppErrorState(
+                        message: _error!,
+                        onRetry: _load,
+                        retryLabel: 'Retry',
+                      ),
+                    )
                   : RefreshIndicator(
                       color: StudentHubColors.blue,
                       onRefresh: _load,
                       child: _snapshot.items.isEmpty
                           ? ListView(
                               physics: const AlwaysScrollableScrollPhysics(),
-                              padding: const EdgeInsets.fromLTRB(24, 48, 24, 28),
                               children: const [
-                                Icon(
-                                  Icons.campaign_outlined,
-                                  size: 48,
-                                  color: StudentHubColors.muted,
-                                ),
-                                SizedBox(height: 16),
-                                Text(
-                                  "You're all caught up",
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontFamily: AppTheme.fontFamily,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w700,
-                                    color: StudentHubColors.ink,
-                                  ),
-                                ),
-                                SizedBox(height: 8),
-                                Text(
-                                  'When your institute posts a notice, it will show up here.',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontFamily: AppTheme.fontFamily,
-                                    color: StudentHubColors.muted,
-                                    height: 1.4,
-                                  ),
+                                AppEmptyState(
+                                  icon: Icons.campaign_outlined,
+                                  title: "You're all caught up",
+                                  message:
+                                      'When your institute posts a notice, it will show up here.',
                                 ),
                               ],
                             )
@@ -140,7 +121,7 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                                 ],
                                 if (_snapshot.pinned.isNotEmpty) ...[
                                   const SizedBox(height: 16),
-                                  const _SectionLabel('Pinned'),
+                                  const StudentSectionHeader(title: 'Pinned', compact: true),
                                   const SizedBox(height: 8),
                                   ..._snapshot.pinned.map(
                                     (item) => Padding(
@@ -154,7 +135,7 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                                 ],
                                 if (_snapshot.unpinned.isNotEmpty) ...[
                                   const SizedBox(height: 8),
-                                  const _SectionLabel('Recent'),
+                                  const StudentSectionHeader(title: 'Recent', compact: true),
                                   const SizedBox(height: 8),
                                   ..._snapshot.unpinned.map(
                                     (item) => Padding(
@@ -269,53 +250,4 @@ class _AnnouncementCard extends StatelessWidget {
   }
 }
 
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel(this.label);
 
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      label,
-      style: const TextStyle(
-        fontSize: 12,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 0.7,
-        color: StudentHubColors.muted,
-      ),
-    );
-  }
-}
-
-class _ErrorBody extends StatelessWidget {
-  const _ErrorBody({required this.message, required this.onRetry});
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: StudentHubColors.muted),
-            ),
-            const SizedBox(height: 12),
-            FilledButton(
-              onPressed: onRetry,
-              style: FilledButton.styleFrom(backgroundColor: StudentHubColors.blue),
-              child: const Text('Retry'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
