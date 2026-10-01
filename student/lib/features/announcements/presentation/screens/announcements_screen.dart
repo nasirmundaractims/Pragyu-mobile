@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:student_mobile/app/router/app_router.dart';
-import 'package:student_mobile/app/theme/app_colors.dart';
+import 'package:student_mobile/app/theme/student_hub_colors.dart';
+import 'package:student_mobile/app/widgets/student_app_header.dart';
+import 'package:student_mobile/app/theme/app_theme.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/features/announcements/data/announcements_repository.dart';
 import 'package:student_mobile/features/announcements/domain/announcements_models.dart';
@@ -71,21 +73,16 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
-      child: Scaffold(
-        backgroundColor: AppColors.background,
-        appBar: AppBar(
-          backgroundColor: AppColors.background,
-          title: const Text('Announcements'),
-        ),
-        body: SafeArea(
-          child: _loading
+      child: StudentHubPage(
+        title: 'Announcements',
+        body: _loading
               ? const Center(
-                  child: CircularProgressIndicator(color: AppColors.brand),
+                  child: CircularProgressIndicator(color: StudentHubColors.blue),
                 )
               : _error != null && _snapshot.items.isEmpty
                   ? _ErrorBody(message: _error!, onRetry: _load)
                   : RefreshIndicator(
-                      color: AppColors.brand,
+                      color: StudentHubColors.blue,
                       onRefresh: _load,
                       child: _snapshot.items.isEmpty
                           ? ListView(
@@ -95,16 +92,17 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                                 Icon(
                                   Icons.campaign_outlined,
                                   size: 48,
-                                  color: AppColors.muted,
+                                  color: StudentHubColors.muted,
                                 ),
                                 SizedBox(height: 16),
                                 Text(
-                                  'No announcements yet',
+                                  "You're all caught up",
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
+                                    fontFamily: AppTheme.fontFamily,
                                     fontSize: 18,
                                     fontWeight: FontWeight.w700,
-                                    color: AppColors.ink,
+                                    color: StudentHubColors.ink,
                                   ),
                                 ),
                                 SizedBox(height: 8),
@@ -112,7 +110,8 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                                   'When your institute posts a notice, it will show up here.',
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
-                                    color: AppColors.muted,
+                                    fontFamily: AppTheme.fontFamily,
+                                    color: StudentHubColors.muted,
                                     height: 1.4,
                                   ),
                                 ),
@@ -126,7 +125,7 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                                   'Pinned and recent notices from your institute.',
                                   style: TextStyle(
                                     fontSize: 13,
-                                    color: AppColors.muted,
+                                    color: StudentHubColors.muted,
                                   ),
                                 ),
                                 if (_error != null) ...[
@@ -134,7 +133,7 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                                   Text(
                                     _error!,
                                     style: const TextStyle(
-                                      color: AppColors.danger,
+                                      color: StudentHubColors.danger,
                                       fontSize: 13,
                                     ),
                                   ),
@@ -170,7 +169,6 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                               ],
                             ),
                     ),
-        ),
       ),
     );
   }
@@ -189,7 +187,7 @@ class _AnnouncementCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final preview = item.plainBody;
     return Material(
-      color: AppColors.surface,
+      color: StudentHubColors.surface,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
@@ -199,7 +197,7 @@ class _AnnouncementCard extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.brandSoft),
+            border: Border.all(color: StudentHubColors.border),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -210,7 +208,7 @@ class _AnnouncementCard extends StatelessWidget {
                     const Icon(
                       Icons.push_pin,
                       size: 16,
-                      color: AppColors.brand,
+                      color: StudentHubColors.blue,
                     ),
                     const SizedBox(width: 6),
                   ],
@@ -220,13 +218,13 @@ class _AnnouncementCard extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.ink,
+                        color: StudentHubColors.ink,
                       ),
                     ),
                   ),
                   const Icon(
                     Icons.chevron_right_rounded,
-                    color: AppColors.muted,
+                    color: StudentHubColors.muted,
                   ),
                 ],
               ),
@@ -239,7 +237,7 @@ class _AnnouncementCard extends StatelessWidget {
                 ].join(' · '),
                 style: const TextStyle(
                   fontSize: 12,
-                  color: AppColors.muted,
+                  color: StudentHubColors.muted,
                 ),
               ),
               if (preview.isNotEmpty) ...[
@@ -251,7 +249,7 @@ class _AnnouncementCard extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 14,
                     height: 1.4,
-                    color: AppColors.ink,
+                    color: StudentHubColors.ink,
                   ),
                 ),
               ],
@@ -284,7 +282,7 @@ class _SectionLabel extends StatelessWidget {
         fontSize: 12,
         fontWeight: FontWeight.w700,
         letterSpacing: 0.7,
-        color: AppColors.muted,
+        color: StudentHubColors.muted,
       ),
     );
   }
@@ -307,12 +305,12 @@ class _ErrorBody extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.muted),
+              style: const TextStyle(color: StudentHubColors.muted),
             ),
             const SizedBox(height: 12),
             FilledButton(
               onPressed: onRetry,
-              style: FilledButton.styleFrom(backgroundColor: AppColors.brand),
+              style: FilledButton.styleFrom(backgroundColor: StudentHubColors.blue),
               child: const Text('Retry'),
             ),
           ],

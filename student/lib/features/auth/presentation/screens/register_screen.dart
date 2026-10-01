@@ -301,16 +301,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  void _socialStub(String provider) {
-    _toast('$provider sign-up is coming soon. Use email for now.');
-  }
-
   Future<void> _openConfigUrl(String? url) async {
     final raw = url?.trim() ?? '';
-    if (raw.isEmpty) {
-      _toast('Link is not configured for this build.');
-      return;
-    }
+    if (raw.isEmpty) return;
     final uri = Uri.tryParse(raw);
     if (uri == null) {
       _toast('Invalid link.');
@@ -368,11 +361,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                         ),
                         const Spacer(),
-                        _LanguageChip(
-                          onTap: () => _toast(
-                            'More languages coming soon.',
-                          ),
-                        ),
+                        const _LanguageChip(),
                       ],
                     ),
                   ),
@@ -650,12 +639,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               onChanged: (value) => setState(
                                 () => _acceptTerms = value ?? false,
                               ),
-                              onTerms: () => _openConfigUrl(
-                                AppConfig.instance.termsUrl,
-                              ),
-                              onPrivacy: () => _openConfigUrl(
-                                AppConfig.instance.privacyUrl,
-                              ),
+                              onTerms: (AppConfig.instance.termsUrl
+                                          ?.trim()
+                                          .isNotEmpty ??
+                                      false)
+                                  ? () => _openConfigUrl(
+                                        AppConfig.instance.termsUrl,
+                                      )
+                                  : null,
+                              onPrivacy: (AppConfig.instance.privacyUrl
+                                          ?.trim()
+                                          .isNotEmpty ??
+                                      false)
+                                  ? () => _openConfigUrl(
+                                        AppConfig.instance.privacyUrl,
+                                      )
+                                  : null,
                             ),
                             const SizedBox(height: 16),
                             _CreateAccountButton(
@@ -804,39 +803,31 @@ class _BlobPainter extends CustomPainter {
 }
 
 class _LanguageChip extends StatelessWidget {
-  const _LanguageChip({required this.onTap});
-
-  final VoidCallback onTap;
+  const _LanguageChip();
 
   @override
   Widget build(BuildContext context) {
     return Material(
       color: Colors.white,
-      shape: StadiumBorder(
-        side: BorderSide(color: const Color(0xFFE2E8F0)),
+      shape: const StadiumBorder(
+        side: BorderSide(color: Color(0xFFE2E8F0)),
       ),
-      child: InkWell(
-        onTap: onTap,
-        customBorder: const StadiumBorder(),
-        child: const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.language_rounded, size: 16, color: Color(0xFF2F7BFF)),
-              SizedBox(width: 6),
-              Text(
-                'English',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF1A2B4C),
-                ),
+      child: const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.language_rounded, size: 16, color: Color(0xFF2F7BFF)),
+            SizedBox(width: 6),
+            Text(
+              'English',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF1A2B4C),
               ),
-              SizedBox(width: 2),
-              Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: Color(0xFF7A8499)),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -1082,16 +1073,16 @@ class _TermsRow extends StatelessWidget {
     required this.accepted,
     required this.enabled,
     required this.onChanged,
-    required this.onTerms,
-    required this.onPrivacy,
+    this.onTerms,
+    this.onPrivacy,
     this.errorText,
   });
 
   final bool accepted;
   final bool enabled;
   final ValueChanged<bool?> onChanged;
-  final VoidCallback onTerms;
-  final VoidCallback onPrivacy;
+  final VoidCallback? onTerms;
+  final VoidCallback? onPrivacy;
   final String? errorText;
 
   @override
@@ -1122,17 +1113,9 @@ class _TermsRow extends StatelessWidget {
                         fontWeight: FontWeight.w500,
                       ),
                     ),
-                    GestureDetector(
+                    _LegalLabel(
+                      label: 'Terms & Conditions',
                       onTap: onTerms,
-                      child: const Text(
-                        'Terms & Conditions',
-                        style: TextStyle(
-                          fontSize: 13,
-                          height: 1.35,
-                          color: _RegisterScreenState._blueDeep,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
                     ),
                     const Text(
                       ' and ',
@@ -1143,17 +1126,9 @@ class _TermsRow extends StatelessWidget {
                         fontWeight: FontWeight.w500,
                       ),
                     ),
-                    GestureDetector(
+                    _LegalLabel(
+                      label: 'Privacy Policy',
                       onTap: onPrivacy,
-                      child: const Text(
-                        'Privacy Policy',
-                        style: TextStyle(
-                          fontSize: 13,
-                          height: 1.35,
-                          color: _RegisterScreenState._blueDeep,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
                     ),
                   ],
                 ),
@@ -1175,6 +1150,35 @@ class _TermsRow extends StatelessWidget {
           ),
       ],
     );
+  }
+}
+
+class _LegalLabel extends StatelessWidget {
+  const _LegalLabel({
+    required this.label,
+    this.onTap,
+  });
+
+  final String label;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final linked = onTap != null;
+    final text = Text(
+      label,
+      style: TextStyle(
+        fontSize: 13,
+        height: 1.35,
+        color: linked
+            ? _RegisterScreenState._blueDeep
+            : _RegisterScreenState._ink,
+        fontWeight: linked ? FontWeight.w700 : FontWeight.w500,
+        decoration: linked ? TextDecoration.underline : TextDecoration.none,
+      ),
+    );
+    if (!linked) return text;
+    return GestureDetector(onTap: onTap, child: text);
   }
 }
 
@@ -1236,134 +1240,6 @@ class _CreateAccountButton extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _OrDivider extends StatelessWidget {
-  const _OrDivider();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Row(
-      children: [
-        Expanded(child: Divider(color: Color(0xFFE2E8F0))),
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: 12),
-          child: Text(
-            'OR',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF9AA3B5),
-              letterSpacing: 0.6,
-            ),
-          ),
-        ),
-        Expanded(child: Divider(color: Color(0xFFE2E8F0))),
-      ],
-    );
-  }
-}
-
-class _SocialRow extends StatelessWidget {
-  const _SocialRow({
-    required this.narrow,
-    required this.onGoogle,
-    required this.onApple,
-    required this.onPhone,
-  });
-
-  final bool narrow;
-  final VoidCallback onGoogle;
-  final VoidCallback onApple;
-  final VoidCallback onPhone;
-
-  @override
-  Widget build(BuildContext context) {
-    final buttons = [
-      _SocialButton(
-        label: 'Continue with Google',
-        icon: Icons.g_mobiledata_rounded,
-        onPressed: onGoogle,
-      ),
-      _SocialButton(
-        label: 'Continue with Apple',
-        icon: Icons.apple_rounded,
-        onPressed: onApple,
-      ),
-      _SocialButton(
-        label: 'Continue with Phone',
-        icon: Icons.phone_iphone_rounded,
-        onPressed: onPhone,
-      ),
-    ];
-
-    if (narrow) {
-      return Column(
-        children: [
-          for (var i = 0; i < buttons.length; i++) ...[
-            if (i > 0) const SizedBox(height: 8),
-            buttons[i],
-          ],
-        ],
-      );
-    }
-
-    return Row(
-      children: [
-        for (var i = 0; i < buttons.length; i++) ...[
-          if (i > 0) const SizedBox(width: 8),
-          Expanded(child: buttons[i]),
-        ],
-      ],
-    );
-  }
-}
-
-class _SocialButton extends StatelessWidget {
-  const _SocialButton({
-    required this.label,
-    required this.icon,
-    required this.onPressed,
-  });
-
-  final String label;
-  final IconData icon;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return OutlinedButton(
-      onPressed: onPressed,
-      style: OutlinedButton.styleFrom(
-        foregroundColor: _RegisterScreenState._ink,
-        side: const BorderSide(color: _RegisterScreenState._fieldBorder),
-        backgroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-        minimumSize: const Size.fromHeight(52),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-        ),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 22, color: _RegisterScreenState._ink),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            softWrap: true,
-            maxLines: 2,
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              height: 1.2,
-            ),
-          ),
-        ],
       ),
     );
   }

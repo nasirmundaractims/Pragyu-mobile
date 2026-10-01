@@ -18,7 +18,6 @@ import 'package:student_mobile/features/home/presentation/screens/home_screen.da
 import 'package:student_mobile/features/me/data/me_repository.dart';
 import 'package:student_mobile/features/me/domain/me_models.dart';
 import 'package:student_mobile/features/organization/presentation/screens/org_picker_screen.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 /// S-70 Me — profile summary, preferences, institute switch, sign out.
 class MeScreen extends StatefulWidget {
@@ -274,22 +273,8 @@ class _MeScreenState extends State<MeScreen> {
   }
 
   Future<void> _ratePragyu() async {
-    final config = AppConfig.instance;
-    final url = Theme.of(context).platform == TargetPlatform.iOS
-        ? (config.iosStoreUrl ?? config.androidStoreUrl)
-        : (config.androidStoreUrl ?? config.iosStoreUrl);
-    if (url == null || url.isEmpty) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Store listing URL is not configured yet. Thanks for supporting Pragyu!',
-          ),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      return;
-    }
+    final url = _storeListingUrl();
+    if (url == null || url.isEmpty) return;
     final uri = Uri.tryParse(url);
     if (uri == null) return;
     final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -301,6 +286,16 @@ class _MeScreenState extends State<MeScreen> {
         ),
       );
     }
+  }
+
+  String? _storeListingUrl() {
+    final config = AppConfig.instance;
+    final preferred = Theme.of(context).platform == TargetPlatform.iOS
+        ? (config.iosStoreUrl ?? config.androidStoreUrl)
+        : (config.androidStoreUrl ?? config.iosStoreUrl);
+    final trimmed = preferred?.trim();
+    if (trimmed == null || trimmed.isEmpty) return null;
+    return trimmed;
   }
 
   Future<void> _signOut() async {
@@ -693,14 +688,15 @@ class _MeScreenState extends State<MeScreen> {
                   ? () => Navigator.of(context).pushNamed(AppRoutes.orgCodeEntry)
                   : _switchInstitute,
             ),
-            _MenuTile(
-              icon: Icons.star_outline_rounded,
-              tint: const Color(0xFFF5A623),
-              soft: const Color(0xFFFFF6E5),
-              title: 'Rate Pragyu',
-              subtitle: 'Share your feedback',
-              onTap: _ratePragyu,
-            ),
+            if (_storeListingUrl() != null)
+              _MenuTile(
+                icon: Icons.star_outline_rounded,
+                tint: const Color(0xFFF5A623),
+                soft: const Color(0xFFFFF6E5),
+                title: 'Rate Pragyu',
+                subtitle: 'Share your feedback',
+                onTap: _ratePragyu,
+              ),
             _MenuTile(
               icon: Icons.info_outline_rounded,
               tint: _blue,

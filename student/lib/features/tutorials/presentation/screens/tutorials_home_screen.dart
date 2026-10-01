@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:student_mobile/app/router/app_router.dart';
-import 'package:student_mobile/app/theme/app_colors.dart';
+import 'package:student_mobile/app/theme/student_hub_colors.dart';
+import 'package:student_mobile/app/widgets/student_app_header.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/features/tutorials/data/tutorials_repository.dart';
 import 'package:student_mobile/features/tutorials/domain/tutorials_models.dart';
@@ -77,21 +78,16 @@ class _TutorialsHomeScreenState extends State<TutorialsHomeScreen> {
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
-      child: Scaffold(
-        backgroundColor: AppColors.background,
-        appBar: AppBar(
-          backgroundColor: AppColors.background,
-          title: const Text('Tutorials'),
-        ),
-        body: SafeArea(
-          child: _loading && _error == null
+      child: StudentHubPage(
+        title: 'Tutorials',
+        body: _loading && _error == null
               ? const Center(
-                  child: CircularProgressIndicator(color: AppColors.brand),
+                  child: CircularProgressIndicator(color: StudentHubColors.blue),
                 )
               : _error != null && _snapshot.contexts.isEmpty
                   ? _ErrorBody(message: _error!, onRetry: _load)
                   : RefreshIndicator(
-                      color: AppColors.brand,
+                      color: StudentHubColors.blue,
                       onRefresh: _load,
                       child: SingleChildScrollView(
                         physics: const AlwaysScrollableScrollPhysics(),
@@ -104,7 +100,7 @@ class _TutorialsHomeScreenState extends State<TutorialsHomeScreen> {
                               style: TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.w700,
-                                color: AppColors.ink,
+                                color: StudentHubColors.ink,
                               ),
                             ),
                             const SizedBox(height: 6),
@@ -112,7 +108,7 @@ class _TutorialsHomeScreenState extends State<TutorialsHomeScreen> {
                               'Browse exam, class, and field guides with structured topics and clear articles.',
                               style: TextStyle(
                                 fontSize: 13,
-                                color: AppColors.muted,
+                                color: StudentHubColors.muted,
                                 height: 1.4,
                               ),
                             ),
@@ -146,7 +142,7 @@ class _TutorialsHomeScreenState extends State<TutorialsHomeScreen> {
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w700,
-                                color: AppColors.ink,
+                                color: StudentHubColors.ink,
                               ),
                             ),
                             const SizedBox(height: 4),
@@ -154,14 +150,14 @@ class _TutorialsHomeScreenState extends State<TutorialsHomeScreen> {
                               'Exams, classes, fields, and custom learning contexts.',
                               style: TextStyle(
                                 fontSize: 13,
-                                color: AppColors.muted,
+                                color: StudentHubColors.muted,
                               ),
                             ),
                             const SizedBox(height: 12),
                             if (_snapshot.contexts.isEmpty)
                               const Text(
                                 'No published tutorials yet. Check back soon.',
-                                style: TextStyle(color: AppColors.muted),
+                                style: TextStyle(color: StudentHubColors.muted),
                               )
                             else
                               for (final item in _snapshot.contexts) ...[
@@ -183,7 +179,6 @@ class _TutorialsHomeScreenState extends State<TutorialsHomeScreen> {
                         ),
                       ),
                     ),
-        ),
       ),
     );
   }
@@ -198,7 +193,7 @@ class _ContextCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppColors.surface,
+      color: StudentHubColors.surface,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
@@ -208,7 +203,7 @@ class _ContextCard extends StatelessWidget {
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0x14000000)),
+            border: Border.all(color: StudentHubColors.border),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -219,7 +214,7 @@ class _ContextCard extends StatelessWidget {
                   fontSize: 10,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.8,
-                  color: AppColors.brand,
+                  color: StudentHubColors.blue,
                 ),
               ),
               const SizedBox(height: 6),
@@ -228,7 +223,7 @@ class _ContextCard extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.ink,
+                  color: StudentHubColors.ink,
                 ),
               ),
               if (card.description?.trim().isNotEmpty == true) ...[
@@ -237,7 +232,7 @@ class _ContextCard extends StatelessWidget {
                   card.description!,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 13, color: AppColors.muted),
+                  style: const TextStyle(fontSize: 13, color: StudentHubColors.muted),
                 ),
               ],
             ],
@@ -269,13 +264,13 @@ class _ArticleStrip extends StatelessWidget {
           style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w700,
-            color: AppColors.ink,
+            color: StudentHubColors.ink,
           ),
         ),
         const SizedBox(height: 10),
         for (final item in items.take(6)) ...[
           Material(
-            color: AppColors.surface,
+            color: StudentHubColors.surface,
             borderRadius: BorderRadius.circular(12),
             child: InkWell(
               borderRadius: BorderRadius.circular(12),
@@ -289,7 +284,7 @@ class _ArticleStrip extends StatelessWidget {
                       item.title,
                       style: const TextStyle(
                         fontWeight: FontWeight.w600,
-                        color: AppColors.ink,
+                        color: StudentHubColors.ink,
                       ),
                     ),
                     if (item.metaLabel.isNotEmpty) ...[
@@ -298,7 +293,7 @@ class _ArticleStrip extends StatelessWidget {
                         item.metaLabel,
                         style: const TextStyle(
                           fontSize: 12,
-                          color: AppColors.muted,
+                          color: StudentHubColors.muted,
                         ),
                       ),
                     ],
@@ -331,12 +326,12 @@ class _ErrorBody extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.muted),
+              style: const TextStyle(color: StudentHubColors.muted),
             ),
             const SizedBox(height: 12),
             FilledButton(
               onPressed: onRetry,
-              style: FilledButton.styleFrom(backgroundColor: AppColors.brand),
+              style: FilledButton.styleFrom(backgroundColor: StudentHubColors.blue),
               child: const Text('Retry'),
             ),
           ],

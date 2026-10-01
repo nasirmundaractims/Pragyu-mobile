@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:student_mobile/app/router/app_router.dart';
-import 'package:student_mobile/app/theme/app_colors.dart';
+import 'package:student_mobile/app/theme/student_hub_colors.dart';
+import 'package:student_mobile/app/widgets/student_app_header.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/features/catalog/data/marketplace_access_service.dart';
 import 'package:student_mobile/features/exam_series/data/exam_series_repository.dart';
@@ -126,29 +127,24 @@ class _ExamSeriesScreenState extends State<ExamSeriesScreen> {
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
-      child: Scaffold(
-        backgroundColor: AppColors.background,
-        appBar: AppBar(
-          backgroundColor: AppColors.background,
-          title: const Text('Question Bank'),
-          actions: [
-            IconButton(
-              tooltip: 'Exam Workspace',
-              onPressed: () =>
-                  Navigator.of(context).pushNamed(AppRoutes.examWorkspace),
-              icon: const Icon(Icons.workspace_premium_outlined),
-            ),
-          ],
-        ),
-        body: SafeArea(
-          child: _loading && _snapshot.packs.isEmpty && _error == null
+      child: StudentHubPage(
+        title: 'Exam Series',
+        actions: [
+          IconButton(
+            tooltip: 'Exam Workspace',
+            onPressed: () =>
+                Navigator.of(context).pushNamed(AppRoutes.examWorkspace),
+            icon: const Icon(Icons.workspace_premium_outlined, color: StudentHubColors.ink),
+          ),
+        ],
+        body: _loading && _snapshot.packs.isEmpty && _error == null
               ? const Center(
-                  child: CircularProgressIndicator(color: AppColors.brand),
+                  child: CircularProgressIndicator(color: StudentHubColors.blue),
                 )
               : _error != null && _snapshot.packs.isEmpty
                   ? _ErrorBody(message: _error!, onRetry: _load)
                   : RefreshIndicator(
-                      color: AppColors.brand,
+                      color: StudentHubColors.blue,
                       onRefresh: _load,
                       child: SingleChildScrollView(
                         physics: const AlwaysScrollableScrollPhysics(),
@@ -185,7 +181,6 @@ class _ExamSeriesScreenState extends State<ExamSeriesScreen> {
                               ),
                       ),
                     ),
-        ),
       ),
     );
   }
@@ -205,9 +200,9 @@ class _HubHeader extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0x14000000)),
+        color: StudentHubColors.surface,
+        borderRadius: BorderRadius.circular(StudentHubColors.cardRadius),
+        border: Border.all(color: StudentHubColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -218,7 +213,7 @@ class _HubHeader extends StatelessWidget {
               fontSize: 11,
               fontWeight: FontWeight.w700,
               letterSpacing: 1.0,
-              color: AppColors.brand,
+              color: StudentHubColors.blue,
             ),
           ),
           const SizedBox(height: 6),
@@ -227,13 +222,13 @@ class _HubHeader extends StatelessWidget {
             style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w700,
-              color: AppColors.ink,
+              color: StudentHubColors.ink,
             ),
           ),
           const SizedBox(height: 6),
           const Text(
             'Open a pack to take the included tests. Purchased packs open in the seller workspace when needed.',
-            style: TextStyle(fontSize: 13, color: AppColors.muted, height: 1.35),
+            style: TextStyle(fontSize: 13, color: StudentHubColors.muted, height: 1.35),
           ),
           if (onFindMore != null) ...[
             const SizedBox(height: 10),
@@ -270,9 +265,9 @@ class _PackCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0x14000000)),
+        color: StudentHubColors.surface,
+        borderRadius: BorderRadius.circular(StudentHubColors.cardRadius),
+        border: Border.all(color: StudentHubColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -284,12 +279,12 @@ class _PackCard extends StatelessWidget {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: AppColors.brandSoft,
-                  borderRadius: BorderRadius.circular(14),
+                  color: StudentHubColors.blueSoft,
+                  borderRadius: BorderRadius.circular(StudentHubColors.cardRadius),
                 ),
                 child: const Icon(
                   Icons.assignment_outlined,
-                  color: AppColors.brand,
+                  color: StudentHubColors.blue,
                 ),
               ),
               const SizedBox(width: 12),
@@ -302,7 +297,7 @@ class _PackCard extends StatelessWidget {
                       style: const TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize: 16,
-                        color: AppColors.ink,
+                        color: StudentHubColors.ink,
                       ),
                     ),
                     if (pack.description?.trim().isNotEmpty == true) ...[
@@ -313,7 +308,7 @@ class _PackCard extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontSize: 13,
-                          color: AppColors.muted,
+                          color: StudentHubColors.muted,
                         ),
                       ),
                     ],
@@ -345,12 +340,12 @@ class _PackCard extends StatelessWidget {
             const Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.auto_awesome, size: 14, color: AppColors.brand),
+                Icon(Icons.auto_awesome, size: 14, color: StudentHubColors.blue),
                 SizedBox(width: 6),
                 Expanded(
                   child: Text(
                     'Opens in the seller workspace so you can take every included test.',
-                    style: TextStyle(fontSize: 12, color: AppColors.muted),
+                    style: TextStyle(fontSize: 12, color: StudentHubColors.muted),
                   ),
                 ),
               ],
@@ -361,7 +356,7 @@ class _PackCard extends StatelessWidget {
             width: double.infinity,
             child: FilledButton(
               onPressed: opening ? null : onOpen,
-              style: FilledButton.styleFrom(backgroundColor: AppColors.brand),
+              style: FilledButton.styleFrom(backgroundColor: StudentHubColors.blue),
               child: Text(needsSwitch ? 'Open pack' : 'Continue'),
             ),
           ),
@@ -382,7 +377,7 @@ class _StatTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: AppColors.background,
+        color: StudentHubColors.pageBg,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -394,7 +389,7 @@ class _StatTile extends StatelessWidget {
               fontSize: 10,
               fontWeight: FontWeight.w600,
               letterSpacing: 0.6,
-              color: AppColors.muted,
+              color: StudentHubColors.muted,
             ),
           ),
           const SizedBox(height: 4),
@@ -404,7 +399,7 @@ class _StatTile extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               fontWeight: FontWeight.w700,
-              color: AppColors.ink,
+              color: StudentHubColors.ink,
             ),
           ),
         ],
@@ -433,7 +428,7 @@ class _EmptyHub extends StatelessWidget {
           end: Alignment.bottomRight,
           colors: [Color(0xFFFFFFFF), Color(0xFFE8EEF6), Color(0xFFECFEFF)],
         ),
-        border: Border.all(color: const Color(0x14000000)),
+        border: Border.all(color: StudentHubColors.border),
       ),
       child: Column(
         children: [
@@ -443,9 +438,9 @@ class _EmptyHub extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0x14000000)),
+              border: Border.all(color: StudentHubColors.border),
             ),
-            child: const Icon(Icons.layers_outlined, color: AppColors.brand),
+            child: const Icon(Icons.layers_outlined, color: StudentHubColors.blue),
           ),
           const SizedBox(height: 16),
           const Text(
@@ -454,20 +449,20 @@ class _EmptyHub extends StatelessWidget {
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w700,
-              color: AppColors.ink,
+              color: StudentHubColors.ink,
             ),
           ),
           const SizedBox(height: 8),
           const Text(
             'Exam Series packs bundle multiple tests for focused practice. Purchase a pack from the catalog, or ask your academy to assign one — then open it here to start.',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 13, color: AppColors.muted, height: 1.4),
+            style: TextStyle(fontSize: 13, color: StudentHubColors.muted, height: 1.4),
           ),
           const SizedBox(height: 18),
           if (onBrowseCatalog != null)
             FilledButton(
               onPressed: onBrowseCatalog,
-              style: FilledButton.styleFrom(backgroundColor: AppColors.brand),
+              style: FilledButton.styleFrom(backgroundColor: StudentHubColors.blue),
               child: const Text('Browse exam series'),
             ),
           if (onBrowseCatalog != null) const SizedBox(height: 8),
@@ -498,12 +493,12 @@ class _ErrorBody extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.muted),
+              style: const TextStyle(color: StudentHubColors.muted),
             ),
             const SizedBox(height: 12),
             FilledButton(
               onPressed: onRetry,
-              style: FilledButton.styleFrom(backgroundColor: AppColors.brand),
+              style: FilledButton.styleFrom(backgroundColor: StudentHubColors.blue),
               child: const Text('Retry'),
             ),
           ],

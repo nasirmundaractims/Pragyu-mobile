@@ -205,26 +205,6 @@ class _SignInScreenState extends State<SignInScreen> {
     Navigator.of(context).maybePop();
   }
 
-  void _toast(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
-  }
-
-  void _socialStub(String provider) {
-    _toast('$provider sign-in is coming soon. Use email for now.');
-  }
-
-  void _googleStub() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Google sign-in needs a native token API. Use email for now.',
-        ),
-      ),
-    );
-  }
-
   static bool _isEmail(String value) {
     return RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(value);
   }
@@ -270,9 +250,7 @@ class _SignInScreenState extends State<SignInScreen> {
                           ),
                         ),
                         const Spacer(),
-                        _LanguageChip(
-                          onTap: () => _toast('More languages coming soon.'),
-                        ),
+                        const _LanguageChip(),
                       ],
                     ),
                   ),
@@ -637,9 +615,7 @@ class _BlobPainter extends CustomPainter {
 }
 
 class _LanguageChip extends StatelessWidget {
-  const _LanguageChip({required this.onTap});
-
-  final VoidCallback onTap;
+  const _LanguageChip();
 
   @override
   Widget build(BuildContext context) {
@@ -648,32 +624,22 @@ class _LanguageChip extends StatelessWidget {
       shape: const StadiumBorder(
         side: BorderSide(color: Color(0xFFE2E8F0)),
       ),
-      child: InkWell(
-        onTap: onTap,
-        customBorder: const StadiumBorder(),
-        child: const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.language_rounded, size: 16, color: Color(0xFF2F7BFF)),
-              SizedBox(width: 6),
-              Text(
-                'English',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF1A2B4C),
-                ),
+      child: const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.language_rounded, size: 16, color: Color(0xFF2F7BFF)),
+            SizedBox(width: 6),
+            Text(
+              'English',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF1A2B4C),
               ),
-              SizedBox(width: 2),
-              Icon(
-                Icons.keyboard_arrow_down_rounded,
-                size: 18,
-                color: Color(0xFF7A8499),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -984,134 +950,6 @@ class _PrimaryButton extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _OrDivider extends StatelessWidget {
-  const _OrDivider();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Row(
-      children: [
-        Expanded(child: Divider(color: Color(0xFFE2E8F0))),
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: 12),
-          child: Text(
-            'OR',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF9AA3B5),
-              letterSpacing: 0.6,
-            ),
-          ),
-        ),
-        Expanded(child: Divider(color: Color(0xFFE2E8F0))),
-      ],
-    );
-  }
-}
-
-class _SocialRow extends StatelessWidget {
-  const _SocialRow({
-    required this.narrow,
-    required this.onGoogle,
-    required this.onApple,
-    required this.onPhone,
-  });
-
-  final bool narrow;
-  final VoidCallback onGoogle;
-  final VoidCallback onApple;
-  final VoidCallback onPhone;
-
-  @override
-  Widget build(BuildContext context) {
-    final buttons = [
-      _SocialButton(
-        label: 'Continue with Google',
-        icon: Icons.g_mobiledata_rounded,
-        onPressed: onGoogle,
-      ),
-      _SocialButton(
-        label: 'Continue with Apple',
-        icon: Icons.apple_rounded,
-        onPressed: onApple,
-      ),
-      _SocialButton(
-        label: 'Continue with Phone',
-        icon: Icons.phone_iphone_rounded,
-        onPressed: onPhone,
-      ),
-    ];
-
-    if (narrow) {
-      return Column(
-        children: [
-          for (var i = 0; i < buttons.length; i++) ...[
-            if (i > 0) const SizedBox(height: 8),
-            buttons[i],
-          ],
-        ],
-      );
-    }
-
-    return Row(
-      children: [
-        for (var i = 0; i < buttons.length; i++) ...[
-          if (i > 0) const SizedBox(width: 8),
-          Expanded(child: buttons[i]),
-        ],
-      ],
-    );
-  }
-}
-
-class _SocialButton extends StatelessWidget {
-  const _SocialButton({
-    required this.label,
-    required this.icon,
-    required this.onPressed,
-  });
-
-  final String label;
-  final IconData icon;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return OutlinedButton(
-      onPressed: onPressed,
-      style: OutlinedButton.styleFrom(
-        foregroundColor: _SignInScreenState._ink,
-        side: const BorderSide(color: _SignInScreenState._fieldBorder),
-        backgroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-        minimumSize: const Size.fromHeight(52),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-        ),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 22, color: _SignInScreenState._ink),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            softWrap: true,
-            maxLines: 2,
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              height: 1.2,
-            ),
-          ),
-        ],
       ),
     );
   }

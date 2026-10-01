@@ -16,7 +16,9 @@ class FakeOrganizationGateway implements OrganizationGateway {
   String? activeOrganizationId;
 
   @override
-  Future<List<OrganizationSummary>> listOrganizations() async {
+  Future<List<OrganizationSummary>> listOrganizations({
+    bool learnerWorkspaceOnly = true,
+  }) async {
     final error = listError;
     if (error != null) throw error;
     return organizations;

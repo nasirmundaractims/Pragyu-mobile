@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:student_mobile/app/router/app_router.dart';
-import 'package:student_mobile/app/theme/app_colors.dart';
+import 'package:student_mobile/app/theme/app_theme.dart';
+import 'package:student_mobile/app/theme/student_hub_colors.dart';
+import 'package:student_mobile/app/widgets/student_app_header.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/features/me/data/me_repository.dart';
 import 'package:student_mobile/features/settings/data/settings_repository.dart';
@@ -88,7 +90,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _toast(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   Future<void> _submitPassword() async {
@@ -224,9 +231,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Logout?'),
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: const Text(
+          'Logout?',
+          style: TextStyle(
+            fontFamily: AppTheme.fontFamily,
+            fontWeight: FontWeight.w800,
+            color: StudentHubColors.ink,
+          ),
+        ),
         content: const Text(
           "You'll need to sign in again to access your courses and tests.",
+          style: TextStyle(
+            fontFamily: AppTheme.fontFamily,
+            color: StudentHubColors.muted,
+            height: 1.4,
+          ),
         ),
         actions: [
           TextButton(
@@ -236,8 +259,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
             style: FilledButton.styleFrom(
-              backgroundColor: AppColors.danger,
+              backgroundColor: StudentHubColors.danger,
               foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
             child: const Text('Logout'),
           ),
@@ -266,110 +292,174 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
       child: Scaffold(
-        backgroundColor: AppColors.background,
-        appBar: AppBar(
-          backgroundColor: AppColors.background,
-          title: const Text('Settings'),
-        ),
+        backgroundColor: StudentHubColors.pageBg,
         body: SafeArea(
-          child: !_ready && _loading
-              ? const Center(
-                  child: CircularProgressIndicator(color: AppColors.brand),
-                )
-              : !_ready && _error != null
-                  ? _ErrorBody(message: _error!, onRetry: _load)
-                  : RefreshIndicator(
-                      color: AppColors.brand,
-                      onRefresh: _load,
-                      child: SingleChildScrollView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            const Text(
-                              'Password, sessions, language, and trusted devices.',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: AppColors.muted,
-                              ),
-                            ),
-                            const SizedBox(height: 14),
-                            _PasswordCard(
-                              currentController: _currentPassword,
-                              newController: _newPassword,
-                              confirmController: _confirmPassword,
-                              saving: _savingPassword,
-                              onSubmit: _submitPassword,
-                            ),
-                            const SizedBox(height: 14),
-                            _LocaleCard(
-                              locale: _locale,
-                              timezone: _timezone,
-                              saving: _savingLocale,
-                              onLocaleChanged: (value) =>
-                                  setState(() => _locale = value),
-                              onTimezoneChanged: (value) =>
-                                  setState(() => _timezone = value),
-                              onSave: _saveLocale,
-                            ),
-                            const SizedBox(height: 14),
-                            _SessionsCard(
-                              sessions: _snapshot.sessions,
-                              unavailable: _snapshot.sessionsUnavailable,
-                              busySessionId: _busySessionId,
-                              revokingOthers: _revokingOthers,
-                              onRevoke: _revokeSession,
-                              onRevokeOthers: _revokeOthers,
-                            ),
-                            const SizedBox(height: 14),
-                            _DevicesCard(
-                              devices: _snapshot.devices,
-                              unavailable: _snapshot.devicesUnavailable,
-                              busyDeviceId: _busyDeviceId,
-                              onRevoke: _revokeDevice,
-                            ),
-                            const SizedBox(height: 20),
-                            SizedBox(
-                              height: 52,
-                              child: OutlinedButton.icon(
-                                onPressed: _loggingOut ? null : _logout,
-                                icon: Icon(
-                                  Icons.logout_rounded,
-                                  color: _loggingOut
-                                      ? AppColors.muted
-                                      : AppColors.danger,
-                                ),
-                                label: Text(
-                                  _loggingOut ? 'Logging out…' : 'Logout',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 15,
-                                    color: _loggingOut
-                                        ? AppColors.muted
-                                        : AppColors.danger,
-                                  ),
-                                ),
-                                style: OutlinedButton.styleFrom(
-                                  side: BorderSide(
-                                    color: _loggingOut
-                                        ? AppColors.muted
-                                            .withValues(alpha: 0.4)
-                                        : AppColors.danger
-                                            .withValues(alpha: 0.55),
-                                    width: 1.4,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
+          child: Column(
+            children: [
+              StudentAppHeader(
+                title: 'Settings',
+                onBack: () => Navigator.of(context).maybePop(),
+              ),
+              Expanded(
+                child: !_ready && _loading
+                    ? const Center(
+                        child: CircularProgressIndicator(
+                          color: StudentHubColors.blue,
                         ),
-                      ),
-                    ),
+                      )
+                    : !_ready && _error != null
+                        ? _ErrorBody(message: _error!, onRetry: _load)
+                        : RefreshIndicator(
+                            color: StudentHubColors.blue,
+                            onRefresh: _load,
+                            child: SingleChildScrollView(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              padding:
+                                  const EdgeInsets.fromLTRB(16, 4, 16, 28),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  const _IntroCard(),
+                                  const SizedBox(height: 18),
+                                  _PasswordCard(
+                                    currentController: _currentPassword,
+                                    newController: _newPassword,
+                                    confirmController: _confirmPassword,
+                                    saving: _savingPassword,
+                                    onSubmit: _submitPassword,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  _LocaleCard(
+                                    locale: _locale,
+                                    timezone: _timezone,
+                                    saving: _savingLocale,
+                                    onLocaleChanged: (value) =>
+                                        setState(() => _locale = value),
+                                    onTimezoneChanged: (value) =>
+                                        setState(() => _timezone = value),
+                                    onSave: _saveLocale,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  _SessionsCard(
+                                    sessions: _snapshot.sessions,
+                                    unavailable:
+                                        _snapshot.sessionsUnavailable,
+                                    busySessionId: _busySessionId,
+                                    revokingOthers: _revokingOthers,
+                                    onRevoke: _revokeSession,
+                                    onRevokeOthers: _revokeOthers,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  _DevicesCard(
+                                    devices: _snapshot.devices,
+                                    unavailable:
+                                        _snapshot.devicesUnavailable,
+                                    busyDeviceId: _busyDeviceId,
+                                    onRevoke: _revokeDevice,
+                                  ),
+                                  const SizedBox(height: 20),
+                                  SizedBox(
+                                    height: 52,
+                                    child: OutlinedButton.icon(
+                                      onPressed:
+                                          _loggingOut ? null : _logout,
+                                      icon: Icon(
+                                        Icons.logout_rounded,
+                                        color: _loggingOut
+                                            ? StudentHubColors.muted
+                                            : StudentHubColors.danger,
+                                      ),
+                                      label: Text(
+                                        _loggingOut
+                                            ? 'Logging out…'
+                                            : 'Logout',
+                                        style: TextStyle(
+                                          fontFamily: AppTheme.fontFamily,
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 15,
+                                          color: _loggingOut
+                                              ? StudentHubColors.muted
+                                              : StudentHubColors.danger,
+                                        ),
+                                      ),
+                                      style: OutlinedButton.styleFrom(
+                                        side: BorderSide(
+                                          color: _loggingOut
+                                              ? StudentHubColors.muted
+                                                  .withValues(alpha: 0.4)
+                                              : StudentHubColors.danger
+                                                  .withValues(alpha: 0.45),
+                                          width: 1.4,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(16),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+              ),
+            ],
+          ),
         ),
+      ),
+    );
+  }
+}
+
+class _IntroCard extends StatelessWidget {
+  const _IntroCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(StudentHubColors.cardRadius),
+        border: Border.all(color: StudentHubColors.border),
+      ),
+      child: const Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _IconWell(
+            icon: Icons.settings_outlined,
+            tint: Color(0xFF22A06B),
+            soft: Color(0xFFE8F8F0),
+          ),
+          SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Keep your account secure',
+                  style: TextStyle(
+                    fontFamily: AppTheme.fontFamily,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: StudentHubColors.ink,
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'Password, sessions, language, and trusted devices.',
+                  style: TextStyle(
+                    fontFamily: AppTheme.fontFamily,
+                    fontSize: 13,
+                    height: 1.4,
+                    color: StudentHubColors.muted,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -393,11 +483,17 @@ class _PasswordCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _SectionCard(
+      icon: Icons.lock_outline_rounded,
+      tint: StudentHubColors.blue,
+      soft: StudentHubColors.blueSoft,
       title: 'Change password',
       subtitle: 'Update your sign-in password.',
       child: Column(
         children: [
-          _PasswordField(controller: currentController, label: 'Current password'),
+          _PasswordField(
+            controller: currentController,
+            label: 'Current password',
+          ),
           const SizedBox(height: 10),
           _PasswordField(controller: newController, label: 'New password'),
           const SizedBox(height: 10),
@@ -405,13 +501,26 @@ class _PasswordCard extends StatelessWidget {
             controller: confirmController,
             label: 'Confirm new password',
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           SizedBox(
             width: double.infinity,
+            height: 48,
             child: FilledButton(
               onPressed: saving ? null : onSubmit,
-              style: FilledButton.styleFrom(backgroundColor: AppColors.brand),
-              child: Text(saving ? 'Updating…' : 'Update password'),
+              style: FilledButton.styleFrom(
+                backgroundColor: StudentHubColors.blue,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Text(
+                saving ? 'Updating…' : 'Update password',
+                style: const TextStyle(
+                  fontFamily: AppTheme.fontFamily,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ),
           ),
         ],
@@ -434,11 +543,34 @@ class _PasswordField extends StatelessWidget {
     return TextField(
       controller: controller,
       obscureText: true,
+      style: const TextStyle(
+        fontFamily: AppTheme.fontFamily,
+        color: StudentHubColors.ink,
+        fontSize: 15,
+      ),
       decoration: InputDecoration(
         labelText: label,
+        labelStyle: const TextStyle(
+          fontFamily: AppTheme.fontFamily,
+          color: StudentHubColors.muted,
+        ),
         filled: true,
-        fillColor: AppColors.background,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        fillColor: StudentHubColors.pageBg,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: StudentHubColors.border),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: StudentHubColors.border),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide:
+              const BorderSide(color: StudentHubColors.blue, width: 1.5),
+        ),
       ),
     );
   }
@@ -475,19 +607,16 @@ class _LocaleCard extends StatelessWidget {
     }.toList();
 
     return _SectionCard(
+      icon: Icons.language_rounded,
+      tint: const Color(0xFFF08A3C),
+      soft: const Color(0xFFFFF2E8),
       title: 'Language & timezone',
       subtitle: 'Used across your profile and study tools.',
       child: Column(
         children: [
           DropdownButtonFormField<String>(
             value: localeValue,
-            decoration: InputDecoration(
-              labelText: 'Language',
-              filled: true,
-              fillColor: AppColors.background,
-              border:
-                  OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            ),
+            decoration: _fieldDecoration('Language'),
             items: [
               for (final option in kLocaleOptions)
                 DropdownMenuItem(value: option.$1, child: Text(option.$2)),
@@ -499,13 +628,7 @@ class _LocaleCard extends StatelessWidget {
           const SizedBox(height: 10),
           DropdownButtonFormField<String>(
             value: timezoneValue,
-            decoration: InputDecoration(
-              labelText: 'Timezone',
-              filled: true,
-              fillColor: AppColors.background,
-              border:
-                  OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            ),
+            decoration: _fieldDecoration('Timezone'),
             items: [
               for (final option in timezoneItems)
                 DropdownMenuItem(value: option, child: Text(option)),
@@ -514,15 +637,55 @@ class _LocaleCard extends StatelessWidget {
               if (value != null) onTimezoneChanged(value);
             },
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           SizedBox(
             width: double.infinity,
+            height: 48,
             child: OutlinedButton(
               onPressed: saving ? null : onSave,
-              child: Text(saving ? 'Saving…' : 'Save locale'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: StudentHubColors.blue,
+                side: const BorderSide(color: StudentHubColors.blue),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Text(
+                saving ? 'Saving…' : 'Save locale',
+                style: const TextStyle(
+                  fontFamily: AppTheme.fontFamily,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  InputDecoration _fieldDecoration(String label) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: const TextStyle(
+        fontFamily: AppTheme.fontFamily,
+        color: StudentHubColors.muted,
+      ),
+      filled: true,
+      fillColor: StudentHubColors.pageBg,
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: StudentHubColors.border),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: StudentHubColors.border),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: StudentHubColors.blue, width: 1.5),
       ),
     );
   }
@@ -548,6 +711,9 @@ class _SessionsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _SectionCard(
+      icon: Icons.devices_rounded,
+      tint: const Color(0xFF7B61FF),
+      soft: const Color(0xFFF0EBFF),
       title: 'Active sessions',
       subtitle: 'Review and revoke signed-in sessions.',
       child: Column(
@@ -555,61 +721,38 @@ class _SessionsCard extends StatelessWidget {
         children: [
           Align(
             alignment: Alignment.centerLeft,
-            child: OutlinedButton(
+            child: OutlinedButton.icon(
               onPressed: revokingOthers ? null : onRevokeOthers,
-              child: Text(
+              icon: const Icon(Icons.logout_rounded, size: 16),
+              label: Text(
                 revokingOthers ? 'Signing out…' : 'Sign out other devices',
+                style: const TextStyle(
+                  fontFamily: AppTheme.fontFamily,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: StudentHubColors.ink,
+                side: const BorderSide(color: StudentHubColors.border),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           if (unavailable)
-            const Text(
-              'Sessions are unavailable.',
-              style: TextStyle(color: AppColors.muted, fontSize: 13),
-            )
+            const _EmptyHint('Sessions are unavailable.')
           else if (sessions.isEmpty)
-            const Text(
-              'No sessions returned.',
-              style: TextStyle(color: AppColors.muted, fontSize: 13),
-            )
+            const _EmptyHint('No sessions returned.')
           else
             for (var i = 0; i < sessions.length; i++) ...[
-              if (i > 0) const Divider(height: 16),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          sessions[i].title,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.ink,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          sessions[i].subtitle,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: AppColors.muted,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: busySessionId == sessions[i].id
-                        ? null
-                        : () => onRevoke(sessions[i]),
-                    child: Text(
-                      busySessionId == sessions[i].id ? '…' : 'Revoke',
-                    ),
-                  ),
-                ],
+              if (i > 0) const SizedBox(height: 8),
+              _ListRow(
+                title: sessions[i].title,
+                subtitle: sessions[i].subtitle,
+                busy: busySessionId == sessions[i].id,
+                onRevoke: () => onRevoke(sessions[i]),
               ),
             ],
         ],
@@ -634,56 +777,26 @@ class _DevicesCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _SectionCard(
+      icon: Icons.phonelink_lock_rounded,
+      tint: const Color(0xFFE85D75),
+      soft: const Color(0xFFFFEEF1),
       title: 'Trusted devices',
       subtitle: 'Devices remembered for sign-in.',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (unavailable)
-            const Text(
-              'Devices are unavailable.',
-              style: TextStyle(color: AppColors.muted, fontSize: 13),
-            )
+            const _EmptyHint('Devices are unavailable.')
           else if (devices.isEmpty)
-            const Text(
-              'No trusted devices yet.',
-              style: TextStyle(color: AppColors.muted, fontSize: 13),
-            )
+            const _EmptyHint('No trusted devices yet.')
           else
             for (var i = 0; i < devices.length; i++) ...[
-              if (i > 0) const Divider(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          devices[i].name,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.ink,
-                          ),
-                        ),
-                        Text(
-                          devices[i].subtitle,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: AppColors.muted,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: busyDeviceId == devices[i].id
-                        ? null
-                        : () => onRevoke(devices[i]),
-                    child: Text(
-                      busyDeviceId == devices[i].id ? '…' : 'Revoke',
-                    ),
-                  ),
-                ],
+              if (i > 0) const SizedBox(height: 8),
+              _ListRow(
+                title: devices[i].name,
+                subtitle: devices[i].subtitle,
+                busy: busyDeviceId == devices[i].id,
+                onRevoke: () => onRevoke(devices[i]),
               ),
             ],
         ],
@@ -692,13 +805,109 @@ class _DevicesCard extends StatelessWidget {
   }
 }
 
+class _ListRow extends StatelessWidget {
+  const _ListRow({
+    required this.title,
+    required this.subtitle,
+    required this.busy,
+    required this.onRevoke,
+  });
+
+  final String title;
+  final String subtitle;
+  final bool busy;
+  final VoidCallback onRevoke;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 10, 6, 10),
+      decoration: BoxDecoration(
+        color: StudentHubColors.pageBg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: StudentHubColors.border),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontFamily: AppTheme.fontFamily,
+                    fontWeight: FontWeight.w700,
+                    color: StudentHubColors.ink,
+                    fontSize: 14,
+                  ),
+                ),
+                if (subtitle.trim().isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      fontFamily: AppTheme.fontFamily,
+                      fontSize: 12,
+                      color: StudentHubColors.muted,
+                      height: 1.3,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: busy ? null : onRevoke,
+            style: TextButton.styleFrom(
+              foregroundColor: StudentHubColors.danger,
+            ),
+            child: Text(
+              busy ? '…' : 'Revoke',
+              style: const TextStyle(
+                fontFamily: AppTheme.fontFamily,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyHint extends StatelessWidget {
+  const _EmptyHint(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: const TextStyle(
+        fontFamily: AppTheme.fontFamily,
+        color: StudentHubColors.muted,
+        fontSize: 13,
+        height: 1.35,
+      ),
+    );
+  }
+}
+
 class _SectionCard extends StatelessWidget {
   const _SectionCard({
+    required this.icon,
+    required this.tint,
+    required this.soft,
     required this.title,
     required this.subtitle,
     required this.child,
   });
 
+  final IconData icon;
+  final Color tint;
+  final Color soft;
   final String title;
   final String subtitle;
   final Widget child;
@@ -706,32 +915,78 @@ class _SectionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0x14000000)),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(StudentHubColors.cardRadius),
+        border: Border.all(color: StudentHubColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w700,
-              color: AppColors.ink,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            subtitle,
-            style: const TextStyle(fontSize: 13, color: AppColors.muted),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _IconWell(icon: icon, tint: tint, soft: soft),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontFamily: AppTheme.fontFamily,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: StudentHubColors.ink,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        fontFamily: AppTheme.fontFamily,
+                        fontSize: 12.5,
+                        height: 1.35,
+                        color: StudentHubColors.muted,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 14),
           child,
         ],
       ),
+    );
+  }
+}
+
+class _IconWell extends StatelessWidget {
+  const _IconWell({
+    required this.icon,
+    required this.tint,
+    required this.soft,
+  });
+
+  final IconData icon;
+  final Color tint;
+  final Color soft;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: soft,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Icon(icon, color: tint, size: 20),
     );
   }
 }
@@ -750,15 +1005,38 @@ class _ErrorBody extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: StudentHubColors.blueSoft,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Icon(
+                Icons.settings_outlined,
+                color: StudentHubColors.blue,
+              ),
+            ),
+            const SizedBox(height: 16),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.muted),
+              style: const TextStyle(
+                fontFamily: AppTheme.fontFamily,
+                color: StudentHubColors.muted,
+                height: 1.4,
+              ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             FilledButton(
               onPressed: onRetry,
-              style: FilledButton.styleFrom(backgroundColor: AppColors.brand),
+              style: FilledButton.styleFrom(
+                backgroundColor: StudentHubColors.blue,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
               child: const Text('Retry'),
             ),
           ],

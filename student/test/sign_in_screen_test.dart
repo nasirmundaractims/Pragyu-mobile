@@ -9,7 +9,6 @@ import 'package:student_mobile/features/auth/data/auth_repository.dart';
 import 'package:student_mobile/features/auth/domain/auth_models.dart';
 import 'package:student_mobile/features/auth/presentation/screens/sign_in_screen.dart';
 import 'package:student_mobile/features/organization/domain/organization_summary.dart';
-import 'package:student_mobile/features/organization/presentation/screens/org_picker_screen.dart';
 
 import 'support/fake_organization_gateway.dart';
 
@@ -116,13 +115,16 @@ Finder _emailField() => find.byType(TextField).at(0);
 Finder _passwordField() => find.byType(TextField).at(1);
 
 Route<dynamic> _testRoutes(RouteSettings settings) {
-  if (settings.name == AppRoutes.orgPicker) {
+  if (settings.name == AppRoutes.home) {
     return MaterialPageRoute<void>(
       settings: settings,
-      builder: (_) => OrgPickerScreen(
-        organizationRepository: _FakeOrgs(),
-        autoSelectSingle: false,
-      ),
+      builder: (_) => const Scaffold(body: Text('Student home')),
+    );
+  }
+  if (settings.name == AppRoutes.orgAssociation) {
+    return MaterialPageRoute<void>(
+      settings: settings,
+      builder: (_) => const Scaffold(body: Text('Org association')),
     );
   }
   return onGenerateRoute(settings);
@@ -161,7 +163,8 @@ void main() {
     expect(auth.loginCalls, 0);
   });
 
-  testWidgets('S-03 signs in and opens org picker', (tester) async {
+  testWidgets('S-03 signs in and opens student home without org picker',
+      (tester) async {
     final auth = _FakeAuth();
     await tester.pumpWidget(
       MaterialApp(
@@ -178,8 +181,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(auth.loginCalls, 1);
-    expect(find.text('Choose institute'), findsOneWidget);
-    expect(find.text('Acme Institute'), findsOneWidget);
+    expect(find.text('Choose institute'), findsNothing);
+    expect(find.text('Student home'), findsOneWidget);
   });
 
   testWidgets('S-03 shows API error message', (tester) async {

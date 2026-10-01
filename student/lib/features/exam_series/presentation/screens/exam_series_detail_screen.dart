@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:student_mobile/app/router/app_router.dart';
-import 'package:student_mobile/app/theme/app_colors.dart';
+import 'package:student_mobile/app/theme/student_hub_colors.dart';
+import 'package:student_mobile/app/widgets/student_app_header.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/features/exam_series/data/exam_series_repository.dart';
 import 'package:student_mobile/features/exam_series/domain/exam_series_models.dart';
@@ -77,21 +78,16 @@ class _ExamSeriesDetailScreenState extends State<ExamSeriesDetailScreen> {
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
-      child: Scaffold(
-        backgroundColor: AppColors.background,
-        appBar: AppBar(
-          backgroundColor: AppColors.background,
-          title: Text(title),
-        ),
-        body: SafeArea(
-          child: _loading && snapshot == null
+      child: StudentHubPage(
+        title: title,
+        body: _loading && snapshot == null
               ? const Center(
-                  child: CircularProgressIndicator(color: AppColors.brand),
+                  child: CircularProgressIndicator(color: StudentHubColors.blue),
                 )
               : _error != null && snapshot == null
                   ? _ErrorBody(message: _error!, onRetry: _load)
                   : RefreshIndicator(
-                      color: AppColors.brand,
+                      color: StudentHubColors.blue,
                       onRefresh: _load,
                       child: SingleChildScrollView(
                         physics: const AlwaysScrollableScrollPhysics(),
@@ -116,7 +112,6 @@ class _ExamSeriesDetailScreenState extends State<ExamSeriesDetailScreen> {
                         ),
                       ),
                     ),
-        ),
       ),
     );
   }
@@ -132,9 +127,9 @@ class _HeaderCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0x14000000)),
+        color: StudentHubColors.surface,
+        borderRadius: BorderRadius.circular(StudentHubColors.cardRadius),
+        border: Border.all(color: StudentHubColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -144,7 +139,7 @@ class _HeaderCard extends StatelessWidget {
             style: const TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.w700,
-              color: AppColors.ink,
+              color: StudentHubColors.ink,
             ),
           ),
           if (pack.description?.trim().isNotEmpty == true) ...[
@@ -153,7 +148,7 @@ class _HeaderCard extends StatelessWidget {
               pack.description!,
               style: const TextStyle(
                 fontSize: 14,
-                color: AppColors.muted,
+                color: StudentHubColors.muted,
                 height: 1.4,
               ),
             ),
@@ -165,7 +160,7 @@ class _HeaderCard extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: AppColors.muted,
+                color: StudentHubColors.muted,
               ),
             ),
           ],
@@ -189,9 +184,9 @@ class _RankCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0x14000000)),
+        color: StudentHubColors.surface,
+        borderRadius: BorderRadius.circular(StudentHubColors.cardRadius),
+        border: Border.all(color: StudentHubColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -201,14 +196,14 @@ class _RankCard extends StatelessWidget {
             style: TextStyle(
               fontSize: 17,
               fontWeight: FontWeight.w700,
-              color: AppColors.ink,
+              color: StudentHubColors.ink,
             ),
           ),
           const SizedBox(height: 10),
           if (unavailable)
             const Text(
               'Rank is unavailable right now. You can still take the included tests.',
-              style: TextStyle(fontSize: 13, color: AppColors.muted),
+              style: TextStyle(fontSize: 13, color: StudentHubColors.muted),
             )
           else if (rank?.hasRank == true) ...[
             Row(
@@ -238,13 +233,13 @@ class _RankCard extends StatelessWidget {
             const SizedBox(height: 10),
             Text(
               rank!.disclosureBlurb,
-              style: const TextStyle(fontSize: 12, color: AppColors.muted),
+              style: const TextStyle(fontSize: 12, color: StudentHubColors.muted),
             ),
           ] else
             Text(
               rank?.message ??
                   'Ranks appear here after the organisation admin discloses marks for exams in this series.',
-              style: const TextStyle(fontSize: 13, color: AppColors.muted),
+              style: const TextStyle(fontSize: 13, color: StudentHubColors.muted),
             ),
         ],
       ),
@@ -265,7 +260,7 @@ class _RankMetric extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(fontSize: 12, color: AppColors.muted),
+          style: const TextStyle(fontSize: 12, color: StudentHubColors.muted),
         ),
         const SizedBox(height: 4),
         Text(
@@ -273,7 +268,7 @@ class _RankMetric extends StatelessWidget {
           style: const TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.w700,
-            color: AppColors.ink,
+            color: StudentHubColors.ink,
           ),
         ),
       ],
@@ -295,9 +290,9 @@ class _AssessmentsCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0x14000000)),
+        color: StudentHubColors.surface,
+        borderRadius: BorderRadius.circular(StudentHubColors.cardRadius),
+        border: Border.all(color: StudentHubColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -307,14 +302,14 @@ class _AssessmentsCard extends StatelessWidget {
             style: TextStyle(
               fontSize: 17,
               fontWeight: FontWeight.w700,
-              color: AppColors.ink,
+              color: StudentHubColors.ink,
             ),
           ),
           const SizedBox(height: 10),
           if (items.isEmpty)
             const Text(
               'No assessments in this series.',
-              style: TextStyle(fontSize: 13, color: AppColors.muted),
+              style: TextStyle(fontSize: 13, color: StudentHubColors.muted),
             )
           else
             for (var i = 0; i < items.length; i++) ...[
@@ -329,7 +324,7 @@ class _AssessmentsCard extends StatelessWidget {
                           items[i].displayTitle,
                           style: const TextStyle(
                             fontWeight: FontWeight.w600,
-                            color: AppColors.ink,
+                            color: StudentHubColors.ink,
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -337,7 +332,7 @@ class _AssessmentsCard extends StatelessWidget {
                           items[i].itemTypeLabel,
                           style: const TextStyle(
                             fontSize: 12,
-                            color: AppColors.muted,
+                            color: StudentHubColors.muted,
                           ),
                         ),
                       ],
@@ -348,7 +343,7 @@ class _AssessmentsCard extends StatelessWidget {
                         ? null
                         : () => onTakeTest(items[i]),
                     style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.brand,
+                      backgroundColor: StudentHubColors.blue,
                       visualDensity: VisualDensity.compact,
                     ),
                     child: const Text('Take test'),
@@ -379,12 +374,12 @@ class _ErrorBody extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.muted),
+              style: const TextStyle(color: StudentHubColors.muted),
             ),
             const SizedBox(height: 12),
             FilledButton(
               onPressed: onRetry,
-              style: FilledButton.styleFrom(backgroundColor: AppColors.brand),
+              style: FilledButton.styleFrom(backgroundColor: StudentHubColors.blue),
               child: const Text('Retry'),
             ),
           ],

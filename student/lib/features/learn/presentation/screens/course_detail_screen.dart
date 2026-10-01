@@ -536,18 +536,6 @@ class _HeroHeader extends StatelessWidget {
                       onTap: onBack,
                       tooltip: 'Back',
                     ),
-                    const Spacer(),
-                    _RoundIconButton(
-                      icon: Icons.favorite_border_rounded,
-                      onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Saved courses coming soon.'),
-                          ),
-                        );
-                      },
-                      tooltip: 'Favorite',
-                    ),
                   ],
                 ),
                 SizedBox(height: short ? 14 : 18),

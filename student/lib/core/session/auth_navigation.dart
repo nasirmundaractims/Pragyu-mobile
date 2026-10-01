@@ -38,12 +38,12 @@ abstract final class AuthNavigation {
   /// Resolves organisation vs individual workspace after authentication.
   ///
   /// Priority:
-  /// 1. Active organisation (non-individual) membership → organisation Home
-  /// 2. Individual workspace → Individual Home
-  /// 3. No memberships → organisation association (code or Individual)
+  /// 1. Active organisation (non-individual) learner membership → Home
+  /// 2. Individual workspace → Home
+  /// 3. No learner memberships → organisation association (code or Individual)
   ///
-  /// Multiple organisations without a stored match → org picker (safe default).
-  /// Tips onboarding is never forced — students go straight to Home.
+  /// Never opens the all-organisations picker after login. When multiple learner
+  /// workspaces exist, the stored org (if still valid) or the first one is used.
   static Future<String> resolveWorkspaceRoute({
     SessionService? sessionService,
     OnboardingStore? onboardingStore,
@@ -62,7 +62,7 @@ abstract final class AuthNavigation {
     }
 
     try {
-      final memberships = await orgs.listOrganizations();
+      final memberships = await orgs.listOrganizations(learnerWorkspaceOnly: true);
       final institutes = memberships.where((o) => o.isOrganisation).toList();
       final individuals = memberships.where((o) => o.isIndividual).toList();
       final storedId = await orgs.readActiveOrganizationId();
@@ -72,11 +72,8 @@ abstract final class AuthNavigation {
           candidates: institutes,
           storedId: storedId,
         );
-        if (selected != null) {
-          await orgs.selectOrganization(selected);
-          return AppRoutes.home;
-        }
-        return AppRoutes.orgPicker;
+        await orgs.selectOrganization(selected ?? institutes.first);
+        return AppRoutes.home;
       }
 
       if (individuals.isNotEmpty) {
@@ -132,7 +129,6 @@ abstract final class AuthNavigation {
         if (org.id == storedId) return org;
       }
     }
-    if (candidates.length == 1) return candidates.first;
-    return null;
+    return candidates.first;
   }
 }

@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:student_mobile/app/router/app_router.dart';
-import 'package:student_mobile/app/theme/app_colors.dart';
+import 'package:student_mobile/app/theme/student_hub_colors.dart';
+import 'package:student_mobile/app/widgets/student_app_header.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/features/exam_workspace/data/exam_workspace_repository.dart';
 import 'package:student_mobile/features/exam_workspace/domain/exam_workspace_models.dart';
@@ -116,29 +117,24 @@ class _ExamWorkspaceScreenState extends State<ExamWorkspaceScreen> {
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
-      child: Scaffold(
-        backgroundColor: AppColors.background,
-        appBar: AppBar(
-          backgroundColor: AppColors.background,
-          title: const Text('Exam Workspace'),
-          actions: [
-            IconButton(
-              tooltip: 'Recommendations',
-              onPressed: () =>
-                  Navigator.of(context).pushNamed(AppRoutes.recommendations),
-              icon: const Icon(Icons.lightbulb_outline),
-            ),
-          ],
-        ),
-        body: SafeArea(
-          child: _loading && snapshot == null
+      child: StudentHubPage(
+        title: 'Exam Workspace',
+        actions: [
+          IconButton(
+            tooltip: 'Recommendations',
+            onPressed: () =>
+                Navigator.of(context).pushNamed(AppRoutes.recommendations),
+            icon: const Icon(Icons.lightbulb_outline, color: StudentHubColors.ink),
+          ),
+        ],
+        body: _loading && snapshot == null
               ? const Center(
-                  child: CircularProgressIndicator(color: AppColors.brand),
+                  child: CircularProgressIndicator(color: StudentHubColors.blue),
                 )
               : _error != null && snapshot == null
                   ? _ErrorBody(message: _error!, onRetry: _load)
                   : RefreshIndicator(
-                      color: AppColors.brand,
+                      color: StudentHubColors.blue,
                       onRefresh: _load,
                       child: SingleChildScrollView(
                         physics: const AlwaysScrollableScrollPhysics(),
@@ -225,7 +221,6 @@ class _ExamWorkspaceScreenState extends State<ExamWorkspaceScreen> {
                         ),
                       ),
                     ),
-        ),
       ),
     );
   }
@@ -260,7 +255,7 @@ class _HeaderCard extends StatelessWidget {
               fontSize: 11,
               fontWeight: FontWeight.w600,
               letterSpacing: 1.1,
-              color: AppColors.muted,
+              color: StudentHubColors.muted,
             ),
           ),
           const SizedBox(height: 8),
@@ -269,7 +264,7 @@ class _HeaderCard extends StatelessWidget {
             style: const TextStyle(
               fontSize: 26,
               fontWeight: FontWeight.w700,
-              color: AppColors.ink,
+              color: StudentHubColors.ink,
               height: 1.15,
             ),
           ),
@@ -279,7 +274,7 @@ class _HeaderCard extends StatelessWidget {
             style: const TextStyle(
               fontSize: 14,
               height: 1.4,
-              color: AppColors.muted,
+              color: StudentHubColors.muted,
             ),
           ),
         ],
@@ -334,7 +329,7 @@ class _SummaryGrid extends StatelessWidget {
                           fontSize: 10,
                           fontWeight: FontWeight.w600,
                           letterSpacing: 0.8,
-                          color: AppColors.muted,
+                          color: StudentHubColors.muted,
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -343,7 +338,7 @@ class _SummaryGrid extends StatelessWidget {
                         style: const TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.w700,
-                          color: AppColors.ink,
+                          color: StudentHubColors.ink,
                         ),
                       ),
                     ],
@@ -396,7 +391,7 @@ class _QuickActions extends StatelessWidget {
         for (var i = 0; i < actions.length; i++) ...[
           if (i > 0) const SizedBox(height: 8),
           Material(
-            color: AppColors.surface,
+            color: StudentHubColors.surface,
             borderRadius: BorderRadius.circular(16),
             child: InkWell(
               borderRadius: BorderRadius.circular(16),
@@ -409,10 +404,10 @@ class _QuickActions extends StatelessWidget {
                       width: 42,
                       height: 42,
                       decoration: BoxDecoration(
-                        color: AppColors.brandSoft,
+                        color: StudentHubColors.blueSoft,
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Icon(actions[i].$3, color: AppColors.brand),
+                      child: Icon(actions[i].$3, color: StudentHubColors.blue),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -423,7 +418,7 @@ class _QuickActions extends StatelessWidget {
                             actions[i].$1,
                             style: const TextStyle(
                               fontWeight: FontWeight.w700,
-                              color: AppColors.ink,
+                              color: StudentHubColors.ink,
                             ),
                           ),
                           const SizedBox(height: 2),
@@ -431,14 +426,14 @@ class _QuickActions extends StatelessWidget {
                             actions[i].$2,
                             style: const TextStyle(
                               fontSize: 12,
-                              color: AppColors.muted,
+                              color: StudentHubColors.muted,
                             ),
                           ),
                         ],
                       ),
                     ),
                     const Icon(Icons.chevron_right_rounded,
-                        color: AppColors.muted),
+                        color: StudentHubColors.muted),
                   ],
                 ),
               ),
@@ -485,8 +480,8 @@ class _ReadinessCard extends StatelessWidget {
                     CircularProgressIndicator(
                       value: (pct.clamp(0, 100)) / 100,
                       strokeWidth: 8,
-                      backgroundColor: AppColors.brandSoft,
-                      color: AppColors.brand,
+                      backgroundColor: StudentHubColors.blueSoft,
+                      color: StudentHubColors.blue,
                     ),
                     Text(
                       snapshot.readinessPct == null
@@ -494,7 +489,7 @@ class _ReadinessCard extends StatelessWidget {
                           : '${snapshot.readinessPct}%',
                       style: const TextStyle(
                         fontWeight: FontWeight.w700,
-                        color: AppColors.ink,
+                        color: StudentHubColors.ink,
                       ),
                     ),
                   ],
@@ -522,7 +517,7 @@ class _ReadinessCard extends StatelessWidget {
             const SizedBox(height: 10),
             const Text(
               'Readiness is unavailable right now. Practice sets below still work.',
-              style: TextStyle(fontSize: 13, color: AppColors.muted),
+              style: TextStyle(fontSize: 13, color: StudentHubColors.muted),
             ),
           ],
           const SizedBox(height: 14),
@@ -558,7 +553,7 @@ class _MetricChip extends StatelessWidget {
       width: 120,
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: AppColors.background,
+        color: StudentHubColors.pageBg,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -569,7 +564,7 @@ class _MetricChip extends StatelessWidget {
             style: const TextStyle(
               fontSize: 9,
               letterSpacing: 0.6,
-              color: AppColors.muted,
+              color: StudentHubColors.muted,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -578,7 +573,7 @@ class _MetricChip extends StatelessWidget {
             value,
             style: const TextStyle(
               fontWeight: FontWeight.w700,
-              color: AppColors.ink,
+              color: StudentHubColors.ink,
               fontSize: 13,
             ),
           ),
@@ -601,13 +596,13 @@ class _ChipWrap extends StatelessWidget {
     if (items.isEmpty) {
       return const Text(
         'No data yet.',
-        style: TextStyle(fontSize: 13, color: AppColors.muted),
+        style: TextStyle(fontSize: 13, color: StudentHubColors.muted),
       );
     }
     final bg = tone == _ChipTone.weak
         ? const Color(0x14C0392B)
         : const Color(0x141F8A5B);
-    final fg = tone == _ChipTone.weak ? AppColors.danger : AppColors.success;
+    final fg = tone == _ChipTone.weak ? StudentHubColors.danger : StudentHubColors.success;
     return Wrap(
       spacing: 8,
       runSpacing: 8,
@@ -654,13 +649,13 @@ class _PracticeSection extends StatelessWidget {
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.w700,
-            color: AppColors.ink,
+            color: StudentHubColors.ink,
           ),
         ),
         const SizedBox(height: 4),
         Text(
           'Available practice for ${snapshot.display.exam.label}',
-          style: const TextStyle(fontSize: 13, color: AppColors.muted),
+          style: const TextStyle(fontSize: 13, color: StudentHubColors.muted),
         ),
         const SizedBox(height: 12),
         Wrap(
@@ -671,7 +666,7 @@ class _PracticeSection extends StatelessWidget {
               SizedBox(
                 width: (MediaQuery.sizeOf(context).width - 42) / 2,
                 child: Material(
-                  color: AppColors.surface,
+                  color: StudentHubColors.surface,
                   borderRadius: BorderRadius.circular(16),
                   child: InkWell(
                     borderRadius: BorderRadius.circular(16),
@@ -687,7 +682,7 @@ class _PracticeSection extends StatelessWidget {
                             type.title,
                             style: const TextStyle(
                               fontWeight: FontWeight.w700,
-                              color: AppColors.ink,
+                              color: StudentHubColors.ink,
                             ),
                           ),
                           const SizedBox(height: 4),
@@ -695,7 +690,7 @@ class _PracticeSection extends StatelessWidget {
                             type.description,
                             style: const TextStyle(
                               fontSize: 12,
-                              color: AppColors.muted,
+                              color: StudentHubColors.muted,
                             ),
                           ),
                           const SizedBox(height: 10),
@@ -705,7 +700,7 @@ class _PracticeSection extends StatelessWidget {
                               fontSize: 11,
                               letterSpacing: 0.6,
                               fontWeight: FontWeight.w600,
-                              color: AppColors.muted,
+                              color: StudentHubColors.muted,
                             ),
                           ),
                         ],
@@ -727,7 +722,7 @@ class _PracticeSection extends StatelessWidget {
                 Text(
                   'No ${snapshot.display.exam.label}-tagged assessments yet. '
                   'Showing all published practice when pattern is General.',
-                  style: const TextStyle(fontSize: 13, color: AppColors.muted),
+                  style: const TextStyle(fontSize: 13, color: StudentHubColors.muted),
                 )
               else
                 ...[
@@ -768,13 +763,13 @@ class _PracticeRow extends StatelessWidget {
                 item.title,
                 style: const TextStyle(
                   fontWeight: FontWeight.w600,
-                  color: AppColors.ink,
+                  color: StudentHubColors.ink,
                 ),
               ),
               const SizedBox(height: 4),
               Text(
                 item.metaLine,
-                style: const TextStyle(fontSize: 12, color: AppColors.muted),
+                style: const TextStyle(fontSize: 12, color: StudentHubColors.muted),
               ),
             ],
           ),
@@ -783,7 +778,7 @@ class _PracticeRow extends StatelessWidget {
         FilledButton(
           onPressed: onStart,
           style: FilledButton.styleFrom(
-            backgroundColor: AppColors.brand,
+            backgroundColor: StudentHubColors.blue,
             foregroundColor: Colors.white,
             visualDensity: VisualDensity.compact,
           ),
@@ -808,7 +803,7 @@ class _CoachActions extends StatelessWidget {
         children: [
           const Row(
             children: [
-              Icon(Icons.auto_awesome, size: 16, color: AppColors.brand),
+              Icon(Icons.auto_awesome, size: 16, color: StudentHubColors.blue),
               SizedBox(width: 6),
               _SectionLabel('AI Coach'),
             ],
@@ -817,7 +812,7 @@ class _CoachActions extends StatelessWidget {
           for (var i = 0; i < actions.length; i++) ...[
             if (i > 0) const SizedBox(height: 8),
             Material(
-              color: AppColors.background,
+              color: StudentHubColors.pageBg,
               borderRadius: BorderRadius.circular(12),
               child: InkWell(
                 borderRadius: BorderRadius.circular(12),
@@ -832,12 +827,12 @@ class _CoachActions extends StatelessWidget {
                           actions[i].label,
                           style: const TextStyle(
                             fontWeight: FontWeight.w600,
-                            color: AppColors.ink,
+                            color: StudentHubColors.ink,
                           ),
                         ),
                       ),
                       const Icon(Icons.chevron_right_rounded,
-                          color: AppColors.muted),
+                          color: StudentHubColors.muted),
                     ],
                   ),
                 ),
@@ -870,7 +865,7 @@ class _RoadmapCard extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 14,
-                  backgroundColor: AppColors.ink,
+                  backgroundColor: StudentHubColors.ink,
                   child: Text(
                     '${i + 1}',
                     style: const TextStyle(
@@ -889,14 +884,14 @@ class _RoadmapCard extends StatelessWidget {
                         steps[i].title,
                         style: const TextStyle(
                           fontWeight: FontWeight.w700,
-                          color: AppColors.ink,
+                          color: StudentHubColors.ink,
                         ),
                       ),
                       Text(
                         steps[i].description,
                         style: const TextStyle(
                           fontSize: 13,
-                          color: AppColors.muted,
+                          color: StudentHubColors.muted,
                         ),
                       ),
                     ],
@@ -937,7 +932,7 @@ class _RecommendationsCard extends StatelessWidget {
           if (items.isEmpty)
             const Text(
               'Recommendations appear from weak topics, assessments, revision, and AI feedback.',
-              style: TextStyle(fontSize: 13, color: AppColors.muted),
+              style: TextStyle(fontSize: 13, color: StudentHubColors.muted),
             )
           else
             for (var i = 0; i < items.length; i++) ...[
@@ -946,7 +941,7 @@ class _RecommendationsCard extends StatelessWidget {
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: AppColors.background,
+                  color: StudentHubColors.pageBg,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(
@@ -956,7 +951,7 @@ class _RecommendationsCard extends StatelessWidget {
                       items[i].title,
                       style: const TextStyle(
                         fontWeight: FontWeight.w600,
-                        color: AppColors.ink,
+                        color: StudentHubColors.ink,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -966,7 +961,7 @@ class _RecommendationsCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         fontSize: 12,
-                        color: AppColors.muted,
+                        color: StudentHubColors.muted,
                       ),
                     ),
                   ],
@@ -1010,7 +1005,7 @@ class _TimelineCard extends StatelessWidget {
                   child: Icon(
                     Icons.schedule_outlined,
                     size: 16,
-                    color: AppColors.muted,
+                    color: StudentHubColors.muted,
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -1022,14 +1017,14 @@ class _TimelineCard extends StatelessWidget {
                         events[i].title,
                         style: const TextStyle(
                           fontWeight: FontWeight.w600,
-                          color: AppColors.ink,
+                          color: StudentHubColors.ink,
                         ),
                       ),
                       Text(
                         events[i].detail,
                         style: const TextStyle(
                           fontSize: 13,
-                          color: AppColors.muted,
+                          color: StudentHubColors.muted,
                         ),
                       ),
                       Text(
@@ -1037,7 +1032,7 @@ class _TimelineCard extends StatelessWidget {
                         style: const TextStyle(
                           fontSize: 10,
                           letterSpacing: 0.8,
-                          color: AppColors.muted,
+                          color: StudentHubColors.muted,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -1077,7 +1072,7 @@ class _RecentActivityCard extends StatelessWidget {
           if (attempts.isEmpty)
             const Text(
               'Practice attempts will appear here.',
-              style: TextStyle(fontSize: 13, color: AppColors.muted),
+              style: TextStyle(fontSize: 13, color: StudentHubColors.muted),
             )
           else
             for (var i = 0; i < attempts.length; i++) ...[
@@ -1094,14 +1089,14 @@ class _RecentActivityCard extends StatelessWidget {
                               : 'Recent practice',
                           style: const TextStyle(
                             fontWeight: FontWeight.w600,
-                            color: AppColors.ink,
+                            color: StudentHubColors.ink,
                           ),
                         ),
                         Text(
                           '${attempts[i].title} · ${attempts[i].submission.status}',
                           style: const TextStyle(
                             fontSize: 12,
-                            color: AppColors.muted,
+                            color: StudentHubColors.muted,
                           ),
                         ),
                       ],
@@ -1145,9 +1140,9 @@ class _Glass extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0x14000000)),
+        color: StudentHubColors.surface,
+        borderRadius: BorderRadius.circular(StudentHubColors.cardRadius),
+        border: Border.all(color: StudentHubColors.border),
         boxShadow: const [
           BoxShadow(
             color: Color(0x0A142033),
@@ -1174,7 +1169,7 @@ class _SectionLabel extends StatelessWidget {
         fontSize: 11,
         fontWeight: FontWeight.w600,
         letterSpacing: 1.0,
-        color: AppColors.muted,
+        color: StudentHubColors.muted,
       ),
     );
   }
@@ -1197,12 +1192,12 @@ class _ErrorBody extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.muted),
+              style: const TextStyle(color: StudentHubColors.muted),
             ),
             const SizedBox(height: 12),
             FilledButton(
               onPressed: onRetry,
-              style: FilledButton.styleFrom(backgroundColor: AppColors.brand),
+              style: FilledButton.styleFrom(backgroundColor: StudentHubColors.blue),
               child: const Text('Retry'),
             ),
           ],

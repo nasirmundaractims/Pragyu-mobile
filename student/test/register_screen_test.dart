@@ -8,7 +8,6 @@ import 'package:student_mobile/features/auth/data/auth_repository.dart';
 import 'package:student_mobile/features/auth/domain/auth_models.dart';
 import 'package:student_mobile/features/auth/presentation/screens/register_screen.dart';
 import 'package:student_mobile/features/organization/domain/organization_summary.dart';
-import 'package:student_mobile/features/organization/presentation/screens/org_picker_screen.dart';
 
 import 'support/fake_organization_gateway.dart';
 
@@ -131,13 +130,16 @@ class _FakeOrgs extends FakeOrganizationGateway {
 }
 
 Route<dynamic> _testRoutes(RouteSettings settings) {
-  if (settings.name == AppRoutes.orgPicker) {
+  if (settings.name == AppRoutes.home) {
     return MaterialPageRoute<void>(
       settings: settings,
-      builder: (_) => OrgPickerScreen(
-        organizationRepository: _FakeOrgs(),
-        autoSelectSingle: false,
-      ),
+      builder: (_) => const Scaffold(body: Text('Student home')),
+    );
+  }
+  if (settings.name == AppRoutes.orgAssociation) {
+    return MaterialPageRoute<void>(
+      settings: settings,
+      builder: (_) => const Scaffold(body: Text('Org association')),
     );
   }
   return onGenerateRoute(settings);
@@ -183,7 +185,7 @@ void main() {
     expect(find.text('Accept the terms to continue'), findsOneWidget);
   });
 
-  testWidgets('S-04 register OTP then creates account and opens org picker',
+  testWidgets('S-04 register OTP then creates account and opens student home',
       (tester) async {
     await tester.binding.setSurfaceSize(const Size(390, 2000));
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -227,7 +229,8 @@ void main() {
 
     expect(fake.lastRegister?.email, 'ada@example.com');
     expect(fake.lastRegister?.phoneVerificationToken, 'phone-token');
-    expect(find.text('Acme Institute'), findsOneWidget);
+    expect(find.text('Choose institute'), findsNothing);
+    expect(find.text('Student home'), findsOneWidget);
   });
 
   testWidgets('S-04 create account has no overflow across phone sizes',

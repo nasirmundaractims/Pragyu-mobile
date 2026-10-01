@@ -1973,26 +1973,7 @@ class _Composer extends StatelessWidget {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    IconButton(
-                      tooltip: 'Attach',
-                      onPressed: enabled && !sending
-                          ? () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Attachments coming soon',
-                                  ),
-                                  behavior: SnackBarBehavior.floating,
-                                  duration: Duration(seconds: 1),
-                                ),
-                              );
-                            }
-                          : null,
-                      icon: const Icon(
-                        Icons.attach_file_rounded,
-                        color: _AiMentorScreenState._muted,
-                      ),
-                    ),
+                    const SizedBox(width: 14),
                     Expanded(
                       child: TextField(
                         controller: controller,
@@ -2016,24 +1997,7 @@ class _Composer extends StatelessWidget {
                         ),
                       ),
                     ),
-                    IconButton(
-                      tooltip: 'Voice',
-                      onPressed: enabled && !sending
-                          ? () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Voice input coming soon'),
-                                  behavior: SnackBarBehavior.floating,
-                                  duration: Duration(seconds: 1),
-                                ),
-                              );
-                            }
-                          : null,
-                      icon: const Icon(
-                        Icons.mic_none_rounded,
-                        color: _AiMentorScreenState._muted,
-                      ),
-                    ),
+                    const SizedBox(width: 8),
                   ],
                 ),
               ),

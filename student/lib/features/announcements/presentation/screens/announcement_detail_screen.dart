@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'package:student_mobile/app/theme/app_colors.dart';
+import 'package:student_mobile/app/theme/student_hub_colors.dart';
+import 'package:student_mobile/app/widgets/student_app_header.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/features/announcements/data/announcements_repository.dart';
 import 'package:student_mobile/features/announcements/domain/announcements_models.dart';
@@ -93,16 +94,11 @@ class _AnnouncementDetailScreenState extends State<AnnouncementDetailScreen> {
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
-      child: Scaffold(
-        backgroundColor: AppColors.background,
-        appBar: AppBar(
-          backgroundColor: AppColors.background,
-          title: const Text('Announcement'),
-        ),
-        body: SafeArea(
-          child: _loading
+      child: StudentHubPage(
+        title: 'Announcement',
+        body: _loading
               ? const Center(
-                  child: CircularProgressIndicator(color: AppColors.brand),
+                  child: CircularProgressIndicator(color: StudentHubColors.blue),
                 )
               : _error != null && item == null
                   ? Center(
@@ -114,13 +110,13 @@ class _AnnouncementDetailScreenState extends State<AnnouncementDetailScreen> {
                             Text(
                               _error!,
                               textAlign: TextAlign.center,
-                              style: const TextStyle(color: AppColors.muted),
+                              style: const TextStyle(color: StudentHubColors.muted),
                             ),
                             const SizedBox(height: 12),
                             FilledButton(
                               onPressed: _resolve,
                               style: FilledButton.styleFrom(
-                                backgroundColor: AppColors.brand,
+                                backgroundColor: StudentHubColors.blue,
                               ),
                               child: const Text('Retry'),
                             ),
@@ -137,14 +133,14 @@ class _AnnouncementDetailScreenState extends State<AnnouncementDetailScreen> {
                               Icon(
                                 Icons.push_pin,
                                 size: 16,
-                                color: AppColors.brand,
+                                color: StudentHubColors.blue,
                               ),
                               SizedBox(width: 6),
                               Text(
                                 'Pinned',
                                 style: TextStyle(
                                   fontWeight: FontWeight.w600,
-                                  color: AppColors.brand,
+                                  color: StudentHubColors.blue,
                                   fontSize: 13,
                                 ),
                               ),
@@ -157,7 +153,7 @@ class _AnnouncementDetailScreenState extends State<AnnouncementDetailScreen> {
                           style: const TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.w700,
-                            color: AppColors.ink,
+                            color: StudentHubColors.ink,
                             height: 1.25,
                           ),
                         ),
@@ -169,7 +165,7 @@ class _AnnouncementDetailScreenState extends State<AnnouncementDetailScreen> {
                               _formatDate(item.publishedAt!),
                           ].join(' · '),
                           style: const TextStyle(
-                            color: AppColors.muted,
+                            color: StudentHubColors.muted,
                             fontSize: 13,
                           ),
                         ),
@@ -181,12 +177,11 @@ class _AnnouncementDetailScreenState extends State<AnnouncementDetailScreen> {
                           style: const TextStyle(
                             fontSize: 16,
                             height: 1.5,
-                            color: AppColors.ink,
+                            color: StudentHubColors.ink,
                           ),
                         ),
                       ],
                     ),
-        ),
       ),
     );
   }

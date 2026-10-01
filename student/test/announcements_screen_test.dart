@@ -114,6 +114,6 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('No announcements yet'), findsOneWidget);
+    expect(find.text("You're all caught up"), findsOneWidget);
   });
 }

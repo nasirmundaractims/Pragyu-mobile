@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:student_mobile/app/router/app_router.dart';
-import 'package:student_mobile/app/theme/app_colors.dart';
+import 'package:student_mobile/app/theme/student_hub_colors.dart';
+import 'package:student_mobile/app/widgets/student_app_header.dart';
+import 'package:student_mobile/app/theme/app_theme.dart';
 import 'package:student_mobile/features/calendar/data/calendar_repository.dart';
 import 'package:student_mobile/features/calendar/domain/calendar_models.dart';
 import 'package:student_mobile/features/lectures/domain/lecture_models.dart';
@@ -82,18 +84,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
-      child: Scaffold(
-        backgroundColor: AppColors.background,
-        appBar: AppBar(
-          backgroundColor: AppColors.background,
-          title: const Text('Calendar'),
-        ),
-        body: SafeArea(
-          child: RefreshIndicator(
-            color: AppColors.brand,
-            onRefresh: _load,
-            child: _buildBody(),
-          ),
+      child: StudentHubPage(
+        title: 'Calendar',
+        body: RefreshIndicator(
+          color: StudentHubColors.blue,
+          onRefresh: _load,
+          child: _buildBody(),
         ),
       ),
     );
@@ -105,7 +101,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         physics: const AlwaysScrollableScrollPhysics(),
         children: const [
           SizedBox(height: 140),
-          Center(child: CircularProgressIndicator(color: AppColors.brand)),
+          Center(child: CircularProgressIndicator(color: StudentHubColors.blue)),
         ],
       );
     }
@@ -117,7 +113,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         children: [
           Text(
             _error!,
-            style: const TextStyle(color: AppColors.danger, height: 1.45),
+            style: const TextStyle(color: StudentHubColors.danger, height: 1.45),
           ),
         ],
       );
@@ -134,7 +130,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           'Upcoming classes and deadlines for the next $horizon days.',
           style: const TextStyle(
             fontSize: 15,
-            color: AppColors.muted,
+            color: StudentHubColors.muted,
             height: 1.4,
           ),
         ),
@@ -162,11 +158,46 @@ class _CalendarScreenState extends State<CalendarScreen> {
         ),
         const SizedBox(height: 18),
         if (snapshot.isEmpty)
-          const Padding(
-            padding: EdgeInsets.only(top: 40),
-            child: Text(
-              'Nothing upcoming in this window.',
-              style: TextStyle(color: AppColors.muted, height: 1.45),
+          Padding(
+            padding: const EdgeInsets.only(top: 32),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(16, 28, 16, 28),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius:
+                    BorderRadius.circular(StudentHubColors.cardRadius),
+                border: Border.all(color: StudentHubColors.border),
+              ),
+              child: const Column(
+                children: [
+                  Icon(
+                    Icons.event_available_outlined,
+                    size: 36,
+                    color: StudentHubColors.blue,
+                  ),
+                  SizedBox(height: 12),
+                  Text(
+                    'No upcoming activities',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: AppTheme.fontFamily,
+                      fontWeight: FontWeight.w700,
+                      color: StudentHubColors.ink,
+                    ),
+                  ),
+                  SizedBox(height: 6),
+                  Text(
+                    'Nothing upcoming in this window.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: AppTheme.fontFamily,
+                      color: StudentHubColors.muted,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
             ),
           )
         else
@@ -205,25 +236,28 @@ class _FilterChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: selected ? AppColors.brand : AppColors.surface,
-      borderRadius: BorderRadius.circular(20),
+      color: selected ? StudentHubColors.blue : Colors.white,
+      borderRadius: BorderRadius.circular(999),
       child: InkWell(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(999),
         onTap: onTap,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(999),
             border: Border.all(
-              color: selected ? AppColors.brand : AppColors.brandSoft,
+              color: selected
+                  ? StudentHubColors.blue
+                  : StudentHubColors.border,
             ),
           ),
           child: Text(
             label,
             style: TextStyle(
+              fontFamily: AppTheme.fontFamily,
               fontWeight: FontWeight.w700,
               fontSize: 13,
-              color: selected ? Colors.white : AppColors.ink,
+              color: selected ? Colors.white : StudentHubColors.ink,
             ),
           ),
         ),
@@ -244,7 +278,7 @@ class _DayHeader extends StatelessWidget {
       style: const TextStyle(
         fontSize: 16,
         fontWeight: FontWeight.w700,
-        color: AppColors.ink,
+        color: StudentHubColors.ink,
       ),
     );
   }
@@ -299,20 +333,20 @@ class _EventTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final live = event.kind == CalendarEventKind.live && event.isLiveNow;
     return Material(
-      color: AppColors.surface,
-      borderRadius: BorderRadius.circular(14),
+      color: StudentHubColors.surface,
+      borderRadius: BorderRadius.circular(StudentHubColors.cardRadius),
       child: InkWell(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(StudentHubColors.cardRadius),
         onTap: onTap,
         child: Container(
           width: double.infinity,
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(StudentHubColors.cardRadius),
             border: Border.all(
               color: live
-                  ? AppColors.accent.withValues(alpha: 0.45)
-                  : AppColors.brandSoft,
+                  ? StudentHubColors.blue.withValues(alpha: 0.45)
+                  : StudentHubColors.blueSoft,
             ),
           ),
           child: Row(
@@ -322,7 +356,7 @@ class _EventTile extends StatelessWidget {
                 event.kind == CalendarEventKind.live
                     ? Icons.sensors_rounded
                     : Icons.quiz_outlined,
-                color: live ? AppColors.accent : AppColors.brand,
+                color: live ? StudentHubColors.blue : StudentHubColors.blue,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -334,7 +368,7 @@ class _EventTile extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
-                        color: live ? AppColors.accent : AppColors.muted,
+                        color: live ? StudentHubColors.blue : StudentHubColors.muted,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -343,7 +377,7 @@ class _EventTile extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.ink,
+                        color: StudentHubColors.ink,
                       ),
                     ),
                     if (event.subtitle != null &&
@@ -353,7 +387,7 @@ class _EventTile extends StatelessWidget {
                         event.subtitle!,
                         style: const TextStyle(
                           fontSize: 13,
-                          color: AppColors.muted,
+                          color: StudentHubColors.muted,
                         ),
                       ),
                     ],
@@ -363,13 +397,13 @@ class _EventTile extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.brand,
+                        color: StudentHubColors.blue,
                       ),
                     ),
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right_rounded, color: AppColors.muted),
+              const Icon(Icons.chevron_right_rounded, color: StudentHubColors.muted),
             ],
           ),
         ),

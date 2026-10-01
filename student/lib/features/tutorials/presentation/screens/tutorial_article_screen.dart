@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'package:student_mobile/app/theme/app_colors.dart';
+import 'package:student_mobile/app/theme/student_hub_colors.dart';
+import 'package:student_mobile/app/widgets/student_app_header.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/features/tutorials/data/tutorials_repository.dart';
 import 'package:student_mobile/features/tutorials/domain/tutorials_models.dart';
@@ -69,16 +70,11 @@ class _TutorialArticleScreenState extends State<TutorialArticleScreen> {
     final title = _snapshot?.article.title ?? 'Article';
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
-      child: Scaffold(
-        backgroundColor: AppColors.background,
-        appBar: AppBar(
-          backgroundColor: AppColors.background,
-          title: Text(title),
-        ),
-        body: SafeArea(
-          child: _loading
+      child: StudentHubPage(
+        title: title,
+        body: _loading
               ? const Center(
-                  child: CircularProgressIndicator(color: AppColors.brand),
+                  child: CircularProgressIndicator(color: StudentHubColors.blue),
                 )
               : _error != null && _snapshot == null
                   ? Center(
@@ -90,13 +86,13 @@ class _TutorialArticleScreenState extends State<TutorialArticleScreen> {
                             Text(
                               _error!,
                               textAlign: TextAlign.center,
-                              style: const TextStyle(color: AppColors.muted),
+                              style: const TextStyle(color: StudentHubColors.muted),
                             ),
                             const SizedBox(height: 12),
                             FilledButton(
                               onPressed: _load,
                               style: FilledButton.styleFrom(
-                                backgroundColor: AppColors.brand,
+                                backgroundColor: StudentHubColors.blue,
                               ),
                               child: const Text('Retry'),
                             ),
@@ -105,7 +101,7 @@ class _TutorialArticleScreenState extends State<TutorialArticleScreen> {
                       ),
                     )
                   : RefreshIndicator(
-                      color: AppColors.brand,
+                      color: StudentHubColors.blue,
                       onRefresh: _load,
                       child: SingleChildScrollView(
                         physics: const AlwaysScrollableScrollPhysics(),
@@ -118,7 +114,7 @@ class _TutorialArticleScreenState extends State<TutorialArticleScreen> {
                               style: const TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.w700,
-                                color: AppColors.ink,
+                                color: StudentHubColors.ink,
                                 height: 1.2,
                               ),
                             ),
@@ -131,7 +127,7 @@ class _TutorialArticleScreenState extends State<TutorialArticleScreen> {
                                 _snapshot!.article.shortDescription!,
                                 style: const TextStyle(
                                   fontSize: 14,
-                                  color: AppColors.muted,
+                                  color: StudentHubColors.muted,
                                   height: 1.4,
                                 ),
                               ),
@@ -168,7 +164,7 @@ class _TutorialArticleScreenState extends State<TutorialArticleScreen> {
                               style: const TextStyle(
                                 fontSize: 15,
                                 height: 1.55,
-                                color: AppColors.ink,
+                                color: StudentHubColors.ink,
                               ),
                             ),
                             if (_snapshot!
@@ -179,7 +175,7 @@ class _TutorialArticleScreenState extends State<TutorialArticleScreen> {
                                 style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.w700,
-                                  color: AppColors.ink,
+                                  color: StudentHubColors.ink,
                                 ),
                               ),
                               const SizedBox(height: 10),
@@ -190,7 +186,7 @@ class _TutorialArticleScreenState extends State<TutorialArticleScreen> {
                                   margin: const EdgeInsets.only(bottom: 10),
                                   padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
-                                    color: AppColors.brandSoft,
+                                    color: StudentHubColors.blueSoft,
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Column(
@@ -201,7 +197,7 @@ class _TutorialArticleScreenState extends State<TutorialArticleScreen> {
                                         block.title,
                                         style: const TextStyle(
                                           fontWeight: FontWeight.w700,
-                                          color: AppColors.ink,
+                                          color: StudentHubColors.ink,
                                         ),
                                       ),
                                       const SizedBox(height: 6),
@@ -210,7 +206,7 @@ class _TutorialArticleScreenState extends State<TutorialArticleScreen> {
                                         style: const TextStyle(
                                           fontSize: 13,
                                           height: 1.45,
-                                          color: AppColors.ink,
+                                          color: StudentHubColors.ink,
                                         ),
                                       ),
                                     ],
@@ -225,7 +221,7 @@ class _TutorialArticleScreenState extends State<TutorialArticleScreen> {
                                 style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.w700,
-                                  color: AppColors.ink,
+                                  color: StudentHubColors.ink,
                                 ),
                               ),
                               const SizedBox(height: 8),
@@ -236,7 +232,7 @@ class _TutorialArticleScreenState extends State<TutorialArticleScreen> {
                                     item.title,
                                     style: const TextStyle(
                                       fontWeight: FontWeight.w600,
-                                      color: AppColors.muted,
+                                      color: StudentHubColors.muted,
                                     ),
                                   ),
                                 ),
@@ -245,7 +241,6 @@ class _TutorialArticleScreenState extends State<TutorialArticleScreen> {
                         ),
                       ),
                     ),
-        ),
       ),
     );
   }
@@ -261,7 +256,7 @@ class _Chip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: AppColors.brandSoft,
+        color: StudentHubColors.blueSoft,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
@@ -269,7 +264,7 @@ class _Chip extends StatelessWidget {
         style: const TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w600,
-          color: AppColors.brand,
+          color: StudentHubColors.blue,
         ),
       ),
     );

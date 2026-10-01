@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'package:student_mobile/app/theme/app_colors.dart';
+import 'package:student_mobile/app/theme/app_theme.dart';
+import 'package:student_mobile/app/theme/student_hub_colors.dart';
+import 'package:student_mobile/app/widgets/student_app_header.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/features/notification_preferences/data/notification_preferences_repository.dart';
 import 'package:student_mobile/features/notification_preferences/domain/notification_preferences_models.dart';
@@ -89,6 +91,7 @@ class _NotificationPreferencesScreenState
                 ? error.message
                 : "Couldn't update preference.",
           ),
+          behavior: SnackBarBehavior.floating,
         ),
       );
     }
@@ -99,98 +102,311 @@ class _NotificationPreferencesScreenState
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
       child: Scaffold(
-        backgroundColor: AppColors.background,
-        appBar: AppBar(
-          backgroundColor: AppColors.background,
-          title: const Text('Notification preferences'),
-        ),
+        backgroundColor: StudentHubColors.pageBg,
         body: SafeArea(
-          child: _loading
-              ? const Center(
-                  child: CircularProgressIndicator(color: AppColors.brand),
-                )
-              : _error != null && _snapshot.channels.isEmpty
-                  ? Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              _error!,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(color: AppColors.muted),
-                            ),
-                            const SizedBox(height: 12),
-                            FilledButton(
-                              onPressed: _load,
-                              style: FilledButton.styleFrom(
-                                backgroundColor: AppColors.brand,
-                              ),
-                              child: const Text('Retry'),
-                            ),
-                          ],
-                        ),
-                      ),
-                    )
-                  : ListView(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
-                      children: [
-                        const Text(
-                          'Choose how Pragyu may contact you about tests, scores, and institute updates.',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: AppColors.muted,
-                            height: 1.4,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Material(
-                          color: AppColors.surface,
-                          borderRadius: BorderRadius.circular(16),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: AppColors.brandSoft),
-                            ),
-                            child: Column(
-                              children: [
-                                for (var i = 0; i < _order.length; i++) ...[
-                                  if (i > 0) const Divider(height: 1),
-                                  SwitchListTile.adaptive(
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 4,
-                                    ),
-                                    title: Text(
-                                      _order[i].title,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                        color: AppColors.ink,
-                                      ),
-                                    ),
-                                    subtitle: Text(
-                                      _order[i].subtitle,
-                                      style: const TextStyle(
-                                        color: AppColors.muted,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                    value: _snapshot.isEnabled(_order[i]),
-                                    activeThumbColor: AppColors.brand,
-                                    onChanged: _savingChannel == _order[i]
-                                        ? null
-                                        : (value) => _toggle(_order[i], value),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+          child: Column(
+            children: [
+              StudentAppHeader(
+                title: 'Notification preferences',
+                onBack: () => Navigator.of(context).maybePop(),
+              ),
+              Expanded(child: _buildBody()),
+            ],
+          ),
         ),
       ),
+    );
+  }
+
+  Widget _buildBody() {
+    if (_loading) {
+      return const Center(
+        child: CircularProgressIndicator(color: StudentHubColors.blue),
+      );
+    }
+
+    if (_error != null && _snapshot.channels.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: StudentHubColors.blueSoft,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(
+                  Icons.notifications_off_outlined,
+                  color: StudentHubColors.blue,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                _error!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontFamily: AppTheme.fontFamily,
+                  color: StudentHubColors.muted,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 16),
+              FilledButton(
+                onPressed: _load,
+                style: FilledButton.styleFrom(
+                  backgroundColor: StudentHubColors.blue,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      color: StudentHubColors.blue,
+      onRefresh: _load,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
+        children: [
+          const _IntroCard(),
+          const SizedBox(height: 18),
+          const Text(
+            'Channels',
+            style: TextStyle(
+              fontFamily: AppTheme.fontFamily,
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: StudentHubColors.muted,
+              letterSpacing: 0.3,
+            ),
+          ),
+          const SizedBox(height: 10),
+          for (final channel in _order) ...[
+            _ChannelTile(
+              channel: channel,
+              enabled: _snapshot.isEnabled(channel),
+              saving: _savingChannel == channel,
+              onChanged: _savingChannel != null
+                  ? null
+                  : (value) => _toggle(channel, value),
+            ),
+            const SizedBox(height: 10),
+          ],
+          const SizedBox(height: 8),
+          const Text(
+            'You can change these anytime. Critical account messages may still be sent when required.',
+            style: TextStyle(
+              fontFamily: AppTheme.fontFamily,
+              fontSize: 12,
+              height: 1.4,
+              color: StudentHubColors.muted,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _IntroCard extends StatelessWidget {
+  const _IntroCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(StudentHubColors.cardRadius),
+        border: Border.all(color: StudentHubColors.border),
+      ),
+      child: const Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _IconWell(
+            icon: Icons.notifications_active_rounded,
+            tint: StudentHubColors.blue,
+            soft: StudentHubColors.blueSoft,
+          ),
+          SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'How Pragyu reaches you',
+                  style: TextStyle(
+                    fontFamily: AppTheme.fontFamily,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: StudentHubColors.ink,
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'Choose how Pragyu may contact you about tests, scores, and institute updates.',
+                  style: TextStyle(
+                    fontFamily: AppTheme.fontFamily,
+                    fontSize: 13,
+                    height: 1.4,
+                    color: StudentHubColors.muted,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ChannelTile extends StatelessWidget {
+  const _ChannelTile({
+    required this.channel,
+    required this.enabled,
+    required this.saving,
+    required this.onChanged,
+  });
+
+  final NotificationChannelId channel;
+  final bool enabled;
+  final bool saving;
+  final ValueChanged<bool>? onChanged;
+
+  (IconData, Color, Color) get _style => switch (channel) {
+        NotificationChannelId.email => (
+            Icons.mail_outline_rounded,
+            StudentHubColors.blue,
+            StudentHubColors.blueSoft,
+          ),
+        NotificationChannelId.inApp => (
+            Icons.notifications_none_rounded,
+            const Color(0xFFE85D75),
+            const Color(0xFFFFEEF1),
+          ),
+        NotificationChannelId.sms => (
+            Icons.sms_outlined,
+            const Color(0xFF22A06B),
+            const Color(0xFFE8F8F0),
+          ),
+        NotificationChannelId.whatsapp => (
+            Icons.chat_rounded,
+            const Color(0xFF25D366),
+            const Color(0xFFE8F8EF),
+          ),
+        NotificationChannelId.push => (
+            Icons.phone_iphone_rounded,
+            const Color(0xFFF08A3C),
+            const Color(0xFFFFF2E8),
+          ),
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    final (icon, tint, soft) = _style;
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(StudentHubColors.cardRadius),
+      child: InkWell(
+        onTap: onChanged == null || saving
+            ? null
+            : () => onChanged!(!enabled),
+        borderRadius: BorderRadius.circular(StudentHubColors.cardRadius),
+        child: Ink(
+          padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(StudentHubColors.cardRadius),
+            border: Border.all(color: StudentHubColors.border),
+          ),
+          child: Row(
+            children: [
+              _IconWell(icon: icon, tint: tint, soft: soft),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      channel.title,
+                      style: const TextStyle(
+                        fontFamily: AppTheme.fontFamily,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14.5,
+                        color: StudentHubColors.ink,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      channel.subtitle,
+                      style: const TextStyle(
+                        fontFamily: AppTheme.fontFamily,
+                        fontSize: 12.5,
+                        height: 1.35,
+                        color: StudentHubColors.muted,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (saving)
+                const SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: StudentHubColors.blue,
+                  ),
+                )
+              else
+                Switch.adaptive(
+                  value: enabled,
+                  activeThumbColor: StudentHubColors.blue,
+                  activeTrackColor: StudentHubColors.blue.withValues(alpha: 0.35),
+                  onChanged: onChanged,
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _IconWell extends StatelessWidget {
+  const _IconWell({
+    required this.icon,
+    required this.tint,
+    required this.soft,
+  });
+
+  final IconData icon;
+  final Color tint;
+  final Color soft;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: soft,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Icon(icon, color: tint, size: 20),
     );
   }
 }

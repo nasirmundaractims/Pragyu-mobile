@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'package:student_mobile/app/theme/app_colors.dart';
+import 'package:student_mobile/app/theme/student_hub_colors.dart';
+import 'package:student_mobile/app/widgets/student_app_header.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/features/attendance/data/attendance_repository.dart';
 import 'package:student_mobile/features/attendance/domain/attendance_models.dart';
@@ -72,23 +73,18 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
-      child: Scaffold(
-        backgroundColor: AppColors.background,
-        appBar: AppBar(
-          backgroundColor: AppColors.background,
-          title: const Text('Attendance'),
-        ),
-        body: SafeArea(
-          child: _loading && summary == null && !_missingProfile && _error == null
+      child: StudentHubPage(
+        title: 'Attendance',
+        body: _loading && summary == null && !_missingProfile && _error == null
               ? const Center(
-                  child: CircularProgressIndicator(color: AppColors.brand),
+                  child: CircularProgressIndicator(color: StudentHubColors.blue),
                 )
               : _missingProfile
                   ? _MissingProfileBody(message: _error ?? 'Link a student profile to view your attendance.')
                   : _error != null && summary == null
                       ? _ErrorBody(message: _error!, onRetry: _load)
                       : RefreshIndicator(
-                          color: AppColors.brand,
+                          color: StudentHubColors.blue,
                           onRefresh: _load,
                           child: SingleChildScrollView(
                             physics: const AlwaysScrollableScrollPhysics(),
@@ -100,7 +96,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                   'See present, absent, late, and excused marks from your academy.',
                                   style: TextStyle(
                                     fontSize: 13,
-                                    color: AppColors.muted,
+                                    color: StudentHubColors.muted,
                                     height: 1.35,
                                   ),
                                 ),
@@ -113,7 +109,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                       Icon(
                                         Icons.event_available_outlined,
                                         size: 18,
-                                        color: AppColors.brand,
+                                        color: StudentHubColors.blue,
                                       ),
                                       SizedBox(width: 8),
                                       Text(
@@ -121,7 +117,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                         style: TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.w700,
-                                          color: AppColors.ink,
+                                          color: StudentHubColors.ink,
                                         ),
                                       ),
                                     ],
@@ -139,7 +135,6 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                             ),
                           ),
                         ),
-        ),
       ),
     );
   }
@@ -195,9 +190,9 @@ class _StatsGrid extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: AppColors.surface,
+                    color: StudentHubColors.surface,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0x14000000)),
+                    border: Border.all(color: StudentHubColors.border),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -208,7 +203,7 @@ class _StatsGrid extends StatelessWidget {
                           fontSize: 10,
                           fontWeight: FontWeight.w700,
                           letterSpacing: 0.7,
-                          color: AppColors.muted,
+                          color: StudentHubColors.muted,
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -217,7 +212,7 @@ class _StatsGrid extends StatelessWidget {
                         style: const TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.w700,
-                          color: AppColors.ink,
+                          color: StudentHubColors.ink,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -225,7 +220,7 @@ class _StatsGrid extends StatelessWidget {
                         card.$3,
                         style: const TextStyle(
                           fontSize: 12,
-                          color: AppColors.muted,
+                          color: StudentHubColors.muted,
                         ),
                       ),
                     ],
@@ -250,9 +245,9 @@ class _RecordRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0x14000000)),
+        color: StudentHubColors.surface,
+        borderRadius: BorderRadius.circular(StudentHubColors.cardRadius),
+        border: Border.all(color: StudentHubColors.border),
       ),
       child: Row(
         children: [
@@ -261,7 +256,7 @@ class _RecordRow extends StatelessWidget {
               record.dateLabel,
               style: const TextStyle(
                 fontWeight: FontWeight.w600,
-                color: AppColors.ink,
+                color: StudentHubColors.ink,
               ),
             ),
           ),
@@ -287,7 +282,7 @@ class _RecordRow extends StatelessWidget {
                 record.reason!,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 12, color: AppColors.muted),
+                style: const TextStyle(fontSize: 12, color: StudentHubColors.muted),
               ),
             ),
           ],
@@ -307,7 +302,7 @@ class _RecordRow extends StatelessWidget {
       case AttendanceStatus.excused:
         return (const Color(0xFFE0F2FE), const Color(0xFF075985));
       case AttendanceStatus.other:
-        return (AppColors.brandSoft, AppColors.brand);
+        return (StudentHubColors.blueSoft, StudentHubColors.blue);
     }
   }
 }
@@ -320,8 +315,8 @@ class _EmptyRecords extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 28, 16, 28),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(18),
+        color: StudentHubColors.surface,
+        borderRadius: BorderRadius.circular(StudentHubColors.cardRadius),
         border: Border.all(
           color: const Color(0x33142033),
           style: BorderStyle.solid,
@@ -333,14 +328,14 @@ class _EmptyRecords extends StatelessWidget {
             'No attendance records yet',
             style: TextStyle(
               fontWeight: FontWeight.w700,
-              color: AppColors.ink,
+              color: StudentHubColors.ink,
             ),
           ),
           SizedBox(height: 6),
           Text(
             'When your academy marks attendance, it will appear here.',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 13, color: AppColors.muted),
+            style: TextStyle(fontSize: 13, color: StudentHubColors.muted),
           ),
         ],
       ),
@@ -361,12 +356,12 @@ class _MissingProfileBody extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.person_outline, size: 40, color: AppColors.brand),
+            const Icon(Icons.person_outline, size: 40, color: StudentHubColors.blue),
             const SizedBox(height: 12),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.muted),
+              style: const TextStyle(color: StudentHubColors.muted),
             ),
           ],
         ),
@@ -393,14 +388,14 @@ class _ErrorBody extends StatelessWidget {
               "Couldn't load attendance",
               style: TextStyle(
                 fontWeight: FontWeight.w700,
-                color: AppColors.ink,
+                color: StudentHubColors.ink,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.muted),
+              style: const TextStyle(color: StudentHubColors.muted),
             ),
             const SizedBox(height: 12),
             OutlinedButton(

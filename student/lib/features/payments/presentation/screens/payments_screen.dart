@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:student_mobile/app/router/app_router.dart';
-import 'package:student_mobile/app/theme/app_colors.dart';
+import 'package:student_mobile/app/theme/student_hub_colors.dart';
+import 'package:student_mobile/app/widgets/student_app_header.dart';
 import 'package:student_mobile/core/config/app_config.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/features/catalog/data/marketplace_access_service.dart';
@@ -276,21 +277,16 @@ class _PaymentsScreenState extends State<PaymentsScreen>
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
-      child: Scaffold(
-        backgroundColor: AppColors.background,
-        appBar: AppBar(
-          backgroundColor: AppColors.background,
-          title: const Text('Payments'),
-        ),
-        body: SafeArea(
-          child: _loading && _error == null
+      child: StudentHubPage(
+        title: 'Payments',
+        body: _loading && _error == null
               ? const Center(
-                  child: CircularProgressIndicator(color: AppColors.brand),
+                  child: CircularProgressIndicator(color: StudentHubColors.blue),
                 )
               : _error != null && !_loading
                   ? _ErrorBody(message: _error!, onRetry: _load)
                   : RefreshIndicator(
-                      color: AppColors.brand,
+                      color: StudentHubColors.blue,
                       onRefresh: _load,
                       child: SingleChildScrollView(
                         physics: const AlwaysScrollableScrollPhysics(),
@@ -302,7 +298,7 @@ class _PaymentsScreenState extends State<PaymentsScreen>
                               'Fees, invoices, and AI credits — switch tabs to manage each area.',
                               style: TextStyle(
                                 fontSize: 13,
-                                color: AppColors.muted,
+                                color: StudentHubColors.muted,
                               ),
                             ),
                             const SizedBox(height: 12),
@@ -369,7 +365,6 @@ class _PaymentsScreenState extends State<PaymentsScreen>
                         ),
                       ),
                     ),
-        ),
       ),
     );
   }
@@ -386,16 +381,16 @@ class _ViewTabs extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: StudentHubColors.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0x14000000)),
+        border: Border.all(color: StudentHubColors.border),
       ),
       child: Row(
         children: [
           for (final view in PaymentsViewId.values)
             Expanded(
               child: Material(
-                color: selected == view ? AppColors.brand : Colors.transparent,
+                color: selected == view ? StudentHubColors.blue : Colors.transparent,
                 borderRadius: BorderRadius.circular(12),
                 child: InkWell(
                   borderRadius: BorderRadius.circular(12),
@@ -408,7 +403,7 @@ class _ViewTabs extends StatelessWidget {
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 13,
-                        color: selected == view ? Colors.white : AppColors.muted,
+                        color: selected == view ? Colors.white : StudentHubColors.muted,
                       ),
                     ),
                   ),
@@ -454,7 +449,7 @@ class _FeesPanel extends StatelessWidget {
         subtitle: 'Institute tuition and installments.',
         child: Text(
           'Fees & payments is not turned on for this institute yet.',
-          style: TextStyle(color: AppColors.muted, fontSize: 13),
+          style: TextStyle(color: StudentHubColors.muted, fontSize: 13),
         ),
       );
     }
@@ -496,14 +491,14 @@ class _FeesPanel extends StatelessWidget {
               const SizedBox(height: 12),
               FilledButton(
                 onPressed: canPay ? onPayNow : null,
-                style: FilledButton.styleFrom(backgroundColor: AppColors.brand),
+                style: FilledButton.styleFrom(backgroundColor: StudentHubColors.blue),
                 child: Text(paying ? 'Starting…' : 'Pay now'),
               ),
               if (!fees.paymentsEnabled) ...[
                 const SizedBox(height: 6),
                 const Text(
                   'Pay is gated until the institute enables fee payments.',
-                  style: TextStyle(fontSize: 12, color: AppColors.muted),
+                  style: TextStyle(fontSize: 12, color: StudentHubColors.muted),
                 ),
               ],
             ],
@@ -516,7 +511,7 @@ class _FeesPanel extends StatelessWidget {
           child: fees.completedPayments.isEmpty
               ? const Text(
                   'No completed payments yet. After you pay, receipt actions appear here.',
-                  style: TextStyle(fontSize: 13, color: AppColors.muted),
+                  style: TextStyle(fontSize: 13, color: StudentHubColors.muted),
                 )
               : Column(
                   children: [
@@ -538,7 +533,7 @@ class _FeesPanel extends StatelessWidget {
           child: fees.assignments.isEmpty
               ? const Text(
                   'No fee assignments yet.',
-                  style: TextStyle(fontSize: 13, color: AppColors.muted),
+                  style: TextStyle(fontSize: 13, color: StudentHubColors.muted),
                 )
               : Column(
                   children: [
@@ -574,12 +569,12 @@ class _ReceiptRow extends StatelessWidget {
           payment.title,
           style: const TextStyle(
             fontWeight: FontWeight.w600,
-            color: AppColors.ink,
+            color: StudentHubColors.ink,
           ),
         ),
         Text(
           '${formatWhen(payment.paidAt)} · ${payment.id.length > 8 ? '${payment.id.substring(0, 8)}…' : payment.id}',
-          style: const TextStyle(fontSize: 12, color: AppColors.muted),
+          style: const TextStyle(fontSize: 12, color: StudentHubColors.muted),
         ),
         const SizedBox(height: 8),
         Wrap(
@@ -612,7 +607,7 @@ class _AssignmentCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.background,
+        color: StudentHubColors.pageBg,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -622,13 +617,13 @@ class _AssignmentCard extends StatelessWidget {
             '${assignment.scheduleType} · ${assignment.status}',
             style: const TextStyle(
               fontWeight: FontWeight.w700,
-              color: AppColors.ink,
+              color: StudentHubColors.ink,
             ),
           ),
           const SizedBox(height: 4),
           Text(
             '${assignment.currency} ${assignment.totalAmount ?? '—'} · Due ${assignment.outstandingAmount ?? '—'}',
-            style: const TextStyle(fontSize: 12, color: AppColors.muted),
+            style: const TextStyle(fontSize: 12, color: StudentHubColors.muted),
           ),
           if (assignment.installments.isNotEmpty) ...[
             const SizedBox(height: 8),
@@ -637,7 +632,7 @@ class _AssignmentCard extends StatelessWidget {
                 padding: const EdgeInsets.only(bottom: 4),
                 child: Text(
                   '${row.title} · ${row.dueDate ?? '—'} · ${row.amountDue ?? '—'} · ${row.status ?? ''}',
-                  style: const TextStyle(fontSize: 12, color: AppColors.muted),
+                  style: const TextStyle(fontSize: 12, color: StudentHubColors.muted),
                 ),
               ),
           ],
@@ -685,7 +680,7 @@ class _BillingPanel extends StatelessWidget {
           child: billing.rows.isEmpty
               ? const Text(
                   'No payments yet. Purchase a course or AI plan to see your history here.',
-                  style: TextStyle(fontSize: 13, color: AppColors.muted),
+                  style: TextStyle(fontSize: 13, color: StudentHubColors.muted),
                 )
               : Column(
                   children: [
@@ -702,7 +697,7 @@ class _BillingPanel extends StatelessWidget {
                                   billing.rows[i].title,
                                   style: const TextStyle(
                                     fontWeight: FontWeight.w600,
-                                    color: AppColors.ink,
+                                    color: StudentHubColors.ink,
                                   ),
                                 ),
                                 Text(
@@ -710,7 +705,7 @@ class _BillingPanel extends StatelessWidget {
                                   '${billing.rows[i].invoiceNumber == null ? '' : ' · ${billing.rows[i].invoiceNumber}'}',
                                   style: const TextStyle(
                                     fontSize: 12,
-                                    color: AppColors.muted,
+                                    color: StudentHubColors.muted,
                                   ),
                                 ),
                               ],
@@ -720,7 +715,7 @@ class _BillingPanel extends StatelessWidget {
                             billing.rows[i].amountLabel,
                             style: const TextStyle(
                               fontWeight: FontWeight.w700,
-                              color: AppColors.ink,
+                              color: StudentHubColors.ink,
                             ),
                           ),
                         ],
@@ -770,13 +765,13 @@ class _BalancePanel extends StatelessWidget {
                   'You are out of AI credits',
                   style: TextStyle(
                     fontWeight: FontWeight.w700,
-                    color: AppColors.ink,
+                    color: StudentHubColors.ink,
                   ),
                 ),
                 SizedBox(height: 4),
                 Text(
                   'Purchase a credit pack below to keep using AI Mentor, answer checking, and OCR.',
-                  style: TextStyle(fontSize: 13, color: AppColors.muted),
+                  style: TextStyle(fontSize: 13, color: StudentHubColors.muted),
                 ),
               ],
             ),
@@ -787,15 +782,15 @@ class _BalancePanel extends StatelessWidget {
           child: balance.packages.isEmpty
               ? const Text(
                   'No credit packs are available right now.',
-                  style: TextStyle(fontSize: 13, color: AppColors.muted),
+                  style: TextStyle(fontSize: 13, color: StudentHubColors.muted),
                 )
               : Column(
                   children: [
                     for (final pkg in balance.packages) ...[
                       Material(
                         color: selectedPackageId == pkg.id
-                            ? AppColors.brandSoft
-                            : AppColors.background,
+                            ? StudentHubColors.blueSoft
+                            : StudentHubColors.pageBg,
                         borderRadius: BorderRadius.circular(12),
                         child: InkWell(
                           borderRadius: BorderRadius.circular(12),
@@ -807,7 +802,7 @@ class _BalancePanel extends StatelessWidget {
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
                                 color: selectedPackageId == pkg.id
-                                    ? AppColors.brand
+                                    ? StudentHubColors.blue
                                     : const Color(0x14000000),
                               ),
                             ),
@@ -818,7 +813,7 @@ class _BalancePanel extends StatelessWidget {
                                   pkg.name,
                                   style: const TextStyle(
                                     fontWeight: FontWeight.w700,
-                                    color: AppColors.ink,
+                                    color: StudentHubColors.ink,
                                   ),
                                 ),
                                 if (pkg.credits != null)
@@ -826,7 +821,7 @@ class _BalancePanel extends StatelessWidget {
                                     '${pkg.credits} credits',
                                     style: const TextStyle(
                                       fontSize: 12,
-                                      color: AppColors.muted,
+                                      color: StudentHubColors.muted,
                                     ),
                                   ),
                                 if (pkg.priceLabel.isNotEmpty)
@@ -834,7 +829,7 @@ class _BalancePanel extends StatelessWidget {
                                     pkg.priceLabel,
                                     style: const TextStyle(
                                       fontWeight: FontWeight.w600,
-                                      color: AppColors.ink,
+                                      color: StudentHubColors.ink,
                                     ),
                                   ),
                               ],
@@ -851,7 +846,7 @@ class _BalancePanel extends StatelessWidget {
                             ? null
                             : onPurchase,
                         style: FilledButton.styleFrom(
-                          backgroundColor: AppColors.brand,
+                          backgroundColor: StudentHubColors.blue,
                         ),
                         child: Text(
                           purchasing
@@ -932,7 +927,7 @@ class _BalancePanel extends StatelessWidget {
                               formatWhen(row.at),
                               style: const TextStyle(
                                 fontSize: 12,
-                                color: AppColors.muted,
+                                color: StudentHubColors.muted,
                               ),
                             ),
                           ],
@@ -968,9 +963,9 @@ class _Section extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0x14000000)),
+        color: StudentHubColors.surface,
+        borderRadius: BorderRadius.circular(StudentHubColors.cardRadius),
+        border: Border.all(color: StudentHubColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -980,13 +975,13 @@ class _Section extends StatelessWidget {
             style: const TextStyle(
               fontSize: 17,
               fontWeight: FontWeight.w700,
-              color: AppColors.ink,
+              color: StudentHubColors.ink,
             ),
           ),
           const SizedBox(height: 4),
           Text(
             subtitle,
-            style: const TextStyle(fontSize: 13, color: AppColors.muted),
+            style: const TextStyle(fontSize: 13, color: StudentHubColors.muted),
           ),
           const SizedBox(height: 12),
           child,
@@ -1013,7 +1008,7 @@ class _MetricTile extends StatelessWidget {
       width: (MediaQuery.sizeOf(context).width - 56) / 2,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.background,
+        color: StudentHubColors.pageBg,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -1025,7 +1020,7 @@ class _MetricTile extends StatelessWidget {
               fontSize: 10,
               fontWeight: FontWeight.w700,
               letterSpacing: 0.6,
-              color: AppColors.muted,
+              color: StudentHubColors.muted,
             ),
           ),
           const SizedBox(height: 6),
@@ -1034,14 +1029,14 @@ class _MetricTile extends StatelessWidget {
             style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w700,
-              color: AppColors.ink,
+              color: StudentHubColors.ink,
             ),
           ),
           if (hint != null) ...[
             const SizedBox(height: 4),
             Text(
               hint!,
-              style: const TextStyle(fontSize: 11, color: AppColors.muted),
+              style: const TextStyle(fontSize: 11, color: StudentHubColors.muted),
             ),
           ],
         ],
@@ -1060,10 +1055,10 @@ class _InfoCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: StudentHubColors.surface,
         borderRadius: BorderRadius.circular(16),
       ),
-      child: Text(text, style: const TextStyle(color: AppColors.muted)),
+      child: Text(text, style: const TextStyle(color: StudentHubColors.muted)),
     );
   }
 }
@@ -1085,12 +1080,12 @@ class _ErrorBody extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.muted),
+              style: const TextStyle(color: StudentHubColors.muted),
             ),
             const SizedBox(height: 12),
             FilledButton(
               onPressed: onRetry,
-              style: FilledButton.styleFrom(backgroundColor: AppColors.brand),
+              style: FilledButton.styleFrom(backgroundColor: StudentHubColors.blue),
               child: const Text('Retry'),
             ),
           ],

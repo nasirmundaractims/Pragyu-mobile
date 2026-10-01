@@ -8,7 +8,9 @@ import 'package:student_mobile/features/organization/domain/organization_members
 import 'package:student_mobile/features/organization/domain/organization_summary.dart';
 
 abstract class OrganizationGateway {
-  Future<List<OrganizationSummary>> listOrganizations();
+  Future<List<OrganizationSummary>> listOrganizations({
+    bool learnerWorkspaceOnly = true,
+  });
   Future<void> selectOrganization(OrganizationSummary organization);
   Future<String?> readActiveOrganizationId();
   Future<String?> readActiveOrganizationType();
@@ -34,12 +36,21 @@ class OrganizationRepository implements OrganizationGateway {
   final TenantStore _tenant;
 
   @override
-  Future<List<OrganizationSummary>> listOrganizations() async {
+  Future<List<OrganizationSummary>> listOrganizations({
+    bool learnerWorkspaceOnly = true,
+  }) async {
     final accessToken = await _requireToken();
+
+    final query = <String, String>{
+      'per_page': '100',
+    };
+    if (learnerWorkspaceOnly) {
+      query['filter[learner_workspace]'] = '1';
+    }
 
     final envelope = await _api.get(
       '/organizations',
-      query: const {'per_page': '100'},
+      query: query,
       accessToken: accessToken,
     );
 

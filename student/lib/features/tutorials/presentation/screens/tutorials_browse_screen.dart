@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:student_mobile/app/router/app_router.dart';
-import 'package:student_mobile/app/theme/app_colors.dart';
+import 'package:student_mobile/app/theme/student_hub_colors.dart';
+import 'package:student_mobile/app/widgets/student_app_header.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/features/tutorials/data/tutorials_repository.dart';
 import 'package:student_mobile/features/tutorials/domain/tutorials_models.dart';
@@ -142,16 +143,11 @@ class _TutorialsBrowseScreenState extends State<TutorialsBrowseScreen> {
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
-      child: Scaffold(
-        backgroundColor: AppColors.background,
-        appBar: AppBar(
-          backgroundColor: AppColors.background,
-          title: Text(_title),
-        ),
-        body: SafeArea(
-          child: _loading
+      child: StudentHubPage(
+        title: _title,
+        body: _loading
               ? const Center(
-                  child: CircularProgressIndicator(color: AppColors.brand),
+                  child: CircularProgressIndicator(color: StudentHubColors.blue),
                 )
               : _error != null
                   ? Center(
@@ -163,13 +159,13 @@ class _TutorialsBrowseScreenState extends State<TutorialsBrowseScreen> {
                             Text(
                               _error!,
                               textAlign: TextAlign.center,
-                              style: const TextStyle(color: AppColors.muted),
+                              style: const TextStyle(color: StudentHubColors.muted),
                             ),
                             const SizedBox(height: 12),
                             FilledButton(
                               onPressed: _load,
                               style: FilledButton.styleFrom(
-                                backgroundColor: AppColors.brand,
+                                backgroundColor: StudentHubColors.blue,
                               ),
                               child: const Text('Retry'),
                             ),
@@ -178,7 +174,7 @@ class _TutorialsBrowseScreenState extends State<TutorialsBrowseScreen> {
                       ),
                     )
                   : RefreshIndicator(
-                      color: AppColors.brand,
+                      color: StudentHubColors.blue,
                       onRefresh: _load,
                       child: SingleChildScrollView(
                         physics: const AlwaysScrollableScrollPhysics(),
@@ -191,7 +187,7 @@ class _TutorialsBrowseScreenState extends State<TutorialsBrowseScreen> {
                               style: const TextStyle(
                                 fontSize: 22,
                                 fontWeight: FontWeight.w700,
-                                color: AppColors.ink,
+                                color: StudentHubColors.ink,
                               ),
                             ),
                             if (_subtitle?.trim().isNotEmpty == true) ...[
@@ -200,7 +196,7 @@ class _TutorialsBrowseScreenState extends State<TutorialsBrowseScreen> {
                                 _subtitle!,
                                 style: const TextStyle(
                                   fontSize: 13,
-                                  color: AppColors.muted,
+                                  color: StudentHubColors.muted,
                                 ),
                               ),
                             ],
@@ -210,7 +206,7 @@ class _TutorialsBrowseScreenState extends State<TutorialsBrowseScreen> {
                                 'Subjects',
                                 style: TextStyle(
                                   fontWeight: FontWeight.w700,
-                                  color: AppColors.ink,
+                                  color: StudentHubColors.ink,
                                 ),
                               ),
                               const SizedBox(height: 8),
@@ -229,7 +225,7 @@ class _TutorialsBrowseScreenState extends State<TutorialsBrowseScreen> {
                                 'Topics',
                                 style: TextStyle(
                                   fontWeight: FontWeight.w700,
-                                  color: AppColors.ink,
+                                  color: StudentHubColors.ink,
                                 ),
                               ),
                               const SizedBox(height: 8),
@@ -259,7 +255,7 @@ class _TutorialsBrowseScreenState extends State<TutorialsBrowseScreen> {
                                 'Articles',
                                 style: TextStyle(
                                   fontWeight: FontWeight.w700,
-                                  color: AppColors.ink,
+                                  color: StudentHubColors.ink,
                                 ),
                               ),
                               const SizedBox(height: 8),
@@ -281,14 +277,13 @@ class _TutorialsBrowseScreenState extends State<TutorialsBrowseScreen> {
                                 padding: EdgeInsets.only(top: 24),
                                 child: Text(
                                   'Nothing published in this section yet.',
-                                  style: TextStyle(color: AppColors.muted),
+                                  style: TextStyle(color: StudentHubColors.muted),
                                 ),
                               ),
                           ],
                         ),
                       ),
                     ),
-        ),
       ),
     );
   }
@@ -308,7 +303,7 @@ class _NavTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppColors.surface,
+      color: StudentHubColors.surface,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
@@ -325,7 +320,7 @@ class _NavTile extends StatelessWidget {
                       title,
                       style: const TextStyle(
                         fontWeight: FontWeight.w600,
-                        color: AppColors.ink,
+                        color: StudentHubColors.ink,
                       ),
                     ),
                     if (subtitle?.trim().isNotEmpty == true) ...[
@@ -336,14 +331,14 @@ class _NavTile extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontSize: 12,
-                          color: AppColors.muted,
+                          color: StudentHubColors.muted,
                         ),
                       ),
                     ],
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right_rounded, color: AppColors.muted),
+              const Icon(Icons.chevron_right_rounded, color: StudentHubColors.muted),
             ],
           ),
         ),
