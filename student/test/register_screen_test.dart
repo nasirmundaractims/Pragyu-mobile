@@ -270,4 +270,19 @@ void main() {
 
     addTearDown(() => tester.binding.setSurfaceSize(null));
   });
+
+  testWidgets('5.4 register has no social login CTAs', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: RegisterScreen(authRepository: _FakeAuth()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Google'), findsNothing);
+    expect(find.textContaining('Apple'), findsNothing);
+    expect(find.textContaining('Continue with'), findsNothing);
+    expect(find.textContaining('Coming soon'), findsNothing);
+  });
 }

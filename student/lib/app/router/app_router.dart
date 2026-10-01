@@ -33,6 +33,7 @@ import '../../features/catalog/domain/catalog_checkout_models.dart';
 import '../../features/catalog/presentation/screens/catalog_browse_screen.dart';
 import '../../features/catalog/presentation/screens/catalog_checkout_screen.dart';
 import '../../features/catalog/presentation/screens/catalog_detail_screen.dart';
+import '../../features/catalog/presentation/screens/saved_courses_screen.dart';
 import '../../features/catalog/presentation/widgets/marketplace_route_gate.dart';
 import '../../features/alerts/presentation/screens/alerts_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
@@ -94,6 +95,7 @@ abstract final class AppRoutes {
   static const catalog = '/catalog';
   static const catalogDetail = '/catalog-detail';
   static const catalogCheckout = '/catalog-checkout';
+  static const savedCourses = '/saved-courses';
   static const assessmentDetail = '/assessment-detail';
   static const attemptInstructions = '/attempt-instructions';
   static const attemptPlayer = '/attempt-player';
@@ -277,6 +279,13 @@ Route<dynamic> onGenerateRoute(RouteSettings settings) {
           child: CatalogCheckoutScreen(
             args: CatalogCheckoutArgs.fromObject(settings.arguments),
           ),
+        ),
+      );
+    case AppRoutes.savedCourses:
+      return MaterialPageRoute<void>(
+        settings: settings,
+        builder: (_) => const MarketplaceRouteGate(
+          child: SavedCoursesScreen(),
         ),
       );
     case AppRoutes.assessmentDetail:

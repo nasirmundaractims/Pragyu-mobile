@@ -149,4 +149,25 @@ void main() {
     expect(fake.lastSentContent, 'Explain DPSP');
     expect(find.text('Want a practice question?'), findsOneWidget);
   });
+
+  testWidgets('5.5 mentor has no voice/attach CTAs', (tester) async {
+    final fake = _FakeMentor(
+      snapshot: const MentorChatSnapshot(studentProfileId: 'sp-1'),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: AiMentorScreen(mentorRepository: fake),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.attach_file_rounded), findsNothing);
+    expect(find.byIcon(Icons.mic_none_rounded), findsNothing);
+    expect(find.byIcon(Icons.mic_rounded), findsNothing);
+    expect(find.textContaining('coming soon'), findsNothing);
+    expect(find.textContaining('Coming soon'), findsNothing);
+    expect(find.byIcon(Icons.send_rounded), findsOneWidget);
+  });
 }

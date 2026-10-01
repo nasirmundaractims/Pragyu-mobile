@@ -6,6 +6,7 @@ import 'package:student_mobile/core/storage/platform_stores.dart';
 import 'package:student_mobile/features/auth/data/token_store.dart';
 import 'package:student_mobile/features/auth/domain/auth_models.dart';
 import 'package:student_mobile/features/catalog/data/marketplace_access_service.dart';
+import 'package:student_mobile/features/me/data/avatar_media_uploader.dart';
 import 'package:student_mobile/features/me/domain/me_models.dart';
 import 'package:student_mobile/features/organization/data/tenant_store.dart';
 
@@ -16,6 +17,15 @@ abstract class MeGateway {
     required String displayName,
     String? phone,
   });
+
+  /// Slice 5.3 — Media upload + PATCH avatar_media_id, then resolve display URL.
+  Future<UserProfileSummary> uploadAvatar({
+    required List<int> bytes,
+    required String fileName,
+    required String mimeType,
+  });
+
+  Future<UserProfileSummary> clearAvatar();
 
   Future<void> setEmailNotifications({
     required String studentProfileId,
@@ -36,15 +46,18 @@ class MeRepository implements MeGateway {
     SessionService? sessionService,
     TokenStore? tokenStore,
     TenantStore? tenantStore,
+    AvatarMediaUploader? avatarUploader,
   })  : _api = apiClient ?? ApiClient(),
         _session = sessionService ?? SessionService(),
         _tokens = tokenStore ?? createTokenStore(),
-        _tenant = tenantStore ?? createTenantStore();
+        _tenant = tenantStore ?? createTenantStore(),
+        _avatarUploader = avatarUploader ?? AvatarMediaUploader();
 
   final ApiClient _api;
   final SessionService _session;
   final TokenStore _tokens;
   final TenantStore _tenant;
+  final AvatarMediaUploader _avatarUploader;
 
   @override
   Future<MeSnapshot> loadMe() async {
@@ -106,7 +119,62 @@ class MeRepository implements MeGateway {
     if (profile.id.isEmpty) {
       throw StateError('Profile update response missing user.');
     }
-    return profile;
+    return _withResolvedAvatar(session, profile);
+  }
+
+  @override
+  Future<UserProfileSummary> uploadAvatar({
+    required List<int> bytes,
+    required String fileName,
+    required String mimeType,
+  }) async {
+    final session = await _requireSession();
+    final current = await _loadUserProfile(session);
+    final profileId = current?.id;
+    if (profileId == null || profileId.isEmpty) {
+      throw ApiException(
+        message: 'Create your profile before uploading a photo.',
+        statusCode: 0,
+      );
+    }
+
+    final mediaFileId = await _avatarUploader.uploadAvatarBytes(
+      bytes: bytes,
+      fileName: fileName,
+      mimeType: mimeType,
+      profileId: profileId,
+    );
+
+    final envelope = await _api.patch(
+      '/users/me/profile',
+      body: {'avatar_media_id': mediaFileId},
+      accessToken: session.accessToken,
+      organizationId: session.organizationId,
+    );
+    final profile = UserProfileSummary.fromJson(_asMap(envelope['data']));
+    if (profile.id.isEmpty) {
+      throw StateError('Avatar update response missing profile.');
+    }
+    return _withResolvedAvatar(
+      session,
+      profile.copyWith(avatarMediaId: mediaFileId),
+    );
+  }
+
+  @override
+  Future<UserProfileSummary> clearAvatar() async {
+    final session = await _requireSession();
+    final envelope = await _api.patch(
+      '/users/me/profile',
+      body: {'clear_avatar': true},
+      accessToken: session.accessToken,
+      organizationId: session.organizationId,
+    );
+    final profile = UserProfileSummary.fromJson(_asMap(envelope['data']));
+    if (profile.id.isEmpty) {
+      throw StateError('Avatar clear response missing profile.');
+    }
+    return profile.copyWith(clearAvatarUrl: true, clearAvatarMediaId: true);
   }
 
   @override
@@ -213,12 +281,51 @@ class MeRepository implements MeGateway {
         organizationId: session.organizationId,
       );
       final profile = UserProfileSummary.fromJson(_asMap(envelope['data']));
-      return profile.id.isEmpty ? null : profile;
+      if (profile.id.isEmpty) return null;
+      return await _withResolvedAvatar(session, profile);
     } on ApiException {
       return null;
     } catch (_) {
       return null;
     }
+  }
+
+  Future<UserProfileSummary> _withResolvedAvatar(
+    SessionContext session,
+    UserProfileSummary profile,
+  ) async {
+    final existingUrl = profile.avatarUrl?.trim();
+    if (existingUrl != null && existingUrl.isNotEmpty) return profile;
+
+    final mediaId = profile.avatarMediaId?.trim();
+    if (mediaId == null || mediaId.isEmpty) return profile;
+
+    final resolved = await _resolveMediaDownloadUrl(session, mediaId);
+    if (resolved == null) return profile;
+    return profile.copyWith(avatarUrl: resolved);
+  }
+
+  Future<String?> _resolveMediaDownloadUrl(
+    SessionContext session,
+    String mediaFileId,
+  ) async {
+    try {
+      final envelope = await _api.get(
+        '/media/files/$mediaFileId/download',
+        accessToken: session.accessToken,
+        organizationId: session.organizationId,
+      );
+      final data = _asMap(envelope['data']);
+      return _nullableTrim(data['url']?.toString());
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String? _nullableTrim(String? raw) {
+    final value = raw?.trim();
+    if (value == null || value.isEmpty) return null;
+    return value;
   }
 
   Future<List<Map<String, dynamic>>> _loadSettings(

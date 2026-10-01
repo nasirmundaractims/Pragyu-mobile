@@ -202,6 +202,8 @@ class _CatalogBrowseScreenState extends State<CatalogBrowseScreen> {
                 initials: _initials,
                 unread: _unread,
                 onBack: () => Navigator.of(context).maybePop(),
+                onSaved: () =>
+                    Navigator.of(context).pushNamed(AppRoutes.savedCourses),
                 onCart: () =>
                     Navigator.of(context).pushNamed(AppRoutes.payments),
                 onAlerts: () =>
@@ -543,6 +545,7 @@ class _MarketHeader extends StatelessWidget {
     required this.initials,
     required this.unread,
     required this.onBack,
+    required this.onSaved,
     required this.onCart,
     required this.onAlerts,
     required this.onProfile,
@@ -551,6 +554,7 @@ class _MarketHeader extends StatelessWidget {
   final String initials;
   final int unread;
   final VoidCallback onBack;
+  final VoidCallback onSaved;
   final VoidCallback onCart;
   final VoidCallback onAlerts;
   final VoidCallback onProfile;
@@ -589,6 +593,14 @@ class _MarketHeader extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+          ),
+          IconButton(
+            tooltip: 'Saved courses',
+            onPressed: onSaved,
+            icon: const Icon(
+              Icons.favorite_border_rounded,
+              color: _CatalogBrowseScreenState._ink,
             ),
           ),
           IconButton(

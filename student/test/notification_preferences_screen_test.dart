@@ -54,6 +54,14 @@ void main() {
     expect(find.text('Notification preferences'), findsOneWidget);
     expect(find.text('Email'), findsOneWidget);
     expect(find.text('In-app alerts'), findsOneWidget);
+    expect(find.text('Where alerts arrive today'), findsOneWidget);
+    expect(find.text('Open Alerts'), findsOneWidget);
+
+    await tester.scrollUntilVisible(
+      find.text('Push notifications'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('Push notifications'), findsOneWidget);
 
     await tester.tap(find.byType(Switch).first);
@@ -61,5 +69,40 @@ void main() {
 
     expect(fake.lastChannel, NotificationChannelId.email);
     expect(fake.lastEnabled, isFalse);
+  });
+
+  testWidgets('5.1 enabling push shows Alerts-path snackbar', (tester) async {
+    final fake = _FakePrefs(
+      NotificationPreferencesSnapshot.fromRows(const [
+        {'channel': 'push', 'is_enabled': false},
+      ]),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: NotificationPreferencesScreen(preferencesRepository: fake),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.text('Push notifications'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    final pushTile = find.ancestor(
+      of: find.text('Push notifications'),
+      matching: find.byType(InkWell),
+    );
+    await tester.tap(find.descendant(of: pushTile, matching: find.byType(Switch)));
+    await tester.pumpAndSettle();
+
+    expect(fake.lastChannel, NotificationChannelId.push);
+    expect(fake.lastEnabled, isTrue);
+    expect(
+      find.textContaining('still arrive in Alerts'),
+      findsOneWidget,
+    );
   });
 }

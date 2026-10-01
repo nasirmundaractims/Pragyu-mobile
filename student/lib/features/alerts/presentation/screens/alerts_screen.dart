@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -10,15 +12,21 @@ import 'package:student_mobile/features/search/presentation/widgets/quick_search
 
 /// S-50 Alerts — notification + academy inbox for the Alerts tab.
 /// S-51 — tap opens the linked screen when the payload resolves.
+/// 5.1 — eval complete / class reminders arrive here (OS push deferred).
 class AlertsScreen extends StatefulWidget {
   const AlertsScreen({
     super.key,
     this.alertsRepository,
     this.onUnreadChanged,
+    this.refreshInterval = const Duration(seconds: 45),
   });
 
   final AlertsGateway? alertsRepository;
   final ValueChanged<int>? onUnreadChanged;
+
+  /// Quiet re-fetch while the inbox is open so new eval / class alerts appear
+  /// without a manual pull (stand-in until FCM wakes the device).
+  final Duration refreshInterval;
 
   @override
   State<AlertsScreen> createState() => _AlertsScreenState();
@@ -33,11 +41,38 @@ class _AlertsScreenState extends State<AlertsScreen> {
   String? _error;
   AlertsSnapshot? _snapshot;
   final Set<String> _markingIds = <String>{};
+  Timer? _refreshTimer;
 
   @override
   void initState() {
     super.initState();
     _load();
+    _startRefreshTimer();
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
+  }
+
+  void _startRefreshTimer() {
+    _refreshTimer?.cancel();
+    final interval = widget.refreshInterval;
+    if (interval <= Duration.zero) return;
+    _refreshTimer = Timer.periodic(interval, (_) => _quietRefresh());
+  }
+
+  Future<void> _quietRefresh() async {
+    if (!mounted || _loading) return;
+    try {
+      final snapshot = await _alerts.loadAlerts(page: 1);
+      if (!mounted) return;
+      setState(() => _snapshot = snapshot);
+      widget.onUnreadChanged?.call(snapshot.unreadCount);
+    } catch (_) {
+      // Keep current list; next tick or pull-to-refresh can recover.
+    }
   }
 
   Future<void> _load() async {
@@ -235,6 +270,8 @@ class _AlertsScreenState extends State<AlertsScreen> {
           ),
           const SizedBox(height: 12),
         ],
+        const _ArrivalHint(),
+        const SizedBox(height: 12),
         _SummaryBar(
           unread: unread,
           markingAll: _markingAll,
@@ -274,6 +311,40 @@ class _AlertsScreenState extends State<AlertsScreen> {
           ),
         ],
       ],
+    );
+  }
+}
+
+class _ArrivalHint extends StatelessWidget {
+  const _ArrivalHint();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.brandSoft.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.brandSoft),
+      ),
+      child: const Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.notifications_active_rounded, color: AppColors.brand, size: 18),
+          SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Evaluation complete and class reminders land here — tap to open the result or join live.',
+              style: TextStyle(
+                color: AppColors.muted,
+                fontSize: 13,
+                height: 1.35,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -360,7 +431,7 @@ class _EmptyState extends StatelessWidget {
           ),
           SizedBox(height: 8),
           Text(
-            'Evaluation results, learning tips, and academy messages will show up here when they arrive.',
+            'When an evaluation finishes or a live class is about to start, it shows up here so you can open the result or join.',
             textAlign: TextAlign.center,
             style: TextStyle(color: AppColors.muted, height: 1.4),
           ),
@@ -411,7 +482,7 @@ class _AlertTile extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  _Chip(label: item.categoryLabel),
+                  _Chip(label: item.arrivalBadge),
                   if (unread) ...[
                     const SizedBox(width: 8),
                     const _Chip(label: 'Unread', emphasis: true),

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:student_mobile/app/router/app_router.dart';
@@ -20,18 +21,27 @@ import 'package:student_mobile/features/me/data/me_repository.dart';
 import 'package:student_mobile/features/me/domain/me_models.dart';
 import 'package:student_mobile/features/organization/presentation/screens/org_picker_screen.dart';
 
+/// Picked avatar payload for tests / ImagePicker bridge.
+typedef MeAvatarPick = Future<
+    ({List<int> bytes, String fileName, String mimeType})?> Function();
+
 /// S-70 Me — profile summary, preferences, institute switch, sign out.
+/// Slice 5.3 — profile avatar upload / clear.
 class MeScreen extends StatefulWidget {
   const MeScreen({
     super.key,
     this.meRepository,
     this.homeRepository,
     this.alertsRepository,
+    this.pickAvatar,
   });
 
   final MeGateway? meRepository;
   final HomeGateway? homeRepository;
   final AlertsGateway? alertsRepository;
+
+  /// Optional override used by widget tests; production uses [ImagePicker].
+  final MeAvatarPick? pickAvatar;
 
   @override
   State<MeScreen> createState() => _MeScreenState();
@@ -50,10 +60,12 @@ class _MeScreenState extends State<MeScreen> {
       widget.alertsRepository ?? AlertsRepository();
   final MarketplaceAccessService _marketplace =
       MarketplaceAccessService.instance;
+  final ImagePicker _picker = ImagePicker();
 
   bool _loading = true;
   bool _savingHours = false;
   bool _savingProfile = false;
+  bool _savingAvatar = false;
   bool _signingOut = false;
   String? _error;
   MeSnapshot? _snapshot;
@@ -253,6 +265,166 @@ class _MeScreenState extends State<MeScreen> {
                 ? error.message
                 : "Couldn't update profile.",
           ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _changeAvatar() async {
+    final snapshot = _snapshot;
+    if (snapshot == null || _savingAvatar) return;
+
+    final hasAvatar = snapshot.userProfile?.hasAvatar == true;
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const ListTile(
+                title: Text(
+                  'Profile photo',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+                subtitle: Text('Shown on Me and across Pragyu.'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library_outlined),
+                title: const Text('Choose from gallery'),
+                onTap: () => Navigator.of(context).pop('gallery'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_camera_outlined),
+                title: const Text('Take photo'),
+                onTap: () => Navigator.of(context).pop('camera'),
+              ),
+              if (hasAvatar)
+                ListTile(
+                  leading: const Icon(Icons.delete_outline, color: _danger),
+                  title: const Text(
+                    'Remove photo',
+                    style: TextStyle(color: _danger),
+                  ),
+                  onTap: () => Navigator.of(context).pop('remove'),
+                ),
+              ListTile(
+                leading: const Icon(Icons.close),
+                title: const Text('Cancel'),
+                onTap: () => Navigator.of(context).pop(),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (!mounted || action == null) return;
+    if (action == 'remove') {
+      await _clearAvatar();
+      return;
+    }
+    if (action == 'gallery' || action == 'camera') {
+      await _pickAndUploadAvatar(
+        source: action == 'camera' ? ImageSource.camera : ImageSource.gallery,
+      );
+    }
+  }
+
+  Future<void> _pickAndUploadAvatar({required ImageSource source}) async {
+    setState(() => _savingAvatar = true);
+    try {
+      final picked = widget.pickAvatar != null
+          ? await widget.pickAvatar!()
+          : await _pickWithImagePicker(source);
+      if (picked == null) {
+        if (mounted) setState(() => _savingAvatar = false);
+        return;
+      }
+
+      final updated = await _me.uploadAvatar(
+        bytes: picked.bytes,
+        fileName: picked.fileName,
+        mimeType: picked.mimeType,
+      );
+      if (!mounted) return;
+      final snapshot = _snapshot;
+      setState(() {
+        _savingAvatar = false;
+        if (snapshot != null) {
+          _snapshot = snapshot.copyWith(userProfile: updated);
+        }
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Profile photo updated.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _savingAvatar = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            error is ApiException
+                ? error.message
+                : "Couldn't update profile photo.",
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Future<({List<int> bytes, String fileName, String mimeType})?>
+      _pickWithImagePicker(ImageSource source) async {
+    final file = await _picker.pickImage(
+      source: source,
+      maxWidth: 1600,
+      maxHeight: 1600,
+      imageQuality: 85,
+    );
+    if (file == null) return null;
+    final bytes = await file.readAsBytes();
+    final name = file.name.trim().isEmpty ? 'avatar.jpg' : file.name;
+    final mime = file.mimeType?.trim().isNotEmpty == true
+        ? file.mimeType!
+        : (name.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg');
+    return (bytes: bytes, fileName: name, mimeType: mime);
+  }
+
+  Future<void> _clearAvatar() async {
+    setState(() => _savingAvatar = true);
+    try {
+      final updated = await _me.clearAvatar();
+      if (!mounted) return;
+      final snapshot = _snapshot;
+      setState(() {
+        _savingAvatar = false;
+        if (snapshot != null) {
+          _snapshot = snapshot.copyWith(userProfile: updated);
+        }
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Profile photo removed.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _savingAvatar = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            error is ApiException
+                ? error.message
+                : "Couldn't remove profile photo.",
+          ),
+          behavior: SnackBarBehavior.floating,
         ),
       );
     }
@@ -464,7 +636,9 @@ class _MeScreenState extends State<MeScreen> {
           initials: _initials,
           avatarUrl: snapshot.userProfile?.avatarUrl,
           saving: _savingProfile,
+          uploadingAvatar: _savingAvatar,
           onEdit: _editProfile,
+          onChangeAvatar: _changeAvatar,
         ),
         const SizedBox(height: 14),
         _StatsRow(
@@ -495,6 +669,10 @@ class _MeScreenState extends State<MeScreen> {
               Navigator.of(context).pushNamed(AppRoutes.notesBookmarks),
           onMarketplace: _marketplace.available
               ? () => Navigator.of(context).pushNamed(AppRoutes.catalog)
+              : null,
+          onSavedCourses: _marketplace.available
+              ? () =>
+                  Navigator.of(context).pushNamed(AppRoutes.savedCourses)
               : null,
         ),
         const SizedBox(height: 10),
@@ -818,7 +996,9 @@ class _ProfileBanner extends StatelessWidget {
     required this.email,
     required this.initials,
     required this.saving,
+    required this.uploadingAvatar,
     required this.onEdit,
+    required this.onChangeAvatar,
     this.phone,
     this.organizationName,
     this.contextLabel,
@@ -835,7 +1015,9 @@ class _ProfileBanner extends StatelessWidget {
   final String initials;
   final String? avatarUrl;
   final bool saving;
+  final bool uploadingAvatar;
   final VoidCallback onEdit;
+  final VoidCallback onChangeAvatar;
 
   @override
   Widget build(BuildContext context) {
@@ -862,9 +1044,23 @@ class _ProfileBanner extends StatelessWidget {
                       border: Border.all(color: _MeScreenState._blue, width: 2),
                     ),
                     child: ClipOval(
-                      child: url != null && url.isNotEmpty
-                          ? AppNetworkImage(url: url, fit: BoxFit.cover)
-                          : _InitialAvatar(initials: initials),
+                      child: uploadingAvatar
+                          ? const ColoredBox(
+                              color: Color(0xFFE8F1FF),
+                              child: Center(
+                                child: SizedBox(
+                                  width: 22,
+                                  height: 22,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: _MeScreenState._blue,
+                                  ),
+                                ),
+                              ),
+                            )
+                          : url != null && url.isNotEmpty
+                              ? AppNetworkImage(url: url, fit: BoxFit.cover)
+                              : _InitialAvatar(initials: initials),
                     ),
                   ),
                   Positioned(
@@ -875,7 +1071,7 @@ class _ProfileBanner extends StatelessWidget {
                       shape: const CircleBorder(),
                       child: InkWell(
                         customBorder: const CircleBorder(),
-                        onTap: saving ? null : onEdit,
+                        onTap: saving || uploadingAvatar ? null : onChangeAvatar,
                         child: const SizedBox(
                           width: 26,
                           height: 26,
@@ -1307,12 +1503,14 @@ class _LearningShortcuts extends StatelessWidget {
     required this.onTests,
     required this.onNotes,
     this.onMarketplace,
+    this.onSavedCourses,
   });
 
   final VoidCallback onCourses;
   final VoidCallback onTests;
   final VoidCallback onNotes;
   final VoidCallback? onMarketplace;
+  final VoidCallback? onSavedCourses;
 
   @override
   Widget build(BuildContext context) {
@@ -1349,6 +1547,15 @@ class _LearningShortcuts extends StatelessWidget {
           const Color(0xFF7B61FF),
           const Color(0xFFF0EBFF),
           onMarketplace!,
+        ),
+      if (onSavedCourses != null)
+        (
+          'Saved courses',
+          'Wishlist for later',
+          Icons.favorite_border_rounded,
+          const Color(0xFFE85D75),
+          const Color(0xFFFFEEF1),
+          onSavedCourses!,
         ),
     ];
 

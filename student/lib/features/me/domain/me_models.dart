@@ -30,6 +30,7 @@ class UserProfileSummary {
     this.locale,
     this.timezone,
     this.avatarUrl,
+    this.avatarMediaId,
   });
 
   final String id;
@@ -38,6 +39,36 @@ class UserProfileSummary {
   final String? locale;
   final String? timezone;
   final String? avatarUrl;
+  final String? avatarMediaId;
+
+  bool get hasAvatar {
+    final url = avatarUrl?.trim();
+    if (url != null && url.isNotEmpty) return true;
+    final mediaId = avatarMediaId?.trim();
+    return mediaId != null && mediaId.isNotEmpty;
+  }
+
+  UserProfileSummary copyWith({
+    String? displayName,
+    String? phone,
+    String? locale,
+    String? timezone,
+    String? avatarUrl,
+    String? avatarMediaId,
+    bool clearAvatarUrl = false,
+    bool clearAvatarMediaId = false,
+  }) {
+    return UserProfileSummary(
+      id: id,
+      displayName: displayName ?? this.displayName,
+      phone: phone ?? this.phone,
+      locale: locale ?? this.locale,
+      timezone: timezone ?? this.timezone,
+      avatarUrl: clearAvatarUrl ? null : (avatarUrl ?? this.avatarUrl),
+      avatarMediaId:
+          clearAvatarMediaId ? null : (avatarMediaId ?? this.avatarMediaId),
+    );
+  }
 
   factory UserProfileSummary.fromJson(Map<String, dynamic> json) {
     return UserProfileSummary(
@@ -47,6 +78,7 @@ class UserProfileSummary {
       locale: _nullableTrim(json['locale']?.toString()),
       timezone: _nullableTrim(json['timezone']?.toString()),
       avatarUrl: _nullableTrim(json['avatar_url']?.toString()),
+      avatarMediaId: _nullableTrim(json['avatar_media_id']?.toString()),
     );
   }
 }

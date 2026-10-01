@@ -3,20 +3,25 @@ import 'package:flutter/services.dart';
 
 import 'package:student_mobile/app/router/app_router.dart';
 import 'package:student_mobile/app/theme/student_hub_colors.dart';
+import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/features/catalog/data/catalog_repository.dart';
+import 'package:student_mobile/features/catalog/data/wishlist_repository.dart';
 import 'package:student_mobile/features/catalog/domain/catalog_checkout_models.dart';
 import 'package:student_mobile/features/catalog/domain/catalog_models.dart';
 
 /// S-29 Catalog detail — listing summary with S-73 Buy / Enroll checkout.
+/// Slice 5.2 — save / unsave via marketplace wishlist.
 class CatalogDetailScreen extends StatefulWidget {
   const CatalogDetailScreen({
     super.key,
     required this.slug,
     this.catalogRepository,
+    this.wishlistRepository,
   });
 
   final String slug;
   final CatalogGateway? catalogRepository;
+  final WishlistGateway? wishlistRepository;
 
   @override
   State<CatalogDetailScreen> createState() => _CatalogDetailScreenState();
@@ -25,10 +30,15 @@ class CatalogDetailScreen extends StatefulWidget {
 class _CatalogDetailScreenState extends State<CatalogDetailScreen> {
   late final CatalogGateway _catalog =
       widget.catalogRepository ?? CatalogRepository();
+  late final WishlistGateway _wishlist =
+      widget.wishlistRepository ?? WishlistRepository();
 
   final _couponController = TextEditingController();
 
   bool _loading = true;
+  bool _wishlistLoading = false;
+  bool _savingWishlist = false;
+  bool _saved = false;
   String? _error;
   CatalogListing? _listing;
 
@@ -56,12 +66,82 @@ class _CatalogDetailScreenState extends State<CatalogDetailScreen> {
         _listing = listing;
         _loading = false;
       });
+      await _refreshSavedState(listing.id);
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _error = 'Unable to open this listing.';
         _loading = false;
       });
+    }
+  }
+
+  Future<void> _refreshSavedState(String listingId) async {
+    if (listingId.trim().isEmpty) return;
+    setState(() => _wishlistLoading = true);
+    try {
+      final saved = await _wishlist.isSaved(listingId);
+      if (!mounted) return;
+      setState(() {
+        _saved = saved;
+        _wishlistLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _wishlistLoading = false);
+    }
+  }
+
+  Future<void> _toggleSave() async {
+    final listing = _listing;
+    if (listing == null || listing.id.isEmpty || _savingWishlist) return;
+
+    final wasSaved = _saved;
+    setState(() {
+      _savingWishlist = true;
+      _saved = !wasSaved;
+    });
+
+    try {
+      if (wasSaved) {
+        await _wishlist.removeListing(listing.id);
+      } else {
+        await _wishlist.saveListing(listing.id);
+      }
+      if (!mounted) return;
+      setState(() => _savingWishlist = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            wasSaved ? 'Removed from saved courses.' : 'Saved for later.',
+          ),
+          behavior: SnackBarBehavior.floating,
+          action: wasSaved
+              ? null
+              : SnackBarAction(
+                  label: 'View',
+                  onPressed: () {
+                    Navigator.of(context).pushNamed(AppRoutes.savedCourses);
+                  },
+                ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _saved = wasSaved;
+        _savingWishlist = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            error is ApiException
+                ? error.message
+                : "Couldn't update saved courses.",
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 
@@ -91,6 +171,32 @@ class _CatalogDetailScreenState extends State<CatalogDetailScreen> {
         appBar: AppBar(
           backgroundColor: StudentHubColors.pageBg,
           title: Text(title),
+          actions: [
+            if (_listing != null)
+              IconButton(
+                tooltip: _saved ? 'Remove from saved' : 'Save for later',
+                onPressed: _savingWishlist || _wishlistLoading
+                    ? null
+                    : _toggleSave,
+                icon: _savingWishlist || _wishlistLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: StudentHubColors.blue,
+                        ),
+                      )
+                    : Icon(
+                        _saved
+                            ? Icons.favorite_rounded
+                            : Icons.favorite_border_rounded,
+                        color: _saved
+                            ? const Color(0xFFE85D75)
+                            : StudentHubColors.ink,
+                      ),
+              ),
+          ],
         ),
         body: SafeArea(
           child: RefreshIndicator(
@@ -205,11 +311,45 @@ class _CatalogDetailScreenState extends State<CatalogDetailScreen> {
             ),
           ),
           const SizedBox(height: 10),
+          OutlinedButton.icon(
+            onPressed: _savingWishlist || _wishlistLoading ? null : _toggleSave,
+            icon: Icon(
+              _saved ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+              color: _saved ? const Color(0xFFE85D75) : StudentHubColors.blue,
+            ),
+            label: Text(_saved ? 'Saved' : 'Save for later'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: StudentHubColors.blue,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              side: const BorderSide(color: StudentHubColors.blue, width: 1.4),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
           const Text(
             'You are enrolled only after payment succeeds. Razorpay may open in the browser when needed.',
             style: TextStyle(fontSize: 12, color: StudentHubColors.muted, height: 1.4),
           ),
-        ] else
+        ] else ...[
+          OutlinedButton.icon(
+            onPressed: _savingWishlist || _wishlistLoading ? null : _toggleSave,
+            icon: Icon(
+              _saved ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+              color: _saved ? const Color(0xFFE85D75) : StudentHubColors.blue,
+            ),
+            label: Text(_saved ? 'Saved' : 'Save for later'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: StudentHubColors.blue,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              side: const BorderSide(color: StudentHubColors.blue, width: 1.4),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
@@ -223,6 +363,7 @@ class _CatalogDetailScreenState extends State<CatalogDetailScreen> {
               style: TextStyle(height: 1.45, color: StudentHubColors.ink),
             ),
           ),
+        ],
       ],
     );
   }

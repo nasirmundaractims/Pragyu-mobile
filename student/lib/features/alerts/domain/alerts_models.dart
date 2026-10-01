@@ -70,6 +70,16 @@ class AlertItem {
         AlertCategory.system => 'System',
       };
 
+  /// Short badge for high-signal push-style events (slice 5.1).
+  String get arrivalBadge {
+    final type = (eventType ?? '').toLowerCase().trim();
+    return switch (type) {
+      'evaluation.completed' => 'Eval complete',
+      'learning.live_class_reminder' => 'Class reminder',
+      _ => categoryLabel,
+    };
+  }
+
   AlertDayGroup dayGroup({DateTime? now}) {
     final created = createdAt;
     if (created == null) return AlertDayGroup.earlier;

@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:student_mobile/app/router/app_router.dart';
 import 'package:student_mobile/app/theme/app_theme.dart';
 import 'package:student_mobile/app/widgets/student_screen_kit.dart';
 import 'package:student_mobile/core/network/api_exception.dart';
 import 'package:student_mobile/features/notification_preferences/data/notification_preferences_repository.dart';
 import 'package:student_mobile/features/notification_preferences/domain/notification_preferences_models.dart';
+import 'package:student_mobile/features/notification_preferences/domain/push_delivery.dart';
 
 /// S-75 Notification preferences — channel toggles.
 class NotificationPreferencesScreen extends StatefulWidget {
@@ -77,6 +79,16 @@ class _NotificationPreferencesScreenState
         _snapshot = updated;
         _savingChannel = null;
       });
+      if (channel == NotificationChannelId.push &&
+          enabled &&
+          !PushDelivery.osPushAvailable) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(PushDelivery.pushEnabledSnack),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     } catch (error) {
       if (!mounted) return;
       setState(() {
@@ -94,6 +106,10 @@ class _NotificationPreferencesScreenState
         ),
       );
     }
+  }
+
+  void _openAlerts() {
+    Navigator.of(context).pushNamed(AppRoutes.alerts);
   }
 
   @override
@@ -130,6 +146,8 @@ class _NotificationPreferencesScreenState
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
         children: [
           const _IntroCard(),
+          const SizedBox(height: 14),
+          _DeliveryCard(onOpenAlerts: _openAlerts),
           const SizedBox(height: 18),
           const Text(
             'Channels',
@@ -216,6 +234,72 @@ class _IntroCard extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DeliveryCard extends StatelessWidget {
+  const _DeliveryCard({required this.onOpenAlerts});
+
+  final VoidCallback onOpenAlerts;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+      decoration: BoxDecoration(
+        color: StudentHubColors.blueSoft,
+        borderRadius: BorderRadius.circular(StudentHubColors.cardRadius),
+        border: Border.all(color: StudentHubColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _IconWell(
+                icon: Icons.mark_email_unread_rounded,
+                tint: StudentHubColors.blue,
+                soft: Colors.white,
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      PushDelivery.arrivalTitle,
+                      style: TextStyle(
+                        fontFamily: AppTheme.fontFamily,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: StudentHubColors.ink,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      PushDelivery.arrivalBody,
+                      style: TextStyle(
+                        fontFamily: AppTheme.fontFamily,
+                        fontSize: 13,
+                        height: 1.4,
+                        color: StudentHubColors.muted,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SecondaryButton(
+            label: PushDelivery.openAlertsLabel,
+            onPressed: onOpenAlerts,
           ),
         ],
       ),

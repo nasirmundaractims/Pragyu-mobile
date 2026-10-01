@@ -227,7 +227,11 @@ lib/
 - **S-76 Switch organization** — covered by Me “Switch institute” (same as S-05 picker)
 - **S-77 Help & About** — version, support email, privacy/terms links, Me entry
 - **S-78 Sign out confirm** — logout confirm dialog on Me + Settings
-- **Push delivery** — preference toggle only; OS push still blocked until FCM token API exists
+- **5.1 Push delivery (honest)** — prefs + Alerts path for eval complete / class reminders; OS push still blocked until FCM token API exists
+- **5.2 Saved courses** — marketplace wishlist save/unsave on catalog detail + Saved courses list (`GET|POST|DELETE /marketplace/me/wishlist`); Me + Catalog entry when marketplace available
+- **5.3 Profile avatar** — Me camera → gallery/camera; Media upload-sessions + `PATCH /users/me/profile` (`avatar_media_id` / `clear_avatar`); display URL from `GET /media/files/{id}/download` when `avatar_url` is empty
+- **5.4 Social login (hidden)** — Google/Apple stay off Sign-in/Register; backend OAuth is web redirect + unset IdP credentials (no Apple, no native SDK token exchange). Revisit only when IdPs are configured **and** a mobile-ready auth contract exists
+- **5.5 Mentorship media (hidden)** — AI Mentor stays text-only (no attach/mic CTAs); coach voice/media APIs are stubs / metadata-only. Revisit when real voice STT + media upload contracts ship
 - **S-72 Payments** — fees, billing history, AI credits; browser handoff waiting banner + resume refresh
 - **S-73 Catalog checkout** — create order, pay/confirm, enrollment unlock; Razorpay via student-web handoff + auto-confirm on return
 - **S-74 Tutorials** — public exam/class guides hub, browse hierarchy, article reader, Me entry
@@ -261,7 +265,7 @@ loading / error layouts:
 | Credit pack handoff | Uses API `checkout_url` or `STUDENT_WEB_BASE_URL/payments?view=balance&package_id=…` |
 | iOS | `ITSAppUsesNonExemptEncryption=false`, mic usage string, `PrivacyInfo.xcprivacy` |
 
-**Deferred (configure later):** FCM / OS push token registration, Google/Apple social login, native Razorpay SDK, Faculty/Parent apps.
+**Deferred (configure later):** FCM / OS push token registration (device banners), Google/Apple social login (5.4 — stay hidden until mobile-ready IdP), mentor voice/attach (5.5 — stay hidden until STT + media APIs), native Razorpay SDK, Faculty/Parent apps.
 
 Still out of band for store listing: Play Console / App Store Connect assets, final counsel privacy text.
 

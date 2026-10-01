@@ -1,3 +1,5 @@
+import 'package:student_mobile/features/notification_preferences/domain/push_delivery.dart';
+
 /// S-75 Notification channel preferences.
 enum NotificationChannelId {
   email,
@@ -29,8 +31,7 @@ extension NotificationChannelIdX on NotificationChannelId {
         NotificationChannelId.inApp => 'Alerts tab inbox messages',
         NotificationChannelId.sms => 'Critical reminders by text message',
         NotificationChannelId.whatsapp => 'Updates via WhatsApp when enabled',
-        NotificationChannelId.push =>
-          'Device push will activate when store push is enabled',
+        NotificationChannelId.push => PushDelivery.pushChannelSubtitle,
       };
 
   static NotificationChannelId? tryParse(String? raw) {

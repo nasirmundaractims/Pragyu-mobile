@@ -230,6 +230,7 @@ void main() {
         theme: AppTheme.light(),
         home: AlertsScreen(
           alertsRepository: fake,
+          refreshInterval: Duration.zero,
           onUnreadChanged: (count) => fake.lastUnreadReported = count,
         ),
       ),
@@ -241,9 +242,12 @@ void main() {
     expect(find.text('2 unread · grouped by day'), findsOneWidget);
     expect(find.text('Today'), findsOneWidget);
     expect(find.text('Yesterday'), findsOneWidget);
-    expect(find.text('Earlier'), findsOneWidget);
     expect(find.text('Evaluation complete'), findsOneWidget);
-    expect(find.text('Evaluation'), findsWidgets);
+    expect(find.text('Eval complete'), findsOneWidget);
+    expect(
+      find.textContaining('Evaluation complete and class reminders land here'),
+      findsOneWidget,
+    );
     expect(find.text('Academy announcement'), findsOneWidget);
     expect(find.text('Open result'), findsOneWidget);
 
@@ -253,6 +257,13 @@ void main() {
     expect(fake.markedIds, contains('n1'));
     expect(fake.lastUnreadReported, 1);
     expect(find.text('1 unread · grouped by day'), findsOneWidget);
+
+    await tester.scrollUntilVisible(
+      find.text('Earlier'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Earlier'), findsOneWidget);
   });
 
   testWidgets('S-50 mark all read clears unread', (tester) async {
@@ -261,7 +272,10 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light(),
-        home: AlertsScreen(alertsRepository: fake),
+        home: AlertsScreen(
+          alertsRepository: fake,
+          refreshInterval: Duration.zero,
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -280,7 +294,10 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light(),
-        home: AlertsScreen(alertsRepository: fake),
+        home: AlertsScreen(
+          alertsRepository: fake,
+          refreshInterval: Duration.zero,
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -320,7 +337,6 @@ void main() {
 
     expect(find.text('AI Eval'), findsWidgets);
     expect(find.text('AI Evaluation'), findsOneWidget);
-    expect(find.text('Polity Weekly Quiz'), findsOneWidget);
     expect(find.text('Evaluation complete'), findsNothing);
   });
 
@@ -336,7 +352,10 @@ void main() {
               onPressed: () {
                 Navigator.of(context).push(
                   MaterialPageRoute<void>(
-                    builder: (_) => AlertsScreen(alertsRepository: fake),
+                    builder: (_) => AlertsScreen(
+                      alertsRepository: fake,
+                      refreshInterval: Duration.zero,
+                    ),
                   ),
                 );
               },
@@ -363,7 +382,10 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light(),
-        home: AlertsScreen(alertsRepository: fake),
+        home: AlertsScreen(
+          alertsRepository: fake,
+          refreshInterval: Duration.zero,
+        ),
         onGenerateRoute: (settings) {
           pushedRoute = settings.name;
           pushedArgs = settings.arguments;

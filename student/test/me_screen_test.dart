@@ -21,6 +21,8 @@ class _FakeMe implements MeGateway {
   String? lastDisplayName;
   String? lastPhone;
   int signOutCalls = 0;
+  int uploadAvatarCalls = 0;
+  int clearAvatarCalls = 0;
 
   @override
   Future<MeSnapshot> loadMe() async => snapshot;
@@ -38,7 +40,36 @@ class _FakeMe implements MeGateway {
       phone: phone,
       locale: snapshot.userProfile?.locale,
       timezone: snapshot.userProfile?.timezone,
+      avatarUrl: snapshot.userProfile?.avatarUrl,
+      avatarMediaId: snapshot.userProfile?.avatarMediaId,
     );
+    snapshot = snapshot.copyWith(userProfile: updated);
+    return updated;
+  }
+
+  @override
+  Future<UserProfileSummary> uploadAvatar({
+    required List<int> bytes,
+    required String fileName,
+    required String mimeType,
+  }) async {
+    uploadAvatarCalls += 1;
+    final updated = (snapshot.userProfile ??
+            const UserProfileSummary(id: 'up1', displayName: 'Alex'))
+        .copyWith(
+      avatarUrl: 'https://cdn.example/avatar.jpg',
+      avatarMediaId: 'media-1',
+    );
+    snapshot = snapshot.copyWith(userProfile: updated);
+    return updated;
+  }
+
+  @override
+  Future<UserProfileSummary> clearAvatar() async {
+    clearAvatarCalls += 1;
+    final updated = (snapshot.userProfile ??
+            const UserProfileSummary(id: 'up1', displayName: 'Alex'))
+        .copyWith(clearAvatarUrl: true, clearAvatarMediaId: true);
     snapshot = snapshot.copyWith(userProfile: updated);
     return updated;
   }
@@ -291,6 +322,39 @@ void main() {
     expect(fake.signOutCalls, 1);
     expect(find.text('Sign in screen'), findsOneWidget);
     expect(loggedOutRoute, AppRoutes.signIn);
+  });
+
+  testWidgets('5.3 camera opens photo sheet and uploads', (tester) async {
+    final fake = _FakeMe(sample());
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: MeScreen(
+          meRepository: fake,
+          homeRepository: _FakeHome(),
+          alertsRepository: _FakeAlerts(),
+          pickAvatar: () async => (
+            bytes: List<int>.filled(12, 1),
+            fileName: 'avatar.jpg',
+            mimeType: 'image/jpeg',
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.photo_camera_outlined));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Profile photo'), findsOneWidget);
+    expect(find.text('Choose from gallery'), findsOneWidget);
+
+    await tester.tap(find.text('Choose from gallery'));
+    await tester.pumpAndSettle();
+
+    expect(fake.uploadAvatarCalls, 1);
+    expect(find.text('Profile photo updated.'), findsOneWidget);
   });
 
   testWidgets('S-70 Me tab shows profile in shell', (tester) async {
