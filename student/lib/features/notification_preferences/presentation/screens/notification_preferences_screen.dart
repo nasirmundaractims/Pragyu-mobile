@@ -83,7 +83,7 @@ class _NotificationPreferencesScreenState
           enabled &&
           !PushDelivery.osPushAvailable) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text(PushDelivery.pushEnabledSnack),
             behavior: SnackBarBehavior.floating,
           ),
@@ -258,20 +258,20 @@ class _DeliveryCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _IconWell(
+              const _IconWell(
                 icon: Icons.mark_email_unread_rounded,
                 tint: StudentHubColors.blue,
                 soft: Colors.white,
               ),
-              SizedBox(width: 12),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    const Text(
                       PushDelivery.arrivalTitle,
                       style: TextStyle(
                         fontFamily: AppTheme.fontFamily,
@@ -280,10 +280,10 @@ class _DeliveryCard extends StatelessWidget {
                         color: StudentHubColors.ink,
                       ),
                     ),
-                    SizedBox(height: 4),
+                    const SizedBox(height: 4),
                     Text(
                       PushDelivery.arrivalBody,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontFamily: AppTheme.fontFamily,
                         fontSize: 13,
                         height: 1.4,
