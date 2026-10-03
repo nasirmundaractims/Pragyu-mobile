@@ -203,6 +203,13 @@ abstract final class AlertDeepLinkResolver {
           label: 'Open calendar',
         );
 
+      case 'coach.study_session_reminder':
+      case 'coach.study_session_starting':
+        return const AlertDeepLinkTarget(
+          route: AppRoutes.studyPlanner,
+          label: 'Open study plan',
+        );
+
       default:
         if (type.contains('assessment')) {
           final id = item.assessmentId;

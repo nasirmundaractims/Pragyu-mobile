@@ -98,6 +98,19 @@ void main() {
     expect(target?.route, AppRoutes.calendar);
   });
 
+  test('study session reminder opens study planner', () {
+    const item = AlertItem(
+      id: 'n5b',
+      source: AlertSource.notification,
+      title: 'Study plan in 10 minutes',
+      eventType: 'coach.study_session_reminder',
+    );
+
+    final target = AlertDeepLinkResolver.resolve(item);
+    expect(target?.route, AppRoutes.studyPlanner);
+    expect(target?.label, 'Open study plan');
+  });
+
   test('announcement alert opens announcements hub', () {
     const item = AlertItem(
       id: 'n6',

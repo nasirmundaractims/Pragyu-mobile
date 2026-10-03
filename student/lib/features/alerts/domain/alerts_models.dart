@@ -76,6 +76,8 @@ class AlertItem {
     return switch (type) {
       'evaluation.completed' => 'Eval complete',
       'learning.live_class_reminder' => 'Class reminder',
+      'coach.study_session_reminder' => 'Study plan (10 min)',
+      'coach.study_session_starting' => 'Study plan starting',
       _ => categoryLabel,
     };
   }
